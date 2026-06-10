@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "incremental": true,
+    "jsx": "react-jsx",
+    "lib": ["dom", "es2022"],
+    "module": "node16",
+    "moduleResolution": "node16",
+    "outDir": ".erb/dll",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"],
+      "@preload": ["out/preload/preload.js"]
+    },
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2022"
+  },
+  "exclude": ["test", "release/build", "release/app/dist", ".erb/dll"]
+}

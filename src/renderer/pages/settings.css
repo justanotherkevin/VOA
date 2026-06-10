@@ -1,0 +1,290 @@
+/* ============================================================
+   Settings page — design tokens + component styles
+   Scoped to .settings-root to avoid global conflicts
+   ============================================================ */
+
+.settings-root {
+  /* light theme (default) */
+  --s-page:      #eef0f3;
+  --s-sidebar:   #e4e6ea;
+  --s-card:      #ffffff;
+  --s-hover:     rgba(0,0,0,.035);
+  --s-line:      rgba(0,0,0,.085);
+  --s-hair:      rgba(0,0,0,.10);
+  --s-text:      #16181c;
+  --s-text2:     #5d626b;
+  --s-text3:     #969ba3;
+  --s-field:     #ffffff;
+  --s-field-line:rgba(0,0,0,.14);
+  --s-track:     rgba(0,0,0,.16);
+  --s-tint:      rgba(0,0,0,.03);
+  --s-accent:    #2f6bed;
+  --s-good:      #1faa4d;
+  --s-warn:      #e0890b;
+  --s-danger:    #d83a3a;
+}
+
+.settings-root.settings-dark {
+  --s-page:      #141518;
+  --s-sidebar:   #1a1c20;
+  --s-card:      #212429;
+  --s-hover:     rgba(255,255,255,.045);
+  --s-line:      rgba(255,255,255,.075);
+  --s-hair:      rgba(255,255,255,.10);
+  --s-text:      #f1f3f5;
+  --s-text2:     #a0a5ad;
+  --s-text3:     #6c7079;
+  --s-field:     #2a2e34;
+  --s-field-line:rgba(255,255,255,.12);
+  --s-track:     rgba(255,255,255,.16);
+  --s-tint:      rgba(255,255,255,.025);
+  --s-accent:    #4f8cff;
+  --s-good:      #34d058;
+  --s-warn:      #ffb02e;
+  --s-danger:    #ff5d5d;
+}
+
+/* ── Radio row ── */
+.s-pick {
+  cursor: pointer;
+}
+.s-pick:hover {
+  background: var(--s-hover);
+}
+.s-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--s-field-line);
+  flex: none;
+  display: grid;
+  place-items: center;
+  transition: border-color .12s;
+  position: relative;
+}
+.s-pick.s-selected .s-radio {
+  border-color: var(--s-accent);
+}
+.s-radio::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--s-accent);
+  transform: scale(0);
+  transition: transform .14s;
+}
+.s-pick.s-selected .s-radio::after {
+  transform: scale(1);
+}
+.s-pick.s-selected {
+  background: color-mix(in srgb, var(--s-accent) 8%, transparent);
+}
+
+/* ── Status pill ── */
+.s-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.s-pill .s-pdot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.s-pill-good {
+  color: var(--s-good);
+  background: color-mix(in srgb, var(--s-good) 14%, transparent);
+}
+.s-pill-good .s-pdot { background: var(--s-good); }
+.s-pill-warn {
+  color: var(--s-warn);
+  background: color-mix(in srgb, var(--s-warn) 16%, transparent);
+}
+.s-pill-warn .s-pdot { background: var(--s-warn); }
+.s-pill-muted {
+  color: var(--s-text2);
+  background: var(--s-tint);
+}
+.s-pill-accent {
+  color: var(--s-accent);
+  background: color-mix(in srgb, var(--s-accent) 13%, transparent);
+}
+.s-pill-accent .s-pdot { background: var(--s-accent); }
+.s-pill-danger {
+  color: var(--s-danger);
+  background: color-mix(in srgb, var(--s-danger) 12%, transparent);
+}
+.s-pill-danger .s-pdot { background: var(--s-danger); }
+
+/* ── Hero card ── */
+.s-hero {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--s-good) 16%, var(--s-card)), var(--s-card));
+  border: 0.5px solid var(--s-hair);
+  border-radius: 13px;
+  padding: 20px;
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+/* ── Card rows (group container) ── */
+.s-card-rows {
+  background: var(--s-card);
+  border: 0.5px solid var(--s-hair);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+/* ── Row ── */
+.s-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: var(--s-rowpad, 12px 15px);
+  border-top: 0.5px solid var(--s-line);
+}
+.settings-root.settings-compact {
+  --s-rowpad: 8px 14px;
+}
+.s-row:first-child {
+  border-top: 0;
+}
+.s-row-btn {
+  cursor: pointer;
+}
+.s-row-btn:hover {
+  background: var(--s-hover);
+}
+
+/* ── Select chip ── */
+.s-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--s-field);
+  border: 0.5px solid var(--s-field-line);
+  border-radius: 7px;
+  padding: 5px 9px;
+  font-size: 12.5px;
+  color: var(--s-text);
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+/* ── Button ── */
+.s-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0.5px solid var(--s-field-line);
+  background: var(--s-field);
+  color: var(--s-text);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 9px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.s-btn:hover {
+  background: var(--s-hover);
+}
+.s-btn-danger {
+  color: var(--s-danger);
+}
+.s-btn-accent {
+  background: var(--s-accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* ── Keycap ── */
+.s-kbd {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--s-text);
+  background: var(--s-field);
+  border: 0.5px solid var(--s-field-line);
+  border-bottom-width: 1.5px;
+  border-radius: 6px;
+  padding: 3px 8px;
+  min-width: 26px;
+  text-align: center;
+}
+
+/* ── Meter dots ── */
+.s-meter {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.s-pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--s-track);
+}
+.s-pip-filled-good { background: var(--s-good); }
+.s-pip-filled-warn { background: var(--s-warn); }
+
+/* ── Note / footer ── */
+.s-note {
+  font-size: 11.5px;
+  color: var(--s-text3);
+  margin: 9px 3px 0;
+  line-height: 1.45;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── App logo badge ── */
+.s-applogo {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  flex: none;
+}
+
+/* ── Accent dot picker ── */
+.s-acc-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  outline: 2px solid transparent;
+  transition: transform .12s;
+}
+.s-acc-dot:hover {
+  transform: scale(1.1);
+}
+.s-acc-dot.s-acc-dot-on {
+  outline-color: var(--s-text2);
+}
+
+/* ── Pane entrance animation ── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes s-rise {
+    from { transform: translateY(6px); opacity: 0.6; }
+    to   { transform: none; opacity: 1; }
+  }
+  .s-pane {
+    animation: s-rise .24s ease;
+  }
+}

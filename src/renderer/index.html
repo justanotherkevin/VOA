@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<!--
+      CSP for development allows inline scripts and eval for Vite HMR.
+      In production, rebuild this HTML with stricter CSP via build process.
+
+      NOTE: Keep this CSP in sync with src/renderer/notification.html
+      Both template files should use the same CSP configuration.
+    -->
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; connect-src 'self' ws://localhost:* http://localhost:* https://cdn.jsdelivr.net"
+		/>
+		<title>VOA</title>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="./index.tsx"></script>
+	</body>
+</html>

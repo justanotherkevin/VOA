@@ -1,0 +1,60 @@
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage
+.eslintcache
+
+# Dependency directory
+# https://www.npmjs.org/doc/misc/npm-faq.html#should-i-check-my-node_modules-folder-into-git
+node_modules
+
+# OSX
+.DS_Store
+
+# Test artifacts
+playwright-report/
+test-results/
+
+release/app/dist
+release/build
+.erb/dll
+dist
+out
+
+.idea
+npm-debug.log.*
+*.css.d.ts
+*.sass.d.ts
+*.scss.d.ts
+
+# E2E tests - ignore local overrides, but track .env.e2e (test configuration)
+.env
+.env.local
+.env.*.local
+
+# Claude
+/.paul
+/docs/notes.md
+
+# Git worktrees
+.worktrees/
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Generated/downloaded assets in public (loaded from CDN or generated at runtime)
+/public/onnx-assets/
+/public/vad-assets/
+
+/graphify-out
+/src/graphify-out

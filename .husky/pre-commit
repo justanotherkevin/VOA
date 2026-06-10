@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo "🧪 Running tests..."
+npm test
+
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Commit aborted."
+  exit 1
+fi
+
+echo "✅ Tests passed!"
+
+echo "✨ Pre-commit checks complete!"

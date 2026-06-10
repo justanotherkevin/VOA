@@ -1,0 +1,30 @@
+# Logs
+logs
+*.log
+npm-debug.log.*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Coverage directory
+coverage
+.eslintcache
+
+# Dependencies
+node_modules
+
+# Build output (electron-vite)
+dist
+out
+release
+
+# OS files
+.DS_Store
+.idea
+
+# Generated CSS type definitions
+*.css.d.ts
+*.sass.d.ts
+*.scss.d.ts

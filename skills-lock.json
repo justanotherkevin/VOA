@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "roadmap-planning": {
+      "source": "justanotherkevin/productskills",
+      "sourceType": "github",
+      "skillPath": "skills/roadmap-planning/SKILL.md",
+      "computedHash": "9c2a7f436a9a5adb28fd4d2852f5b3a83bd8e1b83c06b71cf6f986a3f407075b"
+    }
+  }
+}
