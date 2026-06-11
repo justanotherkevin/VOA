@@ -1,3 +1,5 @@
+export const APP_NAME = 'VOA';
+
 function mobileTabletCheck() {
 	// https://stackoverflow.com/questions/11381673/detecting-a-mobile-browser
 	let check = false;

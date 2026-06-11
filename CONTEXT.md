@@ -1,4 +1,4 @@
-# Audio Transformer
+# VOA
 
 A desktop app that captures audio (mic, system, or both) and transcribes it using local AI models.
 

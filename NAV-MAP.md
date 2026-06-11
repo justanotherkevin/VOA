@@ -1,6 +1,6 @@
 # Navigation Map
 
-## Audio Transformer
+## VOA
 
 **recording**, **recordings list**, **saved recording**, **meeting** (legacy UI label)
 → `src/renderer/hooks/useMeetings.ts` (getMeetings, deleteMeeting, updateMeeting), `src/main/store.ts` (saveMeeting, getMeetings, updateMeeting)

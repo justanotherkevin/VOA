@@ -16,7 +16,7 @@ export default function createTray(mainWindow: BrowserWindow) {
   }
 
   tray = new Tray(staticIcon);
-  tray.setToolTip('Audio Transformer');
+  tray.setToolTip(app.getName());
 
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show App', click: () => mainWindow?.show() },

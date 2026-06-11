@@ -13,7 +13,7 @@ import { SegmentedControl } from '@/renderer/components/settings/SegmentedContro
 import ShortcutConfigDialog from '@/renderer/components/ui/ShortcutConfigDialog';
 import { useShortcuts } from '@/renderer/hooks/useShortcuts';
 import { usePermissions } from '@/renderer/hooks/usePermissions';
-import { MODEL_META_DATA, CACHED_MODEL_META } from '@/lib/Constants';
+import { APP_NAME, MODEL_META_DATA, CACHED_MODEL_META } from '@/lib/Constants';
 import { RECORDING_SHORTCUT } from '@/lib/shortcuts';
 
 type PaneId = 'general' | 'transcription' | 'recording' | 'audio' | 'privacy' | 'permissions' | 'shortcuts';
@@ -1183,7 +1183,7 @@ export default function Settings() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Library location</div>
                       <code style={{ fontSize: 11, fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace', background: 'var(--s-tint)', padding: '1px 5px', borderRadius: 4, color: 'var(--s-text2)', marginTop: 2, display: 'inline-block' }}>
-                        ~/Library/Application Support/Audio Transformer
+                        {`~/Library/Application Support/${APP_NAME}`}
                       </code>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
