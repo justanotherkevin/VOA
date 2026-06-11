@@ -31,12 +31,16 @@ export function initializeShortcutHelpers(testPage: Page): void {
 }
 
 /**
- * Navigate to Settings page
+ * Navigate to Settings page and open the Shortcuts pane.
  */
 export async function navigateToSettings(): Promise<void> {
-  // Wait for the Settings button to be visible (with extended timeout for app to load)
   await clickByTestIdCommon(page, 'nav-setting-button');
-  // await waitForElementCommon(page, '[data-testid="customize-shortcut-button"]');
+  // Wait for the Settings page to mount
+  await waitForElementCommon(page, '.settings-root', 5000);
+  // Navigate to the Shortcuts pane (Settings is pane-based)
+  await page.locator('button:has-text("Shortcuts")').first().click();
+  // Wait until the Change button (customize-shortcut-button) is visible
+  await waitForElementCommon(page, '[data-testid="customize-shortcut-button"]', 5000);
 }
 
 /**

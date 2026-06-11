@@ -70,6 +70,7 @@ const electronAPI = {
       ipcRenderer.invoke(CHANNELS.MEETING_DETECTOR.DISMISS, meetingKey),
     on: {
       saved: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.MEETINGS.SAVED, cb),
+      cleared: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.MEETINGS.CLEARED, cb),
       detected: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.MEETING_DETECTOR.DETECTED, cb),
       ended: (cb: (...args: unknown[]) => void) =>
@@ -99,9 +100,10 @@ const electronAPI = {
         ipcRenderer.invoke(CHANNELS.MODEL.SET_ASR_TYPE, asrType),
       cache: {
         list: () => ipcRenderer.invoke(CHANNELS.MODEL.CACHE_LIST),
-        delete: (modelName: string) =>
-          ipcRenderer.invoke(CHANNELS.MODEL.CACHE_DELETE, modelName),
+        delete: (modelName: string, source?: 'xenova' | 'hf') =>
+          ipcRenderer.invoke(CHANNELS.MODEL.CACHE_DELETE, modelName, source ?? 'xenova'),
         clearAll: () => ipcRenderer.invoke(CHANNELS.MODEL.CACHE_CLEAR_ALL),
+        getPaths: () => ipcRenderer.invoke(CHANNELS.MODEL.CACHE_PATHS),
       },
     },
     // Recording preferences (formerly "meetingPreferences" — unrelated to meeting objects)
@@ -124,6 +126,21 @@ const electronAPI = {
       get: () => ipcRenderer.invoke(CHANNELS.UI_PREFERENCES.GET),
       update: (prefs: Record<string, unknown>) =>
         ipcRenderer.invoke(CHANNELS.UI_PREFERENCES.UPDATE, prefs),
+    },
+  },
+
+  // ── Shell ─────────────────────────────────────────────────────────────────
+  shell: {
+    openPath: (filePath: string) => ipcRenderer.invoke(CHANNELS.SHELL.OPEN_PATH, filePath),
+  },
+
+  // ── Summarizer ────────────────────────────────────────────────────────────
+  summarizer: {
+    prefetch: () => ipcRenderer.invoke(CHANNELS.MODEL.SUMMARIZER_PREFETCH),
+    on: {
+      progress: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.SUMMARIZER.PROGRESS, cb),
+      ready: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.SUMMARIZER.READY, cb),
+      error: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.SUMMARIZER.ERROR, cb),
     },
   },
 
@@ -168,6 +185,18 @@ const electronAPI = {
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+
+if (process.env.E2E_TEST === 'true') {
+  contextBridge.exposeInMainWorld('__e2eTestAPI', {
+    forceMeetingNextSession: () => ipcRenderer.invoke('transcriber:e2e-force-meeting'),
+    transcribeFileForTest: (filePath: string) =>
+      ipcRenderer.invoke('transcriber:e2e-transcribe-file', { filePath }),
+    mockEnrichMeeting: () =>
+      ipcRenderer.invoke('transcriber:e2e-mock-enrich-meeting'),
+    seedMeeting: (data: unknown) =>
+      ipcRenderer.invoke('meetings:e2e-seed', data),
+  });
+}
 
 export type ElectronAPI = typeof electronAPI;
 declare global {

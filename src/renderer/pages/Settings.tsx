@@ -90,8 +90,11 @@ export default function Settings() {
   const [appPrefs, setAppPrefs] = useState({ launchAtLogin: false, showMenuBar: true, showDockIcon: true });
   const [audioPrefs, setAudioPrefs] = useState({ micGain: 62, noiseSuppression: true, labelSpeakers: true });
   const [modelPrefs, setModelPrefs] = useState({ selectedModel: 'Xenova/whisper-tiny', asrType: 'whisper' as const });
-  const [cachedModels, setCachedModels] = useState<Array<{ name: string; size: number; path: string }>>([]);
+  const [cachedModels, setCachedModels] = useState<Array<{ name: string; size: number; path: string; source: 'xenova' | 'hf' }>>([]);
   const [isDeletingModel, setIsDeletingModel] = useState<string | null>(null);
+  const [summarizerStatus, setSummarizerStatus] = useState<'idle' | 'downloading' | 'ready' | 'error'>('idle');
+  const [summarizerProgress, setSummarizerProgress] = useState<Array<{ file: string; progress: number }>>([]);
+  const [cachePaths, setCachePaths] = useState<{ xenova: string; hf: string } | null>(null);
 
   const [isShortcutDialogOpen, setIsShortcutDialogOpen] = useState(false);
 
@@ -130,12 +133,48 @@ export default function Settings() {
         const cacheRes = await window.electronAPI.settings.model.cache.list();
         if (cacheRes?.success) {
           setCachedModels(cacheRes.models);
+          const hasQwen = cacheRes.models.some((m: any) => m.source === 'hf');
+          setSummarizerStatus(hasQwen ? 'ready' : 'idle');
         }
+        const paths = await window.electronAPI.settings.model.cache.getPaths();
+        if (paths) setCachePaths(paths);
       } catch (error) {
         console.error('Failed to load settings:', error);
       }
     };
     loadAllPrefs();
+  }, []);
+
+  useEffect(() => {
+    const refreshModels = () =>
+      window.electronAPI.settings.model.cache.list().then((res: any) => {
+        if (res?.success) setCachedModels(res.models);
+      });
+
+    const unsubProgress = window.electronAPI.summarizer.on.progress((data: any) => {
+      if (data?.status === 'progress' && data?.file && typeof data?.progress === 'number') {
+        setSummarizerStatus('downloading');
+        setSummarizerProgress((prev) => {
+          const idx = prev.findIndex((p) => p.file === data.file);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = { file: data.file, progress: data.progress };
+            return updated;
+          }
+          return [...prev, { file: data.file, progress: data.progress }];
+        });
+      }
+    });
+    const unsubReady = window.electronAPI.summarizer.on.ready(() => {
+      setSummarizerStatus('ready');
+      setSummarizerProgress([]);
+      refreshModels();
+    });
+    const unsubError = window.electronAPI.summarizer.on.error(() => {
+      setSummarizerStatus('error');
+      setSummarizerProgress([]);
+    });
+    return () => { unsubProgress(); unsubReady(); unsubError(); };
   }, []);
 
   function applyTheme(prefs: typeof uiPrefs) {
@@ -200,15 +239,27 @@ export default function Settings() {
     return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
   }
 
-  async function handleDeleteModel(modelName: string) {
-    if (!window.confirm(`Delete ${modelName}?`)) return;
-    setIsDeletingModel(modelName);
+  async function handleDeleteModel(model: { name: string; source: 'xenova' | 'hf' }) {
+    if (!window.confirm(`Delete ${model.name}?`)) return;
+    setIsDeletingModel(model.name);
     try {
-      await window.electronAPI.settings.model.cache.delete(modelName);
+      await window.electronAPI.settings.model.cache.delete(model.name, model.source);
+      if (model.source === 'hf') setSummarizerStatus('idle');
       const res = await window.electronAPI.settings.model.cache.list();
       if (res?.success) setCachedModels(res.models);
     } finally {
       setIsDeletingModel(null);
+    }
+  }
+
+  async function handlePrefetchSummarizer() {
+    setSummarizerStatus('downloading');
+    setSummarizerProgress([]);
+    try {
+      await window.electronAPI.summarizer.prefetch();
+    } catch {
+      setSummarizerStatus('error');
+      setSummarizerProgress([]);
     }
   }
 
@@ -919,49 +970,147 @@ export default function Settings() {
                 </div>
               </div>
 
-              {cachedModels.length > 0 && (
-                <div style={{ marginBottom: 22 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text2)', margin: '0 0 7px 3px' }}>
-                    Cached models <span style={{ fontWeight: 400, color: 'var(--s-text3)' }}>({cachedModels.length})</span>
-                  </div>
-                  <div className="s-card-rows">
-                    {cachedModels.map((m) => {
-                      const meta = CACHED_MODEL_META[m.name];
-                      const leftCol = (
-                        <>
-                          <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>{m.name}</div>
-                          <div style={{ fontSize: 12, color: 'var(--s-text2)', marginTop: 2 }}>
-                            {meta ? `${meta.subtitle} · ${formatBytes(m.size)}` : formatBytes(m.size)}
-                          </div>
-                        </>
-                      );
-                      return (
-                        <div key={m.name} className="s-row">
-                          {meta
-                            ? <ModelInfoTooltip description={meta.description}>{leftCol}</ModelInfoTooltip>
-                            : <div style={{ flex: 1, minWidth: 0 }}>{leftCol}</div>
-                          }
+              {(() => {
+                const whisperModels = cachedModels.filter((m) => m.source === 'xenova');
+                const qwenModel = cachedModels.find((m) => m.source === 'hf');
+                const qwenMeta = CACHED_MODEL_META['Qwen2.5-1.5B-Instruct'];
+                const showClearAll = cachedModels.length > 1 || (summarizerStatus === 'ready' && whisperModels.length > 0);
+
+                return (
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text2)', margin: '0 0 7px 3px' }}>
+                      AI models
+                    </div>
+                    <div className="s-card-rows">
+                      {/* Qwen row — always visible */}
+                      <div className="s-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <ModelInfoTooltip description={qwenMeta.description}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Qwen2.5-1.5B-Instruct</div>
+                              <div style={{ fontSize: 12, color: 'var(--s-text2)', marginTop: 2 }}>
+                                {summarizerStatus === 'ready' && qwenModel
+                                  ? `${qwenMeta.subtitle} · ${formatBytes(qwenModel.size)}`
+                                  : summarizerStatus === 'downloading'
+                                  ? `${qwenMeta.subtitle} · downloading…`
+                                  : `${qwenMeta.subtitle}`}
+                              </div>
+                            </div>
+                          </ModelInfoTooltip>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
-                            <button
-                              className="s-btn s-btn-danger"
-                              onClick={() => handleDeleteModel(m.name)}
-                              disabled={isDeletingModel === m.name}
-                            >
-                              {isDeletingModel === m.name ? 'Deleting…' : 'Delete'}
-                            </button>
+                            {summarizerStatus === 'ready' ? (
+                              <button
+                                className="s-btn s-btn-danger"
+                                onClick={() => handleDeleteModel({ name: 'Qwen2.5-1.5B-Instruct', source: 'hf' })}
+                                disabled={isDeletingModel === 'Qwen2.5-1.5B-Instruct'}
+                              >
+                                {isDeletingModel === 'Qwen2.5-1.5B-Instruct' ? 'Deleting…' : 'Delete'}
+                              </button>
+                            ) : summarizerStatus === 'downloading' ? (
+                              <span style={{ fontSize: 12, color: 'var(--s-text3)' }}>Downloading…</span>
+                            ) : summarizerStatus === 'error' ? (
+                              <button className="s-btn" onClick={handlePrefetchSummarizer}>
+                                <Download size={13} />
+                                Retry
+                              </button>
+                            ) : (
+                              <button className="s-btn" onClick={handlePrefetchSummarizer}>
+                                <Download size={13} />
+                                Download
+                              </button>
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
-                    {cachedModels.length > 1 && (
-                      <div className="s-row s-row-btn" onClick={() => window.electronAPI.settings.model.cache.clearAll()}>
-                        <Trash2 size={17} color="var(--s-text2)" style={{ flexShrink: 0 }} />
-                        <div style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Clear all</div>
+                        {summarizerStatus === 'downloading' && summarizerProgress.length > 0 && (
+                          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                            {summarizerProgress.map((item) => (
+                              <div key={item.file}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--s-text2)', marginBottom: 3 }}>
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>{item.file}</span>
+                                  <span>{Math.round(item.progress)}%</span>
+                                </div>
+                                <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'var(--s-border)' }}>
+                                  <div
+                                    style={{
+                                      height: 4, borderRadius: 2,
+                                      background: 'var(--s-accent)',
+                                      width: `${item.progress}%`,
+                                      transition: 'width 0.2s ease',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Whisper cached models */}
+                      {whisperModels.map((m) => {
+                        const meta = CACHED_MODEL_META[m.name];
+                        const leftCol = (
+                          <>
+                            <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>{m.name}</div>
+                            <div style={{ fontSize: 12, color: 'var(--s-text2)', marginTop: 2 }}>
+                              {meta ? `${meta.subtitle} · ${formatBytes(m.size)}` : formatBytes(m.size)}
+                            </div>
+                          </>
+                        );
+                        return (
+                          <div key={m.name} className="s-row">
+                            {meta
+                              ? <ModelInfoTooltip description={meta.description}>{leftCol}</ModelInfoTooltip>
+                              : <div style={{ flex: 1, minWidth: 0 }}>{leftCol}</div>
+                            }
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+                              <button
+                                className="s-btn s-btn-danger"
+                                onClick={() => handleDeleteModel(m)}
+                                disabled={isDeletingModel === m.name}
+                              >
+                                {isDeletingModel === m.name ? 'Deleting…' : 'Delete'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Clear all */}
+                      {showClearAll && (
+                        <div
+                          className="s-row s-row-btn"
+                          onClick={async () => {
+                            await window.electronAPI.settings.model.cache.clearAll();
+                            setSummarizerStatus('idle');
+                            const res = await window.electronAPI.settings.model.cache.list();
+                            if (res?.success) setCachedModels(res.models);
+                          }}
+                        >
+                          <Trash2 size={17} color="var(--s-text2)" style={{ flexShrink: 0 }} />
+                          <div style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Clear all</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cache path footer */}
+                    {cachePaths && (
+                      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--s-text3)' }}>
+                        <Folder size={12} color="var(--s-text3)" style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                          {cachePaths.hf}
+                        </span>
+                        <button
+                          className="s-btn"
+                          style={{ padding: '2px 8px', fontSize: 11.5, flexShrink: 0 }}
+                          onClick={() => window.electronAPI.shell.openPath(cachePaths.hf)}
+                        >
+                          Reveal
+                        </button>
                       </div>
                     )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text2)', margin: '0 0 7px 3px' }}>Language</div>
@@ -1243,7 +1392,7 @@ export default function Settings() {
                           {k}
                         </span>
                       ))}
-                      <button className="s-btn" onClick={() => setIsShortcutDialogOpen(true)} disabled={isSaving}>
+                      <button className="s-btn" data-testid="customize-shortcut-button" onClick={() => setIsShortcutDialogOpen(true)} disabled={isSaving}>
                         Change
                       </button>
                     </div>

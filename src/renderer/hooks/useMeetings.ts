@@ -57,7 +57,7 @@ export function useMeetings() {
   useEffect(() => {
     fetchMeetings();
 
-    const unsubscribe = window.electronAPI.meetings.on.saved((meeting: Meeting) => {
+    const unsubSaved = window.electronAPI.meetings.on.saved((meeting: Meeting) => {
       setMeetings((prev) => {
         const isNew = !prev.some((m) => m.id === meeting.id);
         if (isNew) setSelectedId(meeting.id);
@@ -65,8 +65,14 @@ export function useMeetings() {
       });
     });
 
+    const unsubCleared = window.electronAPI.meetings.on.cleared(() => {
+      setMeetings([]);
+      setSelectedId(null);
+    });
+
     return () => {
-      unsubscribe();
+      unsubSaved();
+      unsubCleared();
     };
   }, []);
 

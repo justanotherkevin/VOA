@@ -38,7 +38,7 @@ Every Electron app is built around three layers. Understanding where code lives 
 ## Full Folder Structure
 
 ```
-voa/
+audio-transformer/
 │
 ├── src/
 │   │

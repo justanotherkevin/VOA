@@ -131,7 +131,6 @@ export function MeetingDetail({
     (summaryReady && meeting.topics.length > 0) ||
     meeting.actionItems.length > 0 ||
     meeting.summaryStatus === 'pending';
-
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#111]">
       {/* Header */}
@@ -203,7 +202,7 @@ export function MeetingDetail({
 
       {/* Sidebar split body */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Overview + Transcript */}
+        {/* Left column: Overview + Transcript */}
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
           {/* Overview */}
           <Section icon={<AlignLeft size={15} />} title="Overview">
@@ -289,7 +288,7 @@ export function MeetingDetail({
           </Section>
         </div>
 
-        {/* Right: Decisions, Topics, Action Items */}
+        {/* Right column: Decisions, Topics, Action Items */}
         <div className="max-w-56 shrink-0">
           {/* Key Decisions — hidden when empty */}
           {shouldShowSideDetails && (

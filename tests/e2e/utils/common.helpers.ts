@@ -1,9 +1,37 @@
-import { Page, expect } from '@playwright/test';
+import { Page, ElectronApplication, expect } from '@playwright/test';
 
 /**
  * Generic element selectors and interactions
  * These helpers can be used across all e2e tests
  */
+
+/**
+ * Poll until both the main (index.html) and notification windows are visible.
+ * Uses a 15-second deadline to accommodate slow app starts.
+ */
+export async function getVisibleWindows(
+  electronApp: ElectronApplication,
+): Promise<{ main: Page; notification: Page }> {
+  let main: Page | undefined, notification: Page | undefined;
+  await electronApp.firstWindow();
+  await expect
+    .poll(
+      () => {
+        const windows = electronApp.windows();
+        main = windows.find((w: any) => w.url().includes('index.html'));
+        notification = windows.find((w: any) =>
+          w.url().includes('notification.html'),
+        );
+        return main && notification;
+      },
+      { timeout: 15_000 },
+    )
+    .toBeTruthy();
+
+  if (!main || !notification)
+    throw new Error('Could not find main and notification windows');
+  return { main, notification };
+}
 
 /**
  * Wait for an element to be visible
@@ -434,23 +462,25 @@ export async function simulateGlobalShortcut(
 
 /**
  * Navigate to the Settings page via the sidebar link.
+ * Pass an optional pane label (e.g. 'Audio', 'Shortcuts') to also click that pane.
  */
-export async function navigateToSettings(page: any): Promise<void> {
+export async function navigateToSettings(page: any, pane?: string): Promise<void> {
   await page.click('button[title="Settings"]');
-  await page.waitForSelector('h1:has-text("Settings")', { timeout: 5000 });
+  // Wait for the Settings page root to appear (pane-based layout, no single "Settings" h1)
+  await page.waitForSelector('.settings-root', { timeout: 5000 });
+  if (pane) {
+    await page.locator(`button:has-text("${pane}")`).first().click();
+    await page.waitForSelector(`h1:has-text("${pane}")`, { timeout: 5000 });
+  }
 }
 /**
- * Find the system audio toggle label (the visible switch).
- * The underlying <input type="checkbox"> is sr-only so we click the <label> that
- * wraps it, which is the standard Tailwind toggle pattern used in Settings.tsx.
+ * Find the system audio toggle switch in the Settings > Audio pane.
+ * Rendered as a button[role="switch"] in the "Capture system audio" row.
+ * Caller must have navigated to the Audio pane before calling this.
  */
 export async function getSystemAudioToggle(page: any) {
-  // The label wraps an sr-only checkbox next to the visual div inside the
-  // "Capture System Audio" card.
   return page
-    .locator('h2:has-text("Capture System Audio")')
-    .locator(
-      'xpath=ancestor::div[contains(@class,"flex")]//label[contains(@class,"inline-flex")]',
-    )
-    .first();
+    .locator('.s-row')
+    .filter({ hasText: 'Capture system audio' })
+    .locator('button[role="switch"]');
 }

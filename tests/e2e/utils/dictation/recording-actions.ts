@@ -2,6 +2,7 @@ import type { Page, ElectronApplication } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { BrowserWindow } from 'electron';
 import { wait } from '../common.helpers';
+import { forceMeetingNextSession } from '../seed.helpers';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -26,19 +27,19 @@ export async function toggleRecording(
 }
 
 /**
- * Start recording via Main process interaction
+ * Start recording via Main process interaction.
+ * Pass `{ isMeeting: true }` to classify the session as a meeting recording
+ * (sets the E2E force-meeting flag before the toggle so SESSION_START picks it up).
  */
 export async function startRecording(
   page: Page,
   electronApp: ElectronApplication,
+  options?: { isMeeting?: boolean },
 ): Promise<void> {
-  console.log('📍 Starting recording');
-  // Reset state via evaluation
-  await (electronApp as any).evaluate(({ app }: any) => {
-    // We could reach into app state here if needed, but for now we just trigger toggle
-  });
+  if (options?.isMeeting) {
+    await forceMeetingNextSession(page);
+  }
   await wait(100);
-  // Now trigger the toggle
   await toggleRecording(page, electronApp);
   await wait(500);
 }
@@ -50,7 +51,6 @@ export async function stopRecording(
   page: Page,
   electronApp: ElectronApplication,
 ): Promise<void> {
-  console.log('📍 Stopping recording');
   await toggleRecording(page, electronApp);
   await wait(500);
 }

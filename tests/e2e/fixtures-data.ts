@@ -1,49 +1,58 @@
 /**
- * Test Data Fixtures for E2E Tests
+ * Test Data Factories for E2E Tests
  *
- * Provides realistic sample transcripts for testing.
- * These fixtures are used to initialize the test electron-store
- * with known data for predictable test runs.
+ * Provides factory functions for creating Meeting objects in tests.
+ * Use these factories with seed.helpers.ts to populate the store
+ * when a test needs specific data to be present at startup.
+ *
+ * Usage:
+ *   import { meetingFactory } from '../fixtures-data';
+ *   import { seedMeeting, clearMeetings } from './utils/seed.helpers';
+ *
+ *   // In your test beforeEach:
+ *   await clearMeetings(page);
+ *   await seedMeeting(page, meetingFactory({ title: 'Budget Review' }));
  */
 
-import { StoredTranscript } from '@/main/store';
+import { Meeting } from '@/main/store';
+
+export function meetingFactory(overrides: Partial<Omit<Meeting, 'id'>> = {}): Omit<Meeting, 'id'> {
+  const now = Date.now();
+  return {
+    title: 'Test Meeting',
+    startedAt: now - 30 * 60 * 1000,
+    endedAt: now,
+    durationMs: 30 * 60 * 1000,
+    transcript: 'This is a sample meeting transcript for testing purposes.',
+    chunks: [
+      { text: 'This is a sample meeting transcript', timestamp: [0, 2.0] },
+      { text: 'for testing purposes', timestamp: [2.0, 3.5] },
+    ],
+    summary: '',
+    summaryStatus: 'pending',
+    decisions: [],
+    topics: [],
+    actionItems: [],
+    audioSource: 'mic',
+    participants: [],
+    tags: [],
+    ...overrides,
+  };
+}
 
 /**
- * Generate default test transcripts
- * Returns 3 sample transcripts with realistic data
+ * Create a Meeting that already has enrichment data (summaryStatus: 'ready').
  */
-export function getDefaultTestTranscripts(): StoredTranscript[] {
-	const now = Date.now();
-	return [
-		{
-			id: '550e8400-e29b-41d4-a716-446655440001',
-			date: now - 2 * 60 * 60 * 1000, // 2 hours ago
-			text: 'The quick brown fox jumps over the lazy dog. This is a test transcription.',
-			chunks: [
-				{ text: 'The quick brown fox', timestamp: [0, 1.2] },
-				{ text: 'jumps over the lazy dog', timestamp: [1.2, 2.5] },
-				{ text: 'This is a test transcription', timestamp: [2.5, 4.1] },
-			],
-		},
-		{
-			id: '550e8400-e29b-41d4-a716-446655440002',
-			date: now - 1 * 60 * 60 * 1000, // 1 hour ago
-			text: 'Software testing is crucial for quality assurance and reliability.',
-			chunks: [
-				{ text: 'Software testing', timestamp: [0, 0.8] },
-				{ text: 'is crucial for quality assurance', timestamp: [0.8, 2.1] },
-				{ text: 'and reliability', timestamp: [2.1, 2.9] },
-			],
-		},
-		{
-			id: '550e8400-e29b-41d4-a716-446655440003',
-			date: now - 30 * 60 * 1000, // 30 minutes ago
-			text: 'End to end testing validates the complete application workflow.',
-			chunks: [
-				{ text: 'End to end testing', timestamp: [0, 1.0] },
-				{ text: 'validates the complete application', timestamp: [1.0, 2.2] },
-				{ text: 'workflow', timestamp: [2.2, 2.7] },
-			],
-		},
-	];
+export function enrichedMeetingFactory(overrides: Partial<Omit<Meeting, 'id'>> = {}): Omit<Meeting, 'id'> {
+  return meetingFactory({
+    summary: 'The team reviewed quarterly targets and agreed on next steps.',
+    summaryStatus: 'ready',
+    decisions: ['Approved Q3 roadmap', 'Assigned ownership of migration task'],
+    topics: ['Quarterly targets', 'Roadmap planning'],
+    actionItems: [
+      { text: 'Write migration plan by Friday', done: false },
+      { text: 'Update project tracker', done: false },
+    ],
+    ...overrides,
+  });
 }

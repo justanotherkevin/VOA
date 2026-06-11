@@ -23,7 +23,7 @@ export interface E2EConfig {
  * Falls back to defaults if .env.e2e is not loaded
  */
 export function loadE2EConfig(): E2EConfig {
-  const appName = process.env.VITE_APP_NAME || 'audio-to-text';
+  const appName = 'voa'; // matches package.json "name" — electron-store uses this as the directory
   const storeName = process.env.VITE_STORE_NAME || 'audio-to-text-test';
   const appStorePathEnv = process.env.VITE_APP_STORE_PATH;
   const releaseAppPath = process.env.VITE_RELEASE_APP_PATH || '../../release/app';

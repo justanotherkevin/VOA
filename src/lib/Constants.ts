@@ -193,6 +193,10 @@ export const MODEL_META_DATA = [
 ];
 
 export const CACHED_MODEL_META: Record<string, { subtitle: string; description: string }> = {
+	'Qwen2.5-1.5B-Instruct': {
+		subtitle: 'AI summaries · ~900 MB',
+		description: "Alibaba's Qwen 2.5 1.5B runs fully on-device to generate structured summaries, decisions, topics, and action items after each meeting.",
+	},
 	'distilbart-cnn-6-6': {
 		subtitle: 'for text summary',
 		description: "A distilled version of Facebook's BART model, fine-tuned on CNN/DailyMail news articles for abstractive summarization. Generates a short summary of your transcript. The \"6-6\" means 6 encoder layers + 6 decoder layers (the full BART-large has 12+12).",

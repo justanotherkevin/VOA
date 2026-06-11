@@ -86,10 +86,15 @@ class StructuredSummarizerService {
   private pipe: any = null;
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
+  private progressCallback: ((data: any) => void) | null = null;
 
-  async initialize(): Promise<void> {
+  async initialize(progressCallback?: (data: any) => void): Promise<void> {
+    if (progressCallback) this.progressCallback = progressCallback;
     if (this.initializationPromise) return this.initializationPromise;
-    if (this.isInitialized) return Promise.resolve();
+    if (this.isInitialized) {
+      progressCallback?.({ status: 'ready' });
+      return Promise.resolve();
+    }
 
     this.initializationPromise = (async () => {
       try {
@@ -101,7 +106,7 @@ class StructuredSummarizerService {
         this.pipe = await pipeline(
           'text-generation',
           DEFAULT_MODELS.text2structuredSummary,
-          { dtype: 'q4' },
+          { dtype: 'q4', progress_callback: (d: any) => this.progressCallback?.(d) },
         );
         this.isInitialized = true;
         console.log('[StructuredSummarizer] Pipeline initialized successfully');

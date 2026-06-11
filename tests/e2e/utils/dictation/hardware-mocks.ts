@@ -167,28 +167,50 @@ export async function setupAudioMocking(page: Page): Promise<void> {
   await page.addInitScript(setupFn);
 }
 
+// Must match connect-src in index.html CSP (http://localhost:*).
+// Playwright intercepts before Vite ever handles it.
+const AUDIO_SERVE_URL = 'http://localhost:5173/__e2e_audio_mock__';
+
 /**
- * Mount mock audio chunks to trigger transcription workflow
+ * Mount mock audio chunks to trigger transcription workflow.
+ *
+ * Serves the audio file via Playwright route interception instead of
+ * serialising bytes through page.evaluate — safe for files of any size.
  */
 export async function mountMockAudioChunks(
   electronPage: Page,
   audioFilename: string = 'fairy-tails-story.mp3',
+  mocksDir: string = path.join(__dirname, '../../mocks'),
 ): Promise<void> {
-  const audioFilePath = path.join(__dirname, '../../mocks', audioFilename);
+  const audioFilePath = path.join(mocksDir, audioFilename);
   const audioFileBuffer = await fs.promises.readFile(audioFilePath);
 
-  const setRecordingHook = await electronPage.evaluate(
-    async (audioData: { bytes: number[] }) => {
-      const uint8Array = new Uint8Array(audioData.bytes);
-      const mockBlob = new Blob([uint8Array], { type: 'audio/mpeg' });
+  // Serve the file via route interception so no large JSON goes over CDP.
+  await electronPage.route(AUDIO_SERVE_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'audio/mpeg',
+      body: audioFileBuffer,
+    }),
+  );
 
-      // Access the recording complete handler from useRecordingFlow
+  try {
+    const result = await electronPage.evaluate(async (audioUrl: string) => {
+      let response: Response;
+      try {
+        response = await fetch(audioUrl);
+      } catch (e) {
+        return { success: false, error: `fetch failed: ${e}` };
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const mockBlob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+
       const hooks = (window as any).__recordingFlowHooks__;
       if (hooks && hooks.triggerRecordingComplete) {
         await hooks.triggerRecordingComplete(
-          [mockBlob], // chunks array
-          'audio/mpeg', // mimeType
-          Date.now() - 500, // startTime (simulated 2.5s recording)
+          [mockBlob],
+          'audio/mpeg',
+          Date.now() - 500,
         );
         console.log('[Test] Mock audio processing triggered');
         return { success: true };
@@ -196,12 +218,12 @@ export async function mountMockAudioChunks(
         console.error('[Test] Recording flow hooks not found on window');
         return { success: false, error: 'Hooks not available' };
       }
-    },
-    { bytes: Array.from(audioFileBuffer) },
-  );
-  if (!setRecordingHook.success) {
-    throw new Error(
-      `Failed to trigger mock audio processing: ${setRecordingHook.error}`,
-    );
+    }, AUDIO_SERVE_URL);
+
+    if (!result.success) {
+      throw new Error(`Failed to trigger mock audio processing: ${result.error}`);
+    }
+  } finally {
+    await electronPage.unroute(AUDIO_SERVE_URL);
   }
 }

@@ -20,6 +20,7 @@ export const CHANNELS = {
     DELETE: 'meetings:delete',
     CLEAR: 'meetings:clear',
     SAVED: 'meetings:saved',
+    CLEARED: 'meetings:cleared',
   },
   MEETING_DETECTOR: {
     DETECTED: 'meeting-detector:detected',
@@ -44,8 +45,18 @@ export const CHANNELS = {
     CACHE_LIST: 'modelCache:list',
     CACHE_DELETE: 'modelCache:delete',
     CACHE_CLEAR_ALL: 'modelCache:clearAll',
+    CACHE_PATHS: 'modelCache:paths',
     GET_ASR_TYPE: 'settings:get-asr-type',
     SET_ASR_TYPE: 'settings:set-asr-type',
+    SUMMARIZER_PREFETCH: 'summarizer:prefetch',
+  },
+  SUMMARIZER: {
+    PROGRESS: 'summarizer:progress',
+    READY: 'summarizer:ready',
+    ERROR: 'summarizer:error',
+  },
+  SHELL: {
+    OPEN_PATH: 'shell:openPath',
   },
   PERMISSIONS: {
     CHECK: 'permissions:check',

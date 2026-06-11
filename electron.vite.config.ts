@@ -15,6 +15,11 @@ export default defineConfig({
     build: {
       outDir: 'dist/main',
       sourcemap: 'hidden',
+      rollupOptions: {
+        // node-web-audio-api is in devDeps (test-only); externalizeDepsPlugin
+        // only covers deps, so we must mark it external explicitly.
+        external: ['node-web-audio-api'],
+      },
     },
   },
   preload: {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Mic, Settings } from 'lucide-react';
+import appIcon from '../../../../assets/icons/64x64.png';
 
 export type AppStatus = 'ready' | 'recording' | 'processing';
 
@@ -27,8 +28,12 @@ export default function Sidebar({ status = 'ready' }: SidebarProps) {
     <div className="flex flex-col w-14 bg-[#111] text-white h-screen border-r border-[#222] items-center py-4">
       {/* App icon with status badge */}
       <div className="mb-6 relative group" title={label}>
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Mic size={16} />
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+          <img
+            src={appIcon}
+            alt="App icon"
+            className="w-full h-full rounded-lg"
+          />
         </div>
 
         {/* Status dot — bottom-right corner, slightly outside the icon */}

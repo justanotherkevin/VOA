@@ -18,12 +18,12 @@ import {
 import path from 'path';
 import fs from 'fs';
 import { e2eConfig } from './config';
-import { getDefaultTestTranscripts } from './fixtures-data';
 import { DEFAULT_SHORTCUTS } from '@/main/store';
 
 type ElectronFixtures = {
   electronApp: any;
   page: Page;
+  cleanState: void;
 };
 
 async function getMainWindow(electronApp: any): Promise<Page> {
@@ -70,7 +70,8 @@ function initializeTestStore(): void {
     const storeFilePath = path.join(appStorePath, `${storeName}.json`);
 
     const storeData = {
-      transcriptHistory: getDefaultTestTranscripts(),
+      meetings: [],
+      meetingsMigrated: true,
       shortcuts: DEFAULT_SHORTCUTS,
       modelPreferences: {
         selectedModel: 'Xenova/whisper-tiny',
@@ -109,26 +110,69 @@ function cleanupElectronStore(): void {
 export const test = base.extend<ElectronFixtures>({
   electronApp: [
     async ({}, use) => {
+      // Write a clean store before the app launches so it reads no stale data on startup.
+      // This is the only reliable initialization point — the app reads the file on boot,
+      // and the worker-scoped app is shared across all tests in this worker.
+      initializeTestStore();
       const app = await electron.launch({
         args: [path.join(__dirname, '../../dist/main/main.js')],
         env: {
           ...process.env,
           NODE_ENV: 'development',
           E2E_TEST: 'true',
+          E2E_STORE_NAME: 'audio-to-text-test',
         },
       });
 
       await use(app);
-      await app.close();
+      try {
+        await app.close();
+      } catch (e) {
+        console.error('[fixtures-dev] app.close() failed (app may have crashed):', e);
+      }
+      cleanupElectronStore();
     },
     { scope: 'worker' },
   ] as any,
 
+  // auto:true — runs before and after every test without needing to be requested.
+  // Clears meetings in the store AND notifies the renderer so useMeetings re-renders.
+  cleanState: [
+    async ({ electronApp }, use) => {
+      // Wait for __e2eStore to be ready before clearing — it's set asynchronously
+      // during app boot and cleanState can run before initializeStore() resolves.
+      const waitForStore = async () => {
+        const deadline = Date.now() + 10_000;
+        while (Date.now() < deadline) {
+          const ready = await electronApp.evaluate(
+            () => !!(global as any).__e2eStore,
+          );
+          if (ready) return;
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        console.warn('[fixtures-dev] __e2eStore not ready after 10s — clearing may be a no-op');
+      };
+
+      const reset = async () => {
+        await waitForStore();
+        await electronApp.evaluate(({ BrowserWindow }: any) => {
+          (global as any).__e2eStore?.set('meetings', []);
+          BrowserWindow.getAllWindows().forEach((win: any) => {
+            win.webContents.send('meetings:cleared');
+          });
+        });
+      };
+      await reset();
+      await use();
+      await reset();
+    },
+    { auto: true },
+  ] as any,
+
   page: async ({ electronApp }, use) => {
+    let mainWindow: Page | undefined;
     try {
-      // Initialize test store with fixture data before each test
-      initializeTestStore();
-      const mainWindow = await getMainWindow(electronApp);
+      mainWindow = await getMainWindow(electronApp);
 
       if (mainWindow.isClosed?.()) {
         throw new Error('Main window closed immediately after getting it');
@@ -137,9 +181,6 @@ export const test = base.extend<ElectronFixtures>({
       await mainWindow.waitForLoadState('domcontentloaded', { timeout: 10000 });
 
       await use(mainWindow);
-
-      // Cleanup test store after each test completes
-      cleanupElectronStore();
     } catch (error) {
       console.error('[fixtures-dev] Error in page fixture:', error);
       throw error;

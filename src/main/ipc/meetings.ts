@@ -5,10 +5,13 @@ import {
   updateMeeting,
   deleteMeeting,
   clearMeetings,
+  saveMeeting,
   getMeetingPreferences,
   saveMeetingPreferences,
+  Meeting,
 } from '../store';
 import { CHANNELS } from '@/lib/ipc-channels';
+import { getMainWindow } from '../state/volatile';
 
 export function registerMeetingsHandlers() {
   ipcMain.handle(CHANNELS.MEETINGS.GET_ALL, async () => {
@@ -29,6 +32,7 @@ export function registerMeetingsHandlers() {
 
   ipcMain.handle(CHANNELS.MEETINGS.CLEAR, async () => {
     clearMeetings();
+    getMainWindow()?.webContents.send(CHANNELS.MEETINGS.CLEARED);
     return { success: true };
   });
 
@@ -40,4 +44,10 @@ export function registerMeetingsHandlers() {
     saveMeetingPreferences(prefs as any);
     return { success: true };
   });
+
+  if (process.env.E2E_TEST === 'true') {
+    ipcMain.handle('meetings:e2e-seed', async (_event, data: Omit<Meeting, 'id'>) => {
+      return saveMeeting(data);
+    });
+  }
 }

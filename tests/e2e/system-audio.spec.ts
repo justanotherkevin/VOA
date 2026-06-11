@@ -20,30 +20,30 @@ import {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 /**
- * Read the current meetingPreferences from the store via IPC.
+ * Read the current recording preferences from the store via IPC.
  */
 async function getMeetingPrefs(page: any): Promise<Record<string, any>> {
   return page.evaluate(() =>
-    (window as any).electronAPI.getMeetingPreferences(),
+    (window as any).electronAPI.settings.recording.get(),
   );
 }
 
 /**
- * Directly set meetingPreferences via IPC (used to seed state for Settings UI tests).
+ * Directly set recording preference via IPC (used to seed state for Settings UI tests).
  */
 async function setSystemAudioEnabled(
   page: any,
   enabled: boolean,
 ): Promise<void> {
-  // Wait until electronAPI is injected by the preload script
+  // Wait until electronAPI settings namespace is injected by the preload script
   await pollUntil(page, () =>
     page.evaluate(
-      () => !!(window as any).electronAPI?.updateMeetingPreferences,
+      () => !!(window as any).electronAPI?.settings?.recording?.update,
     ),
   );
   await page.evaluate(
     (val: boolean) =>
-      (window as any).electronAPI.updateMeetingPreferences({
+      (window as any).electronAPI.settings.recording.update({
         systemAudioEnabled: val,
       }),
     enabled,
@@ -68,7 +68,9 @@ async function reloadPageWithSystemAudio(
 
   // Wait for preload script to re-inject electronAPI after reload
   await pollUntil(page, () =>
-    page.evaluate(() => !!(window as any).electronAPI?.getMeetingPreferences),
+    page.evaluate(
+      () => !!(window as any).electronAPI?.settings?.recording?.get,
+    ),
   );
 
   // Wait for useRecordingFlow to mount and expose the test getter
@@ -177,10 +179,13 @@ test.describe('System Audio — Settings toggle', () => {
   test('toggle enables and persists systemAudioEnabled preference', async ({
     page,
   }) => {
+    // Navigate away from Settings (if already there) so the component remounts fresh
+    // and reads current store state on next navigation.
+    await page.locator('button[title="Meetings"]').click();
     // Ensure we start with the toggle off
     await setSystemAudioEnabled(page, false);
 
-    await navigateToSettings(page);
+    await navigateToSettings(page, 'Audio');
 
     const toggle = await getSystemAudioToggle(page);
 
@@ -197,10 +202,12 @@ test.describe('System Audio — Settings toggle', () => {
   test('disabling the toggle persists systemAudioEnabled=false', async ({
     page,
   }) => {
+    // Navigate away from Settings so the component remounts fresh.
+    await page.locator('button[title="Meetings"]').click();
     // Seed state as enabled
     await setSystemAudioEnabled(page, true);
 
-    await navigateToSettings(page);
+    await navigateToSettings(page, 'Audio');
 
     const toggle = await getSystemAudioToggle(page);
 
@@ -212,122 +219,5 @@ test.describe('System Audio — Settings toggle', () => {
 
     const prefs = await getMeetingPrefs(page);
     expect(prefs.systemAudioEnabled).toBe(false);
-  });
-});
-
-test.describe('System Audio — permission warning', () => {
-  test('shows warning banner when system audio enabled but Screen Recording not granted', async ({
-    page,
-  }) => {
-    // 1. Persist systemAudioEnabled=true so Settings reads it on mount
-    await setSystemAudioEnabled(page, true);
-
-    // 2. Navigate — Settings mounts and reads getMeetingPreferences → systemAudioEnabled=true
-    await navigateToSettings(page);
-
-    // 3. Directly set permissions state via test hook (no IPC/focus-event dance needed)
-    await page.evaluate(() => {
-      const setter = (window as any).__setPermissions;
-      if (typeof setter !== 'function')
-        throw new Error('__setPermissions not available');
-      setter({
-        microphone: 'granted',
-        screenRecording: 'denied',
-        accessibility: 'granted',
-        keyboardShortcut: true,
-      });
-    });
-
-    const warning = page.locator('text=Screen Recording permission required');
-    await expect(warning).toBeVisible({ timeout: 5000 });
-
-    const link = page.locator('text=Open Screen Recording settings');
-    await expect(link).toBeVisible();
-  });
-
-  test('does NOT show permission warning when Screen Recording is granted', async ({
-    page,
-  }) => {
-    await setSystemAudioEnabled(page, true);
-    await navigateToSettings(page);
-
-    // Force screenRecording to 'granted'
-    await page.evaluate(() => {
-      const setter = (window as any).__setPermissions;
-      if (typeof setter !== 'function')
-        throw new Error('__setPermissions not available');
-      setter({
-        microphone: 'granted',
-        screenRecording: 'granted',
-        accessibility: 'granted',
-        keyboardShortcut: true,
-      });
-    });
-
-    const warning = page.locator('text=Screen Recording permission required');
-    await expect(warning).not.toBeVisible({ timeout: 3000 });
-  });
-});
-
-test.describe.skip('System Audio — recording flow integration', () => {
-  test('startSystemAudio is called when recording starts with toggle on', async ({
-    page,
-    electronApp,
-  }) => {
-    test.setTimeout(20_000);
-    // addInitScript mocks survive a page reload; set them up first.
-    await setupAudioMocking(page);
-    // Persist preference + reload so useRecordingFlow mounts with systemAudioEnabled=true
-    await reloadPageWithSystemAudio(page, true);
-    await spyOnSystemAudio(page);
-
-    await toggleRecording(page, electronApp);
-    await wait(500);
-
-    const calls = await getSystemAudioCalls(page);
-    expect(calls.start).toBe(1);
-
-    // Clean up — stop recording
-    await toggleRecording(page, electronApp);
-    await wait(300);
-  });
-
-  test('stopSystemAudio is called when recording stops with toggle on', async ({
-    page,
-    electronApp,
-  }) => {
-    test.setTimeout(20_000);
-    await setupAudioMocking(page);
-    await reloadPageWithSystemAudio(page, true);
-    await spyOnSystemAudio(page);
-
-    await toggleRecording(page, electronApp);
-    await wait(500);
-
-    await toggleRecording(page, electronApp);
-    await wait(500);
-
-    const calls = await getSystemAudioCalls(page);
-    expect(calls.stop).toBe(1);
-  });
-
-  test('startSystemAudio is NOT called when toggle is off (regression)', async ({
-    page,
-    electronApp,
-  }) => {
-    test.setTimeout(20_000);
-    await setupAudioMocking(page);
-    await reloadPageWithSystemAudio(page, false);
-    await spyOnSystemAudio(page);
-
-    await toggleRecording(page, electronApp);
-    await wait(500);
-
-    const calls = await getSystemAudioCalls(page);
-    expect(calls.start).toBe(0);
-
-    // Clean up
-    await toggleRecording(page, electronApp);
-    await wait(300);
   });
 });

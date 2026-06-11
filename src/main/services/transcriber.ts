@@ -215,11 +215,19 @@ class TranscriberService {
 
   private async getStructuredSummary(text: string) {
     try {
+      const win = getMainWindow();
+      const sendProgress = (data: any) => {
+        try { win?.webContents.send(CHANNELS.SUMMARIZER.PROGRESS, data); } catch {}
+      };
+      await structuredSummarizerService.initialize(sendProgress);
       const result = await structuredSummarizerService.summarize(text);
       log('[TranscriberService] Structured summarization complete');
+      win?.webContents.send(CHANNELS.SUMMARIZER.READY, {});
       return result;
     } catch (error) {
       log('[TranscriberService] Error summarizing text:', error);
+      const win = getMainWindow();
+      try { win?.webContents.send(CHANNELS.SUMMARIZER.ERROR, String(error)); } catch {}
       return null;
     }
   }
@@ -290,6 +298,13 @@ class TranscriberService {
     meetingId: string,
     text: string,
   ): Promise<void> {
+    if (process.env.E2E_TEST === 'true') {
+      // E2E tests inject mock enrichment via transcriber:e2e-mock-enrich-meeting.
+      // Skip the real Qwen model: onnxruntime-node@1.21 SIGSEGVs on ARM64 when
+      // loading models via HuggingFace XET streaming.
+      log('[TranscriberService] E2E mode: skipping Qwen enrichment, awaiting mock injection');
+      return;
+    }
     try {
       const result = await this.getStructuredSummary(text);
       const updated = updateMeeting(meetingId, {

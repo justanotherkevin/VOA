@@ -134,7 +134,9 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
 
 export async function initializeStore() {
   const { default: Store } = await import('electron-store');
-  const storeName = process.env.VITE_STORE_NAME || 'audio-to-text';
+  // E2E_STORE_NAME is a runtime env var (not replaced at build time like VITE_*).
+  // Passing it via electronApp.launch env lets tests use an isolated store file.
+  const storeName = process.env.E2E_STORE_NAME || 'audio-to-text';
   store = new Store<StoreSchema>({
     name: storeName,
     defaults: {
@@ -151,6 +153,10 @@ export async function initializeStore() {
   });
 
   runMigrations();
+
+  if (process.env.E2E_TEST === 'true') {
+    (global as any).__e2eStore = store;
+  }
 }
 
 // ─── Migration ────────────────────────────────────────────────────────────────
