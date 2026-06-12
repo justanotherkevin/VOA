@@ -1,8 +1,8 @@
 # VOA
 
-> **Screenshot / demo GIF goes here.**
-> Once you have a recording, add it at `docs/screenshots/demo.gif` and replace this line with:
-> `![VOA demo](docs/screenshots/demo.gif)`
+| Meeting transcript | Model selection |
+|---|---|
+| ![Meeting transcript with AI summary](docs/screenshots/city-meeting-transcript.webp) | ![Available LLM models](docs/screenshots/model-list.webp) |
 
 **VOA** is a macOS desktop app that transcribes anything you say — meetings, calls, voice memos — using on-device AI. Press a hotkey from any app, speak, and get a searchable transcript with an AI-generated summary. Nothing leaves your machine.
 
@@ -68,6 +68,7 @@ sequenceDiagram
     participant VAD as VAD (useVAD)
     participant IPC as IPC Bridge
     participant Transcriber as TranscriberService
+    participant Qwen as Qwen2.5 (utilityProcess)
 
     User->>Main: Press hotkey (any app)
     Main->>Renderer: recording:toggle
@@ -84,11 +85,18 @@ sequenceDiagram
 
     User->>Main: Press hotkey again
     Renderer->>IPC: endTranscriberSession()
-    Transcriber->>Transcriber: Generate AI summary
-    Transcriber-->>Renderer: meeting:saved
+    Transcriber-->>Renderer: meeting:saved (summaryStatus: not-started)
+
+    Note over Renderer: Meeting recordings show "✨ Meeting details" button
+    User->>Renderer: Click "Meeting details"
+    Renderer->>IPC: meetings:enrich(meetingId)
+    IPC->>Transcriber: triggerEnrichment()
+    Transcriber->>Qwen: summarize(transcript)
+    Qwen-->>Transcriber: summary + decisions + action items
+    Transcriber-->>Renderer: meeting:updated (summaryStatus: ready)
 ```
 
-The main process registers a global shortcut and handles all AI inference. The renderer manages audio capture via Web Audio API + VAD, streaming raw `Float32Array` segments over IPC. Whisper runs in the Node.js main process via ONNX Runtime — no Worker, no browser sandbox.
+The main process registers a global shortcut and handles all AI inference. The renderer manages audio capture via Web Audio API + VAD, streaming raw `Float32Array` segments over IPC. Whisper runs in the Node.js main process via ONNX Runtime. Qwen2.5 runs in an Electron `utilityProcess` child to isolate ONNX crashes from the main process. Meeting summaries are generated on-demand when the user explicitly requests them — nothing runs automatically after recording ends.
 
 ---
 
@@ -141,22 +149,6 @@ VOA's built-in permissions screen walks you through granting each one.
 | Persistent storage | `electron-store` |
 | Build | `electron-vite`, `electron-builder` |
 | Testing | Vitest, Playwright |
-
----
-
-## Adding Screenshots
-
-When you're ready to add visuals:
-
-1. Create the folder: `docs/screenshots/`
-2. Add your file: `docs/screenshots/demo.gif` (GIF) or `docs/screenshots/app.png` (static)
-3. Replace the placeholder at the top of this README with:
-
-```markdown
-![VOA demo](docs/screenshots/demo.gif)
-```
-
-Recommended capture: show the recording pill appearing, a transcript streaming in, and the structured summary view.
 
 ---
 
