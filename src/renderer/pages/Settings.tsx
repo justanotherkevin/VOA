@@ -93,7 +93,8 @@ export default function Settings() {
   const [cachedModels, setCachedModels] = useState<Array<{ name: string; size: number; path: string; source: 'xenova' | 'hf' }>>([]);
   const [isDeletingModel, setIsDeletingModel] = useState<string | null>(null);
   const [summarizerStatus, setSummarizerStatus] = useState<'idle' | 'downloading' | 'ready' | 'error'>('idle');
-  const [summarizerProgress, setSummarizerProgress] = useState<Array<{ file: string; progress: number }>>([]);
+  // progress: null = file started but percentage unknown (large files saved to HF disk cache)
+  const [summarizerProgress, setSummarizerProgress] = useState<Array<{ file: string; progress: number | null }>>([]);
   const [cachePaths, setCachePaths] = useState<{ xenova: string; hf: string } | null>(null);
 
   const [isShortcutDialogOpen, setIsShortcutDialogOpen] = useState(false);
@@ -152,7 +153,19 @@ export default function Settings() {
       });
 
     const unsubProgress = window.electronAPI.summarizer.on.progress((data: any) => {
-      if (data?.status === 'progress' && data?.file && typeof data?.progress === 'number') {
+      if (!data?.file) return;
+      // 'initiate'/'download' fire for all files including large ones saved to HF disk cache.
+      // Those never emit 'progress' (no byte-level streaming in Node.js file path mode),
+      // so we show them with an indeterminate bar (progress: null).
+      if (data.status === 'initiate' || data.status === 'download') {
+        setSummarizerStatus('downloading');
+        setSummarizerProgress((prev) => {
+          if (prev.some((p) => p.file === data.file)) return prev;
+          return [...prev, { file: data.file, progress: null }];
+        });
+        return;
+      }
+      if (data.status === 'progress' && typeof data.progress === 'number') {
         setSummarizerStatus('downloading');
         setSummarizerProgress((prev) => {
           const idx = prev.findIndex((p) => p.file === data.file);
@@ -1027,17 +1040,28 @@ export default function Settings() {
                               <div key={item.file}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--s-text2)', marginBottom: 3 }}>
                                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>{item.file}</span>
-                                  <span>{Math.round(item.progress)}%</span>
+                                  <span>{item.progress === null ? '…' : `${Math.round(item.progress)}%`}</span>
                                 </div>
-                                <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'var(--s-border)' }}>
-                                  <div
-                                    style={{
-                                      height: 4, borderRadius: 2,
-                                      background: 'var(--s-accent)',
-                                      width: `${item.progress}%`,
-                                      transition: 'width 0.2s ease',
-                                    }}
-                                  />
+                                <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'var(--s-border)', overflow: 'hidden' }}>
+                                  {item.progress === null ? (
+                                    <div
+                                      style={{
+                                        height: 4, borderRadius: 2,
+                                        background: 'var(--s-accent)',
+                                        width: '30%',
+                                        animation: 'summarizer-indeterminate 1.4s ease-in-out infinite',
+                                      }}
+                                    />
+                                  ) : (
+                                    <div
+                                      style={{
+                                        height: 4, borderRadius: 2,
+                                        background: 'var(--s-accent)',
+                                        width: `${item.progress}%`,
+                                        transition: 'width 0.2s ease',
+                                      }}
+                                    />
+                                  )}
                                 </div>
                               </div>
                             ))}

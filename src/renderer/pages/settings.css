@@ -278,6 +278,13 @@
   outline-color: var(--s-text2);
 }
 
+/* ── Indeterminate progress bar for large model downloads ── */
+@keyframes summarizer-indeterminate {
+  0%   { transform: translateX(-100%); }
+  60%  { transform: translateX(280%); }
+  100% { transform: translateX(280%); }
+}
+
 /* ── Pane entrance animation ── */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes s-rise {

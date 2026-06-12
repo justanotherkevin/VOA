@@ -21,8 +21,9 @@ export interface Meeting {
     text: string;
     timestamp: [number, number | null];
   }>;
+  isMeeting: boolean;
   summary: string;
-  summaryStatus: 'pending' | 'ready' | 'failed';
+  summaryStatus: 'pending' | 'ready' | 'failed' | 'not-started';
   decisions: string[];
   topics: string[];
   actionItems: MeetingActionItem[];
@@ -136,6 +137,7 @@ export async function initializeStore() {
   const { default: Store } = await import('electron-store');
   // E2E_STORE_NAME is a runtime env var (not replaced at build time like VITE_*).
   // Passing it via electronApp.launch env lets tests use an isolated store file.
+  // eg. ~/Library/Application Support/voa/audio-to-text.json
   const storeName = process.env.E2E_STORE_NAME || 'audio-to-text';
   store = new Store<StoreSchema>({
     name: storeName,
@@ -166,6 +168,7 @@ function migrateOldMeeting(m: any): Meeting {
   const summaryStatus = m.summaryStatus ?? 'ready';
   return {
     ...m,
+    isMeeting: m.isMeeting ?? false,
     summary,
     summaryStatus,
     decisions: m.decisions ?? [],
@@ -232,7 +235,10 @@ export function getMeetingById(id: string): Meeting | null {
   return found ? migrateOldMeeting(found) : null;
 }
 
-export function updateMeeting(id: string, patch: Partial<Meeting>): Meeting | null {
+export function updateMeeting(
+  id: string,
+  patch: Partial<Meeting>,
+): Meeting | null {
   const meetings: Meeting[] = store.get('meetings') ?? [];
   const idx = meetings.findIndex((m) => m.id === id);
   if (idx === -1) return null;
@@ -279,7 +285,8 @@ export function updateRecordingToggleShortcut(shortcut: string): void {
 export function getModelPreferences(): ModelPreferences {
   if (!store) return DEFAULT_MODEL_PREFERENCES;
 
-  const preferences = store.get('modelPreferences') ?? DEFAULT_MODEL_PREFERENCES;
+  const preferences =
+    store.get('modelPreferences') ?? DEFAULT_MODEL_PREFERENCES;
 
   if (preferences.selectedModel?.startsWith('distil-whisper/')) {
     preferences.selectedModel = DEFAULT_MODEL_PREFERENCES.selectedModel;
@@ -298,7 +305,9 @@ export function saveModelPreferences(preferences: ModelPreferences): void {
   store?.set('modelPreferences', preferences);
 }
 
-export function updateModelPreferences(preferences: Partial<ModelPreferences>): void {
+export function updateModelPreferences(
+  preferences: Partial<ModelPreferences>,
+): void {
   const current = store?.get('modelPreferences') ?? DEFAULT_MODEL_PREFERENCES;
   store?.set('modelPreferences', { ...current, ...preferences });
 }
@@ -307,8 +316,11 @@ export function getMeetingPreferences(): MeetingPreferences {
   return store?.get('meetingPreferences') ?? DEFAULT_MEETING_PREFERENCES;
 }
 
-export function saveMeetingPreferences(prefs: Partial<MeetingPreferences>): void {
-  const current = store?.get('meetingPreferences') ?? DEFAULT_MEETING_PREFERENCES;
+export function saveMeetingPreferences(
+  prefs: Partial<MeetingPreferences>,
+): void {
+  const current =
+    store?.get('meetingPreferences') ?? DEFAULT_MEETING_PREFERENCES;
   store?.set('meetingPreferences', { ...current, ...prefs });
 }
 
@@ -355,7 +367,12 @@ export function saveTranscript(data: {
     tags: [],
   });
 
-  return { id: meeting.id, date: meeting.startedAt, text: meeting.transcript, chunks: meeting.chunks };
+  return {
+    id: meeting.id,
+    date: meeting.startedAt,
+    text: meeting.transcript,
+    chunks: meeting.chunks,
+  };
 }
 
 export function getTranscriptHistory(): StoredTranscript[] {

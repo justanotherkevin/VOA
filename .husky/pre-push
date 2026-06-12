@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo "🎭 Running E2E tests before push (requires full build)..."
+npm run test:e2e
+
+if [ $? -ne 0 ]; then
+  echo "❌ E2E tests failed. Push aborted."
+  exit 1
+fi
+
+echo "✅ E2E tests passed!"
+
+echo "✨ Pre-push checks complete!"

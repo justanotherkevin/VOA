@@ -21,6 +21,7 @@ export const CHANNELS = {
     CLEAR: 'meetings:clear',
     SAVED: 'meetings:saved',
     CLEARED: 'meetings:cleared',
+    ENRICH: 'meetings:enrich',
   },
   MEETING_DETECTOR: {
     DETECTED: 'meeting-detector:detected',

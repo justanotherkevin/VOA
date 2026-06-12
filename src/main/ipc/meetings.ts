@@ -12,6 +12,7 @@ import {
 } from '../store';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { getMainWindow } from '../state/volatile';
+import transcriberService from '../services/transcriber';
 
 export function registerMeetingsHandlers() {
   ipcMain.handle(CHANNELS.MEETINGS.GET_ALL, async () => {
@@ -42,6 +43,14 @@ export function registerMeetingsHandlers() {
 
   ipcMain.handle(CHANNELS.MEETING_PREFERENCES.UPDATE, async (_event, prefs: Record<string, unknown>) => {
     saveMeetingPreferences(prefs as any);
+    return { success: true };
+  });
+
+  ipcMain.handle(CHANNELS.MEETINGS.ENRICH, async (_event, meetingId: string) => {
+    updateMeeting(meetingId, { summaryStatus: 'pending' });
+    const updated = getMeetingById(meetingId);
+    if (updated) getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, updated);
+    void transcriberService.triggerEnrichment(meetingId);
     return { success: true };
   });
 

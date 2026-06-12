@@ -12,7 +12,7 @@
  *    when loading the Qwen model via HuggingFace XET streaming
  *
  * User presses shortcut → Recording starts → city-meeting-short.mp3 injected
- * → isMeeting forced true → Whisper transcribes → summaryStatus:'pending'
+ * → isMeeting forced true → Whisper transcribes → summaryStatus:'not-started'
  * → Mock enrichment injected → summaryStatus:'ready' → MeetingDetail renders
  */
 
@@ -65,30 +65,27 @@ test.describe('Meeting Dictation Flow', () => {
       NOT_READY_MOCKS_DIR,
     );
 
-    // STEP 4: Stop recording → Whisper transcribes → summaryStatus:'pending'
+    // STEP 4: Stop recording → Whisper transcribes → summaryStatus:'not-started'
     await stopRecording(mainPage, electronApp);
 
-    // STEP 5: Wait for the meeting to appear and confirm it is in pending state.
-    // The Key Decisions sidebar renders a "Generating…" spinner while
-    // summaryStatus is 'pending', proving the full pending state was reached
-    // before mock enrichment fires.
+    // STEP 5: Wait for the meeting to appear in the list.
+    // With on-demand enrichment, summaryStatus is 'not-started' after transcription —
+    // the spinner only shows once the user explicitly triggers enrichment.
+    // The test injects mock enrichment directly (Step 6) rather than clicking "Enrich".
     await expect(
       mainPage.locator('text=No meetings yet'),
       'meeting should have appeared in the list',
     ).not.toBeVisible({ timeout: 5_000 });
 
     await expect(
-      mainPage.locator('text=Generating…'),
-      'Key Decisions sidebar should show pending spinner before enrichment',
-    ).toBeVisible({ timeout: 10_000 });
+      mainPage.locator('[data-testid="meeting-type-badge"]').first(),
+      'meeting type badge should be visible in the history list',
+    ).toBeVisible({ timeout: 5_000 });
 
     // STEP 6: Inject mock enrichment results via test-only IPC handler.
-    // The real Qwen model (onnx-community/Qwen2.5-1.5B-Instruct) requires
-    // onnxruntime-node and the bundled version (1.21.0 inside
-    // @huggingface/transformers@3.8) crashes with SIGSEGV on ARM64 when the
-    // model is loaded via HuggingFace XET streaming. The mock bypasses the
-    // native model while still exercising the full store-update → IPC → UI
-    // rendering path that this test is designed to validate.
+    // The real Qwen model (onnx-community/Qwen2.5-1.5B-Instruct) is not downloaded
+    // in E2E test runs. The mock bypasses the native model while still exercising
+    // the full store-update → IPC → MeetingDetail UI rendering path.
     await mockEnrichMeeting(mainPage);
 
     // STEP 7: Verify enrichment sections render after summaryStatus → 'ready'

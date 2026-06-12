@@ -26,7 +26,9 @@ const CACHE_BASE_PATH = path.join(
 );
 
 const HF_CACHE_BASE = path.join(os.homedir(), '.cache', 'huggingface', 'hub');
-const QWEN_DIR_NAME = 'models--onnx-community--Qwen2.5-1.5B-Instruct';
+// @huggingface/transformers JS library writes to {cacheDir}/{org}/{model}/ (not
+// the Python hub's models--{org}--{model} format).
+const QWEN_CACHE_PATH = path.join(HF_CACHE_BASE, 'onnx-community', 'Qwen2.5-1.5B-Instruct');
 const QWEN_MODEL_NAME = 'Qwen2.5-1.5B-Instruct';
 
 export function getCachePaths(): { xenova: string; hf: string } {
@@ -76,10 +78,9 @@ export async function listCachedModels(): Promise<CachedModel[]> {
   }
 
   try {
-    const qwenPath = path.join(HF_CACHE_BASE, QWEN_DIR_NAME);
-    if (fs.existsSync(qwenPath)) {
-      const size = await getDirectorySize(qwenPath);
-      models.push({ name: QWEN_MODEL_NAME, size, path: qwenPath, source: 'hf' });
+    if (fs.existsSync(QWEN_CACHE_PATH)) {
+      const size = await getDirectorySize(QWEN_CACHE_PATH);
+      models.push({ name: QWEN_MODEL_NAME, size, path: QWEN_CACHE_PATH, source: 'hf' });
     }
   } catch (error) {
     console.error('Error listing HF cached models:', error);
@@ -91,7 +92,7 @@ export async function listCachedModels(): Promise<CachedModel[]> {
 export async function deleteModel(modelName: string, source: 'xenova' | 'hf' = 'xenova'): Promise<boolean> {
   try {
     const modelPath = source === 'hf'
-      ? path.join(HF_CACHE_BASE, QWEN_DIR_NAME)
+      ? QWEN_CACHE_PATH
       : path.join(CACHE_BASE_PATH, modelName);
 
     if (source === 'xenova' && !modelPath.startsWith(CACHE_BASE_PATH + path.sep)) {
@@ -130,7 +131,7 @@ export async function clearAllCache(): Promise<number> {
   }
 
   try {
-    const qwenPath = path.join(HF_CACHE_BASE, QWEN_DIR_NAME);
+    const qwenPath = QWEN_CACHE_PATH;
     if (fs.existsSync(qwenPath)) {
       await rm(qwenPath, { recursive: true, force: true });
       deletedCount++;

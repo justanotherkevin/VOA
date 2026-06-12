@@ -66,6 +66,7 @@ const electronAPI = {
       ipcRenderer.invoke(CHANNELS.MEETINGS.UPDATE, id, patch),
     delete: (id: string) => ipcRenderer.invoke(CHANNELS.MEETINGS.DELETE, id),
     clear: () => ipcRenderer.invoke(CHANNELS.MEETINGS.CLEAR),
+    enrich: (meetingId: string) => ipcRenderer.invoke(CHANNELS.MEETINGS.ENRICH, meetingId),
     dismiss: (meetingKey: string) =>
       ipcRenderer.invoke(CHANNELS.MEETING_DETECTOR.DISMISS, meetingKey),
     on: {

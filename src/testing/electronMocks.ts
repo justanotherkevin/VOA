@@ -18,6 +18,7 @@ let completeCallback: ((msg: any) => void) | null = null;
 let recordingToggleCallback: (() => void) | null = null;
 let notificationStateUpdateCallback: ((data: any) => void) | null = null;
 let meetingSavedCallback: ((meeting: any) => void) | null = null;
+let meetingClearedCallback: (() => void) | null = null;
 let meetingDetectedCallback: ((event: any) => void) | null = null;
 let meetingEndedCallback: ((event: any) => void) | null = null;
 
@@ -57,10 +58,15 @@ export function attachGlobalElectronMock() {
       delete: vi.fn(async () => true),
       clear: vi.fn(async () => ({ success: true })),
       dismiss: vi.fn(async () => ({ success: true })),
+      enrich: vi.fn(async () => ({ success: true })),
       on: {
         saved: vi.fn((cb: (m: any) => void) => {
           meetingSavedCallback = cb;
           return () => { meetingSavedCallback = null; };
+        }),
+        cleared: vi.fn((cb: () => void) => {
+          meetingClearedCallback = cb;
+          return () => { meetingClearedCallback = null; };
         }),
         detected: vi.fn((cb: (e: any) => void) => {
           meetingDetectedCallback = cb;
@@ -100,6 +106,7 @@ export function attachGlobalElectronMock() {
           list: vi.fn(async () => ({ success: true, models: [] })),
           delete: vi.fn(async () => ({ success: true })),
           clearAll: vi.fn(async () => ({ success: true, deletedCount: 0 })),
+          getPaths: vi.fn(async () => ({ success: true, paths: [] })),
         },
       },
       recording: {
@@ -117,6 +124,21 @@ export function attachGlobalElectronMock() {
       ui: {
         get: vi.fn(async () => ({ theme: 'dark', accentLight: '#2f6bed', accentDark: '#4f8cff', density: 'comfortable' })),
         update: vi.fn(async () => ({ success: true })),
+      },
+    },
+
+    // ── Shell ─────────────────────────────────────────────────────────────────
+    shell: {
+      openPath: vi.fn(async () => {}),
+    },
+
+    // ── Summarizer ────────────────────────────────────────────────────────────
+    summarizer: {
+      prefetch: vi.fn(async () => {}),
+      on: {
+        progress: vi.fn(() => () => {}),
+        ready: vi.fn(() => () => {}),
+        error: vi.fn(() => () => {}),
       },
     },
 
@@ -174,6 +196,10 @@ export function detachGlobalElectronMock() {
     completeCallback = null;
     recordingToggleCallback = null;
     notificationStateUpdateCallback = null;
+    meetingSavedCallback = null;
+    meetingClearedCallback = null;
+    meetingDetectedCallback = null;
+    meetingEndedCallback = null;
   }
 }
 
@@ -194,6 +220,7 @@ export function resetElectronMockCallbacks() {
   recordingToggleCallback = null;
   notificationStateUpdateCallback = null;
   meetingSavedCallback = null;
+  meetingClearedCallback = null;
   meetingDetectedCallback = null;
   meetingEndedCallback = null;
 }

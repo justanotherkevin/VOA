@@ -62,8 +62,12 @@ if (typeof window !== 'undefined') {
     value: MockResizeObserver,
   });
 
-  // Prevent JSDOM "Not implemented: HTMLCanvasElement.getContext()" noise
-  HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as any;
+  // Prevent JSDOM "Not implemented: HTMLCanvasElement.getContext()" noise.
+  // Guard needed because attachGlobalElectronMock() sets global.window = {}
+  // in Node.js, making typeof window truthy even without a real DOM.
+  if (typeof HTMLCanvasElement !== 'undefined') {
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as any;
+  }
 }
 
 // Ensure mocks and callback registries are reset between tests

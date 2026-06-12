@@ -10,7 +10,6 @@ const tsconfigPaths = tsconfigPathsPlugin({
 
 export default defineConfig({
   main: {
-    entry: 'src/main/main.ts',
     plugins: [tsconfigPaths, externalizeDepsPlugin()],
     build: {
       outDir: 'dist/main',
@@ -19,6 +18,15 @@ export default defineConfig({
         // node-web-audio-api is in devDeps (test-only); externalizeDepsPlugin
         // only covers deps, so we must mark it external explicitly.
         external: ['node-web-audio-api'],
+        input: {
+          main: path.resolve(__dirname, 'src/main/main.ts'),
+          // Qwen process runs in a separate child_process so a SIGSEGV from
+          // onnxruntime-node on ARM64 cannot propagate to the Electron main process.
+          'structured-summarizer-process': path.resolve(
+            __dirname,
+            'src/main/pipeline/structured-summarizer-process.ts',
+          ),
+        },
       },
     },
   },

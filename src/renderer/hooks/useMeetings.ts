@@ -16,8 +16,9 @@ export interface Meeting {
     text: string;
     timestamp: [number, number | null];
   }>;
+  isMeeting: boolean;
   summary: string;
-  summaryStatus: 'pending' | 'ready' | 'failed';
+  summaryStatus: 'pending' | 'ready' | 'failed' | 'not-started';
   decisions: string[];
   topics: string[];
   actionItems: MeetingActionItem[];

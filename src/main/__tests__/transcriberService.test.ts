@@ -17,6 +17,7 @@ vi.mock('@/main/pipeline/style-transfer', () => ({
 
 vi.mock('@/main/pipeline/structured-summarizer', () => ({
   default: {
+    initialize: vi.fn(async () => {}),
     summarize: vi.fn(async () => ({
       summary: '[SUMMARY] processed',
       decisions: [],
@@ -216,7 +217,7 @@ describe('TranscriberService - Helper Methods', () => {
           transcript: 'test text',
           durationMs: 1000,
           audioSource: 'mic',
-          summaryStatus: 'pending',
+          summaryStatus: 'not-started',
         }),
       );
       expect(mockCallbacks.onComplete).toHaveBeenCalledWith(
@@ -248,7 +249,7 @@ describe('TranscriberService - Helper Methods', () => {
       expect(summarizer.summarize).not.toHaveBeenCalled();
     });
 
-    it('calls structured summarizer when isMeeting=true', async () => {
+    it('does not auto-call summarizer on persist when isMeeting=true (enrichment is on-demand)', async () => {
       const { default: summarizer } = await import('@/main/pipeline/structured-summarizer');
 
       const service = transcriberService as any;
@@ -262,9 +263,8 @@ describe('TranscriberService - Helper Methods', () => {
         true,
       );
 
-      // summarizer is called asynchronously (fire-and-forget), give it a tick
       await new Promise((r) => setTimeout(r, 0));
-      expect(summarizer.summarize).toHaveBeenCalledWith('test text that is long enough');
+      expect(summarizer.summarize).not.toHaveBeenCalled();
     });
 
     it('sends error if persistence fails', async () => {

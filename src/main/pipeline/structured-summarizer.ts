@@ -1,4 +1,6 @@
 /* eslint-disable camelcase */
+import path from 'path';
+import { utilityProcess, app } from 'electron';
 import { DEFAULT_MODELS } from '@/lib/Constants';
 
 export interface StructuredSummaryResult {
@@ -82,43 +84,141 @@ export function extractFieldsWithRegex(
   return { summary, decisions, topics, actionItems };
 }
 
+type ChildMessage =
+  | { type: 'progress'; data: any }
+  | { type: 'initialized' }
+  | { type: 'init-error'; message: string }
+  | { type: 'summarize-result'; id: string; responseText: string }
+  | { type: 'summarize-error'; id: string; message: string };
+
+// Minimal interface satisfied by both UtilityProcess (production) and fake objects (tests).
+interface ISummarizerProcess {
+  postMessage(msg: any): void;
+  on(event: 'message', handler: (msg: any) => void): this;
+  on(event: 'exit', handler: (code: number | null) => void): this;
+  kill(): boolean;
+}
+
 class StructuredSummarizerService {
-  private pipe: any = null;
+  private child: ISummarizerProcess | null = null;
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
+  private initResolve: (() => void) | null = null;
+  private initReject: ((e: Error) => void) | null = null;
   private progressCallback: ((data: any) => void) | null = null;
+  private pendingSummarize = new Map<
+    string,
+    {
+      resolve: (r: StructuredSummaryResult | null) => void;
+      reject: (e: Error) => void;
+    }
+  >();
+  private summarizeCounter = 0;
+
+  // Overridable in tests to avoid spawning a real child process.
+  _processFactory: (scriptPath: string) => ISummarizerProcess = (scriptPath) =>
+    utilityProcess.fork(scriptPath, [], { serviceName: 'qwen-summarizer' });
+
+  private createChild(): ISummarizerProcess {
+    const scriptPath = path.join(__dirname, 'structured-summarizer-process.js');
+    const child = this._processFactory(scriptPath);
+
+    // Send config as the first message so the child knows the model name etc.
+    // cacheDir redirects @xenova's cache to the HF hub path that model-cache.ts
+    // already monitors, so Settings correctly reflects the download state.
+    const cacheDir = path.join(app.getPath('home'), '.cache', 'huggingface', 'hub');
+    child.postMessage({
+      type: 'config',
+      modelName: DEFAULT_MODELS.text2structuredSummary,
+      promptTemplate: PROMPT_TEMPLATE,
+      maxChars: MAX_TRANSCRIPT_CHARS,
+      cacheDir,
+    });
+
+    child.on('message', (msg: ChildMessage) => {
+      switch (msg.type) {
+        case 'progress':
+          this.progressCallback?.(msg.data);
+          break;
+
+        case 'initialized':
+          this.isInitialized = true;
+          this.initResolve?.();
+          this.initResolve = null;
+          this.initReject = null;
+          break;
+
+        case 'init-error': {
+          this.initializationPromise = null;
+          const err = new Error(msg.message);
+          this.initReject?.(err);
+          this.initResolve = null;
+          this.initReject = null;
+          break;
+        }
+
+        case 'summarize-result': {
+          const pending = this.pendingSummarize.get(msg.id);
+          if (pending) {
+            this.pendingSummarize.delete(msg.id);
+            pending.resolve(parseStructuredOutput(msg.responseText));
+          }
+          break;
+        }
+
+        case 'summarize-error': {
+          const pending = this.pendingSummarize.get(msg.id);
+          if (pending) {
+            this.pendingSummarize.delete(msg.id);
+            pending.reject(new Error(msg.message));
+          }
+          break;
+        }
+      }
+    });
+
+    // utilityProcess exit event only provides a code (no signal parameter).
+    // Any non-zero exit is treated as an unexpected crash.
+    child.on('exit', (code) => {
+      if (code !== 0) {
+        const err = new Error(
+          `Qwen process exited unexpectedly (code=${code})`,
+        );
+        console.error('[StructuredSummarizer]', err.message);
+        this._handleChildDeath(err);
+      }
+    });
+
+    return child;
+  }
+
+  private _handleChildDeath(err: Error) {
+    this.initializationPromise = null;
+    this.isInitialized = false;
+    this.initReject?.(err);
+    this.initResolve = null;
+    this.initReject = null;
+    for (const pending of this.pendingSummarize.values()) {
+      pending.reject(err);
+    }
+    this.pendingSummarize.clear();
+    this.child = null;
+  }
 
   async initialize(progressCallback?: (data: any) => void): Promise<void> {
     if (progressCallback) this.progressCallback = progressCallback;
-    if (this.initializationPromise) return this.initializationPromise;
     if (this.isInitialized) {
       progressCallback?.({ status: 'ready' });
-      return Promise.resolve();
+      return;
     }
+    if (this.initializationPromise) return this.initializationPromise;
 
-    this.initializationPromise = (async () => {
-      try {
-        console.log(
-          '[StructuredSummarizer] Initializing text-generation pipeline...',
-        );
-        // @huggingface/transformers is ESM-only; must be imported dynamically
-        const { pipeline } = await import('@huggingface/transformers');
-        this.pipe = await pipeline(
-          'text-generation',
-          DEFAULT_MODELS.text2structuredSummary,
-          { dtype: 'q4', progress_callback: (d: any) => this.progressCallback?.(d) },
-        );
-        this.isInitialized = true;
-        console.log('[StructuredSummarizer] Pipeline initialized successfully');
-      } catch (error) {
-        console.error(
-          '[StructuredSummarizer] Failed to initialize pipeline:',
-          error,
-        );
-        this.initializationPromise = null;
-        throw error;
-      }
-    })();
+    this.initializationPromise = new Promise<void>((resolve, reject) => {
+      this.initResolve = resolve;
+      this.initReject = reject;
+      if (!this.child) this.child = this.createChild();
+      this.child.postMessage({ type: 'initialize' });
+    });
 
     return this.initializationPromise;
   }
@@ -131,41 +231,25 @@ class StructuredSummarizerService {
 
     await this.initialize();
 
-    if (!this.pipe)
-      throw new Error('StructuredSummarizer pipeline not initialized');
+    const id = String(++this.summarizeCounter);
 
-    const transcript = text.slice(0, MAX_TRANSCRIPT_CHARS);
-    const messages = [
-      { role: 'user' as const, content: PROMPT_TEMPLATE + transcript },
-    ];
-
-    try {
-      const output = await this.pipe(messages, {
-        max_new_tokens: 512,
-        do_sample: false,
-      });
-
-      const generated = output[0]?.generated_text;
-      const responseText: string = Array.isArray(generated)
-        ? (generated.at(-1)?.content ?? '')
-        : (generated ?? '');
-
-      const result = parseStructuredOutput(responseText);
-      console.log(
-        '[StructuredSummarizer] Parsed result:',
-        JSON.stringify(result),
-      );
-      return result;
-    } catch (error) {
-      console.error('[StructuredSummarizer] Inference error:', error);
+    return new Promise<StructuredSummaryResult | null>((resolve, reject) => {
+      this.pendingSummarize.set(id, { resolve, reject });
+      this.child!.postMessage({ type: 'summarize', id, text });
+    }).catch((err) => {
+      console.error('[StructuredSummarizer] Inference error:', err);
       return null;
-    }
+    });
   }
 
   dispose(): void {
-    this.pipe = null;
+    this.child?.kill();
+    this.child = null;
     this.isInitialized = false;
     this.initializationPromise = null;
+    this.initResolve = null;
+    this.initReject = null;
+    this.pendingSummarize.clear();
   }
 }
 

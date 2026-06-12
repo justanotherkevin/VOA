@@ -250,10 +250,11 @@ class TranscriberService {
         startedAt,
         endedAt,
         durationMs,
+        isMeeting,
         transcript: outputText,
         chunks: outputChunks,
         summary: '',
-        summaryStatus: isMeeting ? 'pending' : 'ready',
+        summaryStatus: isMeeting ? 'not-started' : 'ready',
         decisions: [],
         topics: [],
         actionItems: [],
@@ -284,10 +285,6 @@ class TranscriberService {
       });
 
       log('[TranscriberService] Meeting persisted:', meeting.id, '| isMeeting:', isMeeting);
-
-      if (isMeeting) {
-        this.enrichMeetingWithStructuredSummary(meeting.id, outputText);
-      }
     } catch (error) {
       log('[TranscriberService] Error persisting meeting:', error);
       await this.onError(callbacks, error);
@@ -375,10 +372,11 @@ class TranscriberService {
       startedAt: meta.startedAt,
       endedAt: meta.endedAt,
       durationMs: meta.endedAt - meta.startedAt,
+      isMeeting: meta.isMeeting,
       transcript: outputText,
       chunks: outputChunks,
       summary: '',
-      summaryStatus: meta.isMeeting ? 'pending' : 'ready',
+      summaryStatus: meta.isMeeting ? 'not-started' : 'ready',
       decisions: [],
       topics: [],
       actionItems: [],
@@ -388,9 +386,6 @@ class TranscriberService {
     });
     this.lastSavedMeetingId = meeting.id;
     getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, meeting);
-    if (meta.isMeeting) {
-      this.enrichMeetingWithStructuredSummary(meeting.id, outputText);
-    }
     log(
       `[TranscriberService] Late ${source} segment — created meeting ${meeting.id} (session had empty buffer)`,
     );
@@ -504,6 +499,12 @@ class TranscriberService {
       }
     }
     return '';
+  }
+
+  async triggerEnrichment(meetingId: string): Promise<void> {
+    const meeting = getMeetingById(meetingId);
+    if (!meeting?.transcript) return;
+    return this.enrichMeetingWithStructuredSummary(meetingId, meeting.transcript);
   }
 
   dispose(): void {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlignLeft,
   MessageSquare,
@@ -10,6 +10,8 @@ import {
   Lightbulb,
   Tag,
   Loader2,
+  Sparkles,
+  Download,
 } from 'lucide-react';
 import type { Meeting } from '@/renderer/hooks/useMeetings';
 import {
@@ -21,6 +23,7 @@ import {
 
 interface MeetingDetailProps {
   meeting: Meeting | null;
+  summarizerReady: boolean;
   onDelete?: (id: string) => void;
   onTitleChange?: (id: string, title: string) => void;
 }
@@ -62,13 +65,25 @@ const HAS_TAGS_RE = /\[(Meeting|Mic)\]/i;
 
 export function MeetingDetail({
   meeting,
+  summarizerReady,
   onDelete,
   onTitleChange,
 }: MeetingDetailProps) {
   const { copied, copy } = useCopyText();
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  const [enriching, setEnriching] = useState(false);
   const [tagStyle, setTagStyle] = useState<TranscriptTagStyle>(loadTagStyle);
+
+  useEffect(() => {
+    if (enriching && meeting?.summaryStatus === 'ready') setEnriching(false);
+  }, [enriching, meeting?.summaryStatus]);
+
+  const handleEnrich = async () => {
+    if (!meeting || enriching) return;
+    setEnriching(true);
+    await window.electronAPI.meetings.enrich(meeting.id);
+  };
 
   const handleTagStyleChange = (style: TranscriptTagStyle) => {
     setTagStyle(style);
@@ -125,12 +140,14 @@ export function MeetingDetail({
     .join('');
 
   const summaryReady = meeting.summaryStatus === 'ready';
+  const summaryPending = meeting.summaryStatus === 'pending' || enriching;
+  const summaryNotStarted = meeting.summaryStatus === 'not-started' && !enriching;
 
   const shouldShowSideDetails =
     (summaryReady && meeting.decisions.length > 0) ||
     (summaryReady && meeting.topics.length > 0) ||
     meeting.actionItems.length > 0 ||
-    meeting.summaryStatus === 'pending';
+    summaryPending;
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#111]">
       {/* Header */}
@@ -206,7 +223,7 @@ export function MeetingDetail({
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
           {/* Overview */}
           <Section icon={<AlignLeft size={15} />} title="Overview">
-            {meeting.summaryStatus === 'pending' && (
+            {summaryPending && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Loader2 size={13} className="animate-spin" />
                 <span>Generating summary…</span>
@@ -216,6 +233,29 @@ export function MeetingDetail({
               <p className="text-sm text-gray-600 italic">
                 Summary unavailable.
               </p>
+            )}
+            {meeting.isMeeting && summaryNotStarted && !summarizerReady && (
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-[#2a2a2a] bg-[#161616]">
+                <Download size={15} className="text-gray-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm text-gray-300 font-medium">Get AI meeting insights</p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Download the AI model in{' '}
+                    <span className="text-gray-400">Settings → Transcription</span>{' '}
+                    to extract summary, decisions, topics, and action items.
+                  </p>
+                </div>
+              </div>
+            )}
+            {meeting.isMeeting && summaryNotStarted && summarizerReady && (
+              <button
+                onClick={handleEnrich}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={{ background: 'rgba(124,111,247,0.12)', color: '#a59ef5', border: '1px solid rgba(124,111,247,0.2)' }}
+              >
+                <Sparkles size={14} />
+                Meeting details
+              </button>
             )}
             {summaryReady && meeting.summary && (
               <div className="text-gray-300 text-sm leading-relaxed">
@@ -372,7 +412,7 @@ export function MeetingDetail({
               )}
 
               {/* Pending / failed state in sidebar */}
-              {meeting.summaryStatus === 'pending' && (
+              {summaryPending && (
                 <SideSection
                   icon={<Lightbulb size={13} />}
                   title="Key Decisions"

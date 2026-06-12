@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Mic, Circle } from 'lucide-react';
+import { Search, Mic, Circle, Users } from 'lucide-react';
 import type { Meeting } from '@/renderer/hooks/useMeetings';
 
 interface MeetingListProps {
@@ -173,16 +173,35 @@ function MeetingRow({
             <Circle
               size={8}
               className={`shrink-0 fill-current ${
-                meeting.summaryStatus === 'pending' ? 'text-yellow-400' : 'text-green-500'
+                meeting.summaryStatus === 'pending' || meeting.summaryStatus === 'not-started'
+                  ? 'text-yellow-400'
+                  : 'text-green-500'
               }`}
-              title={meeting.summaryStatus === 'pending' ? 'Generating summary…' : 'Summary ready'}
+              title={
+                meeting.summaryStatus === 'pending'
+                  ? 'Generating summary…'
+                  : meeting.summaryStatus === 'not-started'
+                  ? 'Meeting insights available'
+                  : 'Summary ready'
+              }
             />
           </div>
           <span className="text-xs text-gray-500 shrink-0">{shortDate}</span>
         </div>
-        {duration && (
-          <span className="text-xs text-gray-600">{duration}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {duration && (
+            <span className="text-xs text-gray-600">{duration}</span>
+          )}
+          {(meeting.isMeeting ?? meeting.audioSource !== 'mic') && (
+            <span
+              data-testid="meeting-type-badge"
+              className="flex items-center gap-0.5 text-[10px] text-indigo-400/70 font-medium"
+            >
+              <Users size={9} />
+              Meeting
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );
