@@ -1,0 +1,982 @@
+<!doctype html>
+<html class="scroll-smooth" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>VOA | On-Device AI Transcription for macOS</title>
+    <meta
+      content="Privacy-first meeting recorder for Mac. No cloud, no account, no internet required."
+      name="description"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'on-primary-fixed': '#001a41',
+              'on-primary': '#ffffff',
+              'primary-fixed-dim': '#adc6ff',
+              'on-tertiary-fixed-variant': '#7c2e00',
+              'surface-container': '#ededf2',
+              'outline-variant': '#c1c6d7',
+              'surface-bright': '#f9f9fe',
+              'error-container': '#ffdad6',
+              'on-tertiary-fixed': '#351000',
+              'on-secondary': '#ffffff',
+              'on-tertiary': '#ffffff',
+              'on-error-container': '#93000a',
+              background: '#f9f9fe',
+              'surface-dim': '#d9dade',
+              'on-tertiary-container': '#fffbff',
+              'on-primary-container': '#fefcff',
+              'on-surface-variant': '#414755',
+              'surface-container-highest': '#e2e2e7',
+              'on-secondary-fixed-variant': '#3631b4',
+              'on-background': '#1a1c1f',
+              'on-surface': '#1a1c1f',
+              'inverse-on-surface': '#f0f0f5',
+              'surface-glass': 'rgba(255, 255, 255, 0.7)',
+              'primary-fixed': '#d8e2ff',
+              'on-secondary-fixed': '#0c006a',
+              'secondary-container': '#6664e4',
+              surface: '#f9f9fe',
+              error: '#ba1a1a',
+              primary: '#0058bc',
+              'success-green': '#34C759',
+              'surface-tint': '#005bc1',
+              'on-secondary-container': '#fffbff',
+              'secondary-fixed-dim': '#c2c1ff',
+              'primary-container': '#0070eb',
+              tertiary: '#9e3d00',
+              secondary: '#4c4aca',
+              'on-primary-fixed-variant': '#004493',
+              'on-error': '#ffffff',
+              'surface-container-lowest': '#ffffff',
+              'inverse-surface': '#2e3034',
+              'tertiary-fixed': '#ffdbcc',
+              'text-secondary': '#636366',
+              'tertiary-container': '#c64f00',
+              'surface-container-low': '#f3f3f8',
+              outline: '#717786',
+              'tertiary-fixed-dim': '#ffb595',
+              'inverse-primary': '#adc6ff',
+              'surface-container-high': '#e8e8ed',
+              'surface-variant': '#e2e2e7',
+              'border-subtle': 'rgba(0, 0, 0, 0.1)',
+              'secondary-fixed': '#e2dfff',
+            },
+            borderRadius: {
+              DEFAULT: '0.25rem',
+              lg: '0.5rem',
+              xl: '1rem',
+              full: '9999px',
+            },
+            spacing: {
+              'card-padding': '24px',
+              'stack-gap': '12px',
+              'container-margin': '32px',
+              base: '8px',
+              gutter: '16px',
+            },
+            fontFamily: {
+              'body-lg': ['Inter'],
+              'label-md': ['Inter'],
+              'display-lg': ['Inter'],
+              'body-md': ['Inter'],
+              'headline-xl': ['Inter'],
+              'headline-lg': ['Inter'],
+              'code-sm': ['JetBrains Mono'],
+            },
+            fontSize: {
+              'body-lg': ['16px', { lineHeight: '24px', fontWeight: '400' }],
+              'label-md': [
+                '12px',
+                {
+                  lineHeight: '16px',
+                  letterSpacing: '0.01em',
+                  fontWeight: '500',
+                },
+              ],
+              'display-lg': [
+                '48px',
+                {
+                  lineHeight: '56px',
+                  letterSpacing: '-0.02em',
+                  fontWeight: '700',
+                },
+              ],
+              'body-md': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+              'headline-xl': [
+                '32px',
+                {
+                  lineHeight: '40px',
+                  letterSpacing: '-0.01em',
+                  fontWeight: '600',
+                },
+              ],
+              'headline-lg': [
+                '24px',
+                { lineHeight: '32px', fontWeight: '600' },
+              ],
+              'code-sm': ['13px', { lineHeight: '18px', fontWeight: '400' }],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .glass {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      .soft-shadow {
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
+      }
+      .reveal-on-scroll {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .reveal-on-scroll.active {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      @keyframes float {
+        0% {
+          transform: translateY(0px);
+        }
+        50% {
+          transform: translateY(-15px);
+        }
+        100% {
+          transform: translateY(0px);
+        }
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      .card-hover {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .card-hover:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
+      }
+      .stagger-reveal > * {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      .stagger-reveal.active > * {
+        opacity: 1;
+        transform: translateY(0);
+        transition: all 0.5s ease-out;
+      }
+      .stagger-reveal.active > *:nth-child(1) {
+        transition-delay: 0.1s;
+      }
+      .stagger-reveal.active > *:nth-child(2) {
+        transition-delay: 0.2s;
+      }
+      .stagger-reveal.active > *:nth-child(3) {
+        transition-delay: 0.3s;
+      }
+    </style>
+  </head>
+  <body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+    <!-- TopNavBar -->
+    <nav
+      class="fixed top-0 w-full z-50 transition-all duration-300 py-4 border-b border-transparent"
+      id="main-nav"
+    >
+      <div
+        class="max-w-[1200px] mx-auto flex justify-between items-center px-container-margin"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white"
+          >
+            <span
+              class="material-symbols-outlined text-[20px]"
+              style="font-variation-settings: 'FILL' 1"
+              >graphic_eq</span
+            >
+          </div>
+          <span
+            class="text-headline-lg font-headline-lg font-bold text-on-surface"
+            >VOA</span
+          >
+        </div>
+        <div class="hidden md:flex items-center gap-8">
+          <a
+            class="font-body-md text-on-surface-variant hover:text-primary transition-colors"
+            href="#features"
+            >Features</a
+          >
+          <a
+            class="font-body-md text-on-surface-variant hover:text-primary transition-colors"
+            href="#roadmap"
+            >Roadmap</a
+          >
+          <a
+            class="font-body-md text-on-surface-variant hover:text-primary transition-colors"
+            href="#privacy"
+            >Privacy</a
+          >
+        </div>
+        <div class="flex items-center gap-4">
+          <a
+            href="https://github.com/justanotherkevin/voa"
+            class="hidden md:flex items-center gap-2 bg-primary text-on-primary px-5 py-2 rounded-full font-label-md hover:bg-primary-container transition-all active:scale-95 duration-100 shadow-md hover:shadow-lg"
+          >
+            <span class="material-symbols-outlined text-[16px]">download</span>
+            Download for Mac
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="pt-24">
+      <!-- Hero Section -->
+      <section
+        class="relative overflow-hidden pt-12 pb-24 px-container-margin reveal-on-scroll"
+      >
+        <div
+          class="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"
+        >
+          <div class="relative z-10">
+            <div
+              class="inline-flex items-center gap-2 px-3 py-1 bg-primary-fixed text-on-primary-fixed rounded-full mb-6"
+            >
+              <span class="material-symbols-outlined text-[14px]"
+                >auto_awesome</span
+              >
+              <span class="font-label-md"
+                >Open source &middot; MIT licensed</span
+              >
+            </div>
+            <h1
+              class="font-display-lg text-display-lg text-on-surface mb-6 leading-tight"
+            >
+              Every meeting,<br />
+              <span class="text-primary italic">transcribed on-device</span>.
+            </h1>
+            <p
+              class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-lg"
+            >
+              Press F1 in any app to start recording. Whisper transcribes in
+              real time. Qwen2.5 writes your summary. Nothing touches a cloud.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <a
+                href="https://github.com/justanotherkevin/voa"
+                class="bg-primary text-on-primary px-8 py-4 rounded-full font-headline-lg text-body-lg flex items-center justify-center gap-2 hover:bg-primary-container transition-all active:scale-95 shadow-lg hover:shadow-xl"
+              >
+                <span class="material-symbols-outlined">download</span>
+                Download VOA for macOS
+              </a>
+              <a
+                href="https://github.com/justanotherkevin/voa"
+                class="border border-subtle text-primary px-8 py-4 rounded-full font-headline-lg text-body-lg flex items-center justify-center gap-2 hover:bg-surface-container-low transition-all active:scale-95"
+              >
+                <span class="material-symbols-outlined text-[18px]">star</span>
+                Star on GitHub
+              </a>
+            </div>
+            <p class="mt-4 font-label-md text-on-surface-variant opacity-60">
+              No account needed &middot; Works offline after first model
+              download
+            </p>
+          </div>
+          <div class="relative">
+            <div
+              class="absolute -inset-4 bg-primary/5 blur-3xl rounded-full"
+            ></div>
+            <div
+              class="relative glass rounded-xl border border-subtle soft-shadow overflow-hidden p-1 animate-float"
+            >
+              <img
+                alt="VOA meeting transcript with AI summary"
+                class="w-full h-auto rounded-lg"
+                src="screenshots/city-meeting-transcript.webp"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="py-16 bg-surface-container-low">
+        <div class="max-w-[1200px] mx-auto px-container-margin">
+          <div class="mb-12 text-center reveal-on-scroll">
+            <h2 class="font-headline-xl text-headline-xl mb-3 text-on-surface">
+              How it works
+            </h2>
+            <p class="font-body-lg text-body-lg text-on-surface-variant">
+              Three keypresses. No accounts, no setup.
+            </p>
+          </div>
+          <div
+            class="grid grid-cols-1 md:grid-cols-3 gap-8 stagger-reveal"
+            id="how-it-works"
+          >
+            <div class="flex flex-col items-center text-center p-6">
+              <div
+                class="w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center mb-4 text-2xl font-bold shadow-lg shadow-primary/20"
+              >
+                1
+              </div>
+              <h3 class="font-headline-lg text-body-lg font-bold mb-2">
+                Hit F1 from any app
+              </h3>
+              <p class="font-body-md text-on-surface-variant">
+                VOA starts listening in any context. Zoom, your browser, the
+                terminal. The same key starts and stops recording.
+              </p>
+            </div>
+            <div class="flex flex-col items-center text-center p-6">
+              <div
+                class="w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center mb-4 text-2xl font-bold shadow-lg shadow-primary/20"
+              >
+                2
+              </div>
+              <h3 class="font-headline-lg text-body-lg font-bold mb-2">
+                Speak normally
+              </h3>
+              <p class="font-body-md text-on-surface-variant">
+                Voice Activity Detection splits speech from silence. Whisper
+                runs on your CPU and transcribes as you go.
+              </p>
+            </div>
+            <div class="flex flex-col items-center text-center p-6">
+              <div
+                class="w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center mb-4 text-2xl font-bold shadow-lg shadow-primary/20"
+              >
+                3
+              </div>
+              <h3 class="font-headline-lg text-body-lg font-bold mb-2">
+                Get your transcript
+              </h3>
+              <p class="font-body-md text-on-surface-variant">
+                Your recording saves with a full-text searchable transcript.
+                Request an AI summary whenever you need it.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bento Grid Features -->
+      <section class="py-24" id="features">
+        <div class="max-w-[1200px] mx-auto px-container-margin">
+          <div class="mb-16 text-center max-w-2xl mx-auto reveal-on-scroll">
+            <h2 class="font-headline-xl text-headline-xl mb-4 text-on-surface">
+              What's under the hood
+            </h2>
+            <p class="font-body-lg text-body-lg text-on-surface-variant">
+              Production-grade local models. No cloud shortcuts.
+            </p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-stack-gap">
+            <!-- Feature 1 -->
+            <div
+              class="md:col-span-2 glass p-card-padding rounded-xl border border-subtle flex flex-col justify-between min-h-[300px] card-hover reveal-on-scroll"
+            >
+              <div>
+                <div
+                  class="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6"
+                >
+                  <span class="material-symbols-outlined text-[24px]"
+                    >keyboard_command_key</span
+                  >
+                </div>
+                <h3 class="font-headline-lg text-headline-lg mb-2">
+                  One key, from anywhere
+                </h3>
+                <p class="font-body-md text-on-surface-variant max-w-md">
+                  F1 starts and stops recording regardless of which app is
+                  focused. Works in Zoom, Google Meet, your browser, or a
+                  terminal window.
+                </p>
+              </div>
+              <div
+                class="mt-8 bg-surface-container rounded-lg p-4 font-code-sm border border-subtle"
+              >
+                <span class="text-primary font-bold">fn</span> +
+                <span class="text-primary font-bold">F1</span> to record
+              </div>
+            </div>
+            <!-- Feature 2 -->
+            <div
+              class="glass p-card-padding rounded-xl border border-subtle flex flex-col min-h-[300px] card-hover reveal-on-scroll"
+            >
+              <div
+                class="w-12 h-12 bg-success-green/10 text-success-green rounded-full flex items-center justify-center mb-6"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >memory</span
+                >
+              </div>
+              <h3 class="font-headline-lg text-headline-lg mb-2">
+                Runs on your machine
+              </h3>
+              <p class="font-body-md text-on-surface-variant">
+                Whisper handles transcription. Qwen2.5 handles summaries. Both
+                run via ONNX Runtime and never send a byte outside your Mac.
+              </p>
+            </div>
+            <!-- Feature 3 -->
+            <div
+              class="glass p-card-padding rounded-xl border border-subtle flex flex-col min-h-[300px] card-hover reveal-on-scroll"
+            >
+              <div
+                class="w-12 h-12 bg-secondary-container/10 text-secondary-container rounded-full flex items-center justify-center mb-6"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >leak_add</span
+                >
+              </div>
+              <h3 class="font-headline-lg text-headline-lg mb-2">
+                Auto-labels your meetings
+              </h3>
+              <p class="font-body-md text-on-surface-variant">
+                VOA reads macOS Accessibility APIs to detect when you're in
+                Zoom, Teams, Google Meet, or Slack and names the recording for
+                you.
+              </p>
+            </div>
+            <!-- Feature 4 -->
+            <div
+              class="md:col-span-2 glass p-card-padding rounded-xl border border-subtle flex flex-col md:flex-row gap-8 min-h-[300px] card-hover reveal-on-scroll"
+            >
+              <div class="flex-1">
+                <div
+                  class="w-12 h-12 bg-tertiary/10 text-tertiary rounded-full flex items-center justify-center mb-6"
+                >
+                  <span class="material-symbols-outlined text-[24px]"
+                    >auto_awesome</span
+                  >
+                </div>
+                <h3 class="font-headline-lg text-headline-lg mb-2">
+                  Summaries, not just transcripts
+                </h3>
+                <p class="font-body-md text-on-surface-variant mb-4">
+                  Qwen2.5 reads your transcript and pulls out what mattered:
+                  decisions made, tasks assigned, and topics that took the most
+                  time.
+                </p>
+                <ul class="space-y-2">
+                  <li
+                    class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                  >
+                    <span
+                      class="material-symbols-outlined text-success-green text-[18px]"
+                      >check_circle</span
+                    >
+                    Key Decisions
+                  </li>
+                  <li
+                    class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                  >
+                    <span
+                      class="material-symbols-outlined text-success-green text-[18px]"
+                      >check_circle</span
+                    >
+                    Action Items
+                  </li>
+                  <li
+                    class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                  >
+                    <span
+                      class="material-symbols-outlined text-success-green text-[18px]"
+                      >check_circle</span
+                    >
+                    Topic Breakdown
+                  </li>
+                </ul>
+              </div>
+              <div
+                class="flex-1 bg-white/50 rounded-lg border border-subtle p-4 overflow-hidden"
+              >
+                <img
+                  src="screenshots/smart-summary.png"
+                  alt="Whisper model selection"
+                  class="w-full h-auto rounded"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Roadmap Section -->
+      <section class="py-24" id="roadmap">
+        <div class="max-w-[1200px] mx-auto px-container-margin">
+          <div class="mb-16 text-center max-w-2xl mx-auto reveal-on-scroll">
+            <div
+              class="inline-flex items-center gap-2 px-3 py-1 bg-tertiary/10 text-tertiary rounded-full mb-6"
+            >
+              <span class="material-symbols-outlined text-[14px]"
+                >rocket_launch</span
+              >
+              <span class="font-label-md">What's next</span>
+            </div>
+            <h2 class="font-headline-xl text-headline-xl mb-4 text-on-surface">
+              Coming in future releases
+            </h2>
+            <p class="font-body-lg text-body-lg text-on-surface-variant">
+              Three things worth waiting for.
+            </p>
+          </div>
+          <div
+            class="grid grid-cols-1 md:grid-cols-3 gap-stack-gap stagger-reveal"
+            id="roadmap-cards"
+          >
+            <!-- Roadmap Card 1: Meeting Search -->
+            <div
+              class="glass p-card-padding rounded-xl border border-subtle flex flex-col min-h-[280px] card-hover relative overflow-hidden"
+            >
+              <div class="absolute top-4 right-4">
+                <span
+                  class="font-label-md px-2 py-0.5 bg-primary/10 text-primary rounded-full"
+                  >Coming soon</span
+                >
+              </div>
+              <div
+                class="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >manage_search</span
+                >
+              </div>
+              <h3 class="font-headline-lg text-headline-lg mb-2">
+                Search across every recording
+              </h3>
+              <p class="font-body-md text-on-surface-variant mb-6">
+                Find the moment someone said "let's ship it" or "budget
+                approved." Search by keyword, topic, or date across your full
+                transcript history.
+              </p>
+              <ul class="mt-auto space-y-2">
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-primary text-[16px]"
+                    >arrow_right</span
+                  >
+                  Full-text transcript search
+                </li>
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-primary text-[16px]"
+                    >arrow_right</span
+                  >
+                  Topic &amp; keyword filters
+                </li>
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-primary text-[16px]"
+                    >arrow_right</span
+                  >
+                  Jump to exact timestamp
+                </li>
+              </ul>
+            </div>
+            <!-- Roadmap Card 2: Meeting Groups -->
+            <div
+              class="glass p-card-padding rounded-xl border border-subtle flex flex-col min-h-[280px] card-hover relative overflow-hidden"
+            >
+              <div class="absolute top-4 right-4">
+                <span
+                  class="font-label-md px-2 py-0.5 bg-primary/10 text-primary rounded-full"
+                  >Coming soon</span
+                >
+              </div>
+              <div
+                class="w-12 h-12 bg-secondary-container/10 text-secondary-container rounded-full flex items-center justify-center mb-6"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >folder_special</span
+                >
+              </div>
+              <h3 class="font-headline-lg text-headline-lg mb-2">
+                Group related meetings
+              </h3>
+              <p class="font-body-md text-on-surface-variant mb-6">
+                Cluster recordings by series: stand-ups, interview rounds,
+                client sprints. VOA detects recurring patterns and links related
+                sessions.
+              </p>
+              <ul class="mt-auto space-y-2">
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-secondary-container text-[16px]"
+                    >arrow_right</span
+                  >
+                  AI-detected recurring series
+                </li>
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-secondary-container text-[16px]"
+                    >arrow_right</span
+                  >
+                  Manual grouping &amp; labels
+                </li>
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-secondary-container text-[16px]"
+                    >arrow_right</span
+                  >
+                  Cross-session summaries
+                </li>
+              </ul>
+            </div>
+            <!-- Roadmap Card 3: Action Item Dashboard -->
+            <div
+              class="glass p-card-padding rounded-xl border border-subtle flex flex-col min-h-[280px] card-hover relative overflow-hidden"
+            >
+              <div class="absolute top-4 right-4">
+                <span
+                  class="font-label-md px-2 py-0.5 bg-primary/10 text-primary rounded-full"
+                  >Coming soon</span
+                >
+              </div>
+              <div
+                class="w-12 h-12 bg-tertiary/10 text-tertiary rounded-full flex items-center justify-center mb-6"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >task_alt</span
+                >
+              </div>
+              <h3 class="font-headline-lg text-headline-lg mb-2">
+                One view for every open task
+              </h3>
+              <p class="font-body-md text-on-surface-variant mb-6">
+                Every action item from every meeting in one place. See what's
+                open, what's done, and which meeting it came from.
+              </p>
+              <ul class="mt-auto space-y-2">
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-tertiary text-[16px]"
+                    >arrow_right</span
+                  >
+                  Aggregated across recordings
+                </li>
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-tertiary text-[16px]"
+                    >arrow_right</span
+                  >
+                  Mark complete in one click
+                </li>
+                <li
+                  class="flex items-center gap-2 text-label-md text-on-surface-variant"
+                >
+                  <span
+                    class="material-symbols-outlined text-tertiary text-[16px]"
+                    >arrow_right</span
+                  >
+                  Linked to source meeting
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Privacy Section -->
+      <section class="py-24 relative bg-surface-container-low" id="privacy">
+        <div
+          class="max-w-[1200px] mx-auto px-container-margin grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"
+        >
+          <div class="order-2 lg:order-1 reveal-on-scroll">
+            <div
+              class="relative glass aspect-square max-w-md mx-auto rounded-xl border border-subtle soft-shadow flex items-center justify-center overflow-hidden card-hover"
+            >
+              <div
+                class="relative z-10 flex flex-col items-center text-center p-8"
+              >
+                <div
+                  class="w-24 h-24 bg-primary rounded-full flex items-center justify-center text-white mb-6 shadow-xl shadow-primary/20"
+                >
+                  <span
+                    class="material-symbols-outlined text-[48px]"
+                    style="font-variation-settings: 'FILL' 1"
+                    >shield_lock</span
+                  >
+                </div>
+                <h4 class="font-headline-lg text-headline-lg mb-2 text-primary">
+                  Zero Data Exposure
+                </h4>
+                <p class="font-body-md text-on-surface-variant">
+                  Your audio processes in memory and never writes outside your
+                  Mac.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="order-1 lg:order-2">
+            <h2
+              class="font-display-lg text-display-lg text-on-surface mb-6 reveal-on-scroll"
+            >
+              Your audio never leaves your Mac.
+            </h2>
+            <p
+              class="font-body-lg text-body-lg text-on-surface-variant mb-8 reveal-on-scroll"
+            >
+              Most AI tools route your audio through data centers you don't
+              control. VOA runs the models locally. No API keys. No fine print.
+              Full offline functionality once you download the models.
+            </p>
+            <div class="space-y-6 stagger-reveal" id="privacy-list">
+              <div class="flex gap-4">
+                <div class="shrink-0 text-success-green">
+                  <span class="material-symbols-outlined">verified_user</span>
+                </div>
+                <div>
+                  <h5 class="font-headline-lg text-body-lg font-bold mb-1">
+                    No telemetry
+                  </h5>
+                  <p class="font-body-md text-on-surface-variant">
+                    No tracking, no analytics. We don't know you downloaded the
+                    app.
+                  </p>
+                </div>
+              </div>
+              <div class="flex gap-4">
+                <div class="shrink-0 text-success-green">
+                  <span class="material-symbols-outlined">cloud_off</span>
+                </div>
+                <div>
+                  <h5 class="font-headline-lg text-body-lg font-bold mb-1">
+                    Works off-line
+                  </h5>
+                  <p class="font-body-md text-on-surface-variant">
+                    Transcribe with no internet connection after the first model
+                    download. Useful in secure facilities or on a plane.
+                  </p>
+                </div>
+              </div>
+              <div class="flex gap-4">
+                <div class="shrink-0 text-success-green">
+                  <span class="material-symbols-outlined">lock_open</span>
+                </div>
+                <div>
+                  <h5 class="font-headline-lg text-body-lg font-bold mb-1">
+                    Read the code
+                  </h5>
+                  <p class="font-body-md text-on-surface-variant">
+                    MIT licensed. Every line is on GitHub. No hidden behavior,
+                    no undocumented network calls.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Banner -->
+      <section class="py-20 bg-primary">
+        <div
+          class="max-w-[1200px] mx-auto px-container-margin text-center reveal-on-scroll"
+        >
+          <h2 class="font-display-lg text-display-lg text-white mb-4">
+            Own your recordings.
+          </h2>
+          <p
+            class="font-body-lg text-body-lg text-white/70 mb-8 max-w-xl mx-auto"
+          >
+            Free, open source, and runs on your Mac. No subscription, ever.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="https://github.com/justanotherkevin/voa"
+              class="bg-white text-primary px-8 py-4 rounded-full font-headline-lg text-body-lg flex items-center justify-center gap-2 hover:bg-primary-fixed transition-all active:scale-95 shadow-lg"
+            >
+              <span class="material-symbols-outlined">download</span>
+              Build from Source
+            </a>
+            <a
+              href="https://github.com/justanotherkevin/voa"
+              class="border border-white/30 text-white px-8 py-4 rounded-full font-headline-lg text-body-lg flex items-center justify-center gap-2 hover:bg-white/10 transition-all active:scale-95"
+            >
+              <span class="material-symbols-outlined text-[18px]">star</span>
+              Star on GitHub
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-surface-container-low py-12 border-t border-subtle">
+      <div
+        class="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-stack-gap px-container-margin"
+      >
+        <div>
+          <div class="flex items-center gap-3 mb-6">
+            <div
+              class="w-6 h-6 bg-primary rounded flex items-center justify-center text-white"
+            >
+              <span class="material-symbols-outlined text-[16px]"
+                >graphic_eq</span
+              >
+            </div>
+            <span
+              class="text-headline-lg font-headline-lg font-bold text-on-surface"
+              >VOA</span
+            >
+          </div>
+          <p class="text-on-surface-variant font-body-md max-w-sm mb-6">
+            On-device transcription for macOS. No cloud, no account.
+          </p>
+          <p class="font-label-md text-on-surface-variant">
+            MIT License &mdash;
+            <a
+              href="https://github.com/justanotherkevin"
+              class="hover:text-primary transition-colors"
+              >Kevin Hu</a
+            >
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-8">
+          <div>
+            <h6 class="font-label-md text-on-surface font-bold mb-4">
+              Product
+            </h6>
+            <ul class="space-y-3 font-label-md text-on-surface-variant">
+              <li>
+                <a
+                  class="hover:text-primary transition-colors"
+                  href="https://github.com/justanotherkevin/voa"
+                  >Download</a
+                >
+              </li>
+              <li>
+                <a
+                  class="hover:text-primary transition-colors"
+                  href="https://github.com/justanotherkevin/voa/blob/main/CHANGELOG.md"
+                  >Release Notes</a
+                >
+              </li>
+              <li>
+                <a
+                  class="hover:text-primary transition-colors"
+                  href="https://github.com/justanotherkevin/voa/blob/main/README.md"
+                  >Documentation</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h6 class="font-label-md text-on-surface font-bold mb-4">
+              Project
+            </h6>
+            <ul class="space-y-3 font-label-md text-on-surface-variant">
+              <li>
+                <a
+                  class="hover:text-primary transition-colors"
+                  href="https://github.com/justanotherkevin/voa"
+                  >GitHub</a
+                >
+              </li>
+              <li>
+                <a
+                  class="hover:text-primary transition-colors"
+                  href="https://github.com/justanotherkevin/voa/issues"
+                  >Issues</a
+                >
+              </li>
+              <li>
+                <a
+                  class="hover:text-primary transition-colors"
+                  href="https://github.com/justanotherkevin/voa/blob/main/LICENSE"
+                  >MIT License</a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px',
+      };
+      const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add('active');
+        });
+      }, observerOptions);
+      document
+        .querySelectorAll('.reveal-on-scroll, .stagger-reveal')
+        .forEach((el) => revealObserver.observe(el));
+
+      const header = document.getElementById('main-nav');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+          header.classList.add(
+            'bg-surface-glass',
+            'backdrop-blur-md',
+            'py-3',
+            'border-subtle',
+          );
+          header.classList.remove('py-4', 'border-transparent');
+        } else {
+          header.classList.remove(
+            'bg-surface-glass',
+            'backdrop-blur-md',
+            'py-3',
+            'border-subtle',
+          );
+          header.classList.add('py-4', 'border-transparent');
+        }
+      });
+
+      document.querySelectorAll('nav a[href^="#"]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          document
+            .querySelectorAll('nav a')
+            .forEach((l) => l.classList.remove('text-primary'));
+          e.target.classList.add('text-primary');
+        });
+      });
+
+      window.addEventListener('scroll', () => {
+        const scrolled = window.pageYOffset;
+        const heroImage = document.querySelector('.animate-float');
+        if (heroImage)
+          heroImage.parentElement.style.transform = `translateY(${scrolled * 0.05}px)`;
+      });
+    </script>
+  </body>
+</html>

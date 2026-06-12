@@ -1,7 +1,7 @@
 # VOA
 
-| Meeting transcript | Model selection |
-|---|---|
+| Meeting transcript                                                                   | Model selection                                           |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
 | ![Meeting transcript with AI summary](docs/screenshots/city-meeting-transcript.webp) | ![Available LLM models](docs/screenshots/model-list.webp) |
 
 **VOA** is a macOS desktop app that transcribes anything you say — meetings, calls, voice memos — using on-device AI. Press a hotkey from any app, speak, and get a searchable transcript with an AI-generated summary. Nothing leaves your machine.
@@ -39,20 +39,20 @@ In a world where ambient voice data is increasingly valuable — and increasingl
 
 VOA uses three on-device models — all downloaded once and cached locally:
 
-| Purpose | Model | Notes |
-|---|---|---|
-| Speech-to-text | OpenAI Whisper (via `@xenova/transformers`) | Runs in Node.js via ONNX Runtime |
-| Structured summaries | Qwen2.5-1.5B-Instruct | Local LLM for meeting summaries + action items |
-| Summarization | DistilBART CNN | Abstractive text summarization |
+| Purpose              | Model                                       | Notes                                          |
+| -------------------- | ------------------------------------------- | ---------------------------------------------- |
+| Speech-to-text       | OpenAI Whisper (via `@xenova/transformers`) | Runs in Node.js via ONNX Runtime               |
+| Structured summaries | Qwen2.5-1.5B-Instruct                       | Local LLM for meeting summaries + action items |
+| Summarization        | DistilBART CNN                              | Abstractive text summarization                 |
 
 ### Whisper model options
 
-| Model | Size | Speed | Accuracy |
-|---|---|---|---|
-| Tiny | ~75 MB | ⚡⚡⚡⚡ | ★★☆☆ |
-| Base | ~142 MB | ⚡⚡⚡ | ★★★☆ |
-| Small | ~466 MB | ⚡⚡ | ★★★★ |
-| Medium | ~1.5 GB | ⚡ | ★★★★★ |
+| Model  | Size    | Speed    | Accuracy |
+| ------ | ------- | -------- | -------- |
+| Tiny   | ~75 MB  | ⚡⚡⚡⚡ | ★★☆☆     |
+| Base   | ~142 MB | ⚡⚡⚡   | ★★★☆     |
+| Small  | ~466 MB | ⚡⚡     | ★★★★     |
+| Medium | ~1.5 GB | ⚡       | ★★★★★    |
 
 English-only variants available for each model (faster, smaller).
 
@@ -127,11 +127,11 @@ On first run, VOA downloads the selected Whisper model (~75 MB for Tiny). Subseq
 
 VOA requires three macOS permissions to function:
 
-| Permission | Why |
-|---|---|
-| Microphone | Record your voice |
-| Accessibility | Detect when a meeting app is active |
-| Screen Recording | Capture system audio from speakers |
+| Permission       | Why                                 |
+| ---------------- | ----------------------------------- |
+| Microphone       | Record your voice                   |
+| Accessibility    | Detect when a meeting app is active |
+| Screen Recording | Capture system audio from speakers  |
 
 VOA's built-in permissions screen walks you through granting each one.
 
@@ -139,16 +139,16 @@ VOA's built-in permissions screen walks you through granting each one.
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Desktop shell | Electron 35 |
-| UI | React 19, TypeScript, Tailwind CSS v4, shadcn/ui |
-| AI inference | `@xenova/transformers` (Whisper, DistilBART, Qwen2.5) |
-| ONNX Runtime | `onnxruntime-node` + `onnxruntime-web` |
-| Voice Activity Detection | `@ricky0123/vad-web` |
-| Persistent storage | `electron-store` |
-| Build | `electron-vite`, `electron-builder` |
-| Testing | Vitest, Playwright |
+| Layer                    | Technology                                            |
+| ------------------------ | ----------------------------------------------------- |
+| Desktop shell            | Electron 35                                           |
+| UI                       | React 19, TypeScript, Tailwind CSS v4, shadcn/ui      |
+| AI inference             | `@xenova/transformers` (Whisper, DistilBART, Qwen2.5) |
+| ONNX Runtime             | `onnxruntime-node` + `onnxruntime-web`                |
+| Voice Activity Detection | `@ricky0123/vad-web`                                  |
+| Persistent storage       | `electron-store`                                      |
+| Build                    | `electron-vite`, `electron-builder`                   |
+| Testing                  | Vitest, Playwright                                    |
 
 ---
 
