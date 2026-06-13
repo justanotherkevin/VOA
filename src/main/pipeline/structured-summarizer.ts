@@ -11,16 +11,35 @@ export interface StructuredSummaryResult {
 }
 
 const MAX_TRANSCRIPT_CHARS = 8000;
-const PROMPT_TEMPLATE = `You are a meeting note assistant. Extract structured information from this meeting transcript.
-Return only valid JSON matching this schema:
+const PROMPT_TEMPLATE = `You are a meeting transcript analyzer. Extract structured information and return ONLY valid JSON matching this schema:
 {
-  "summary": "2-3 sentence overview",
-  "decisions": ["decision 1", "decision 2"],
-  "topics": ["topic 1", "topic 2"],
-  "actionItems": [{"text": "task description", "done": false}]
+  "summary": "2-3 sentence overview of what was discussed and decided",
+  "decisions": ["explicit decision made during the meeting"],
+  "topics": ["main subject discussed"],
+  "actionItems": [{"text": "what needs to be done", "done": false}]
 }
-Transcript:
-`;
+
+Example:
+Transcript: "Let's move the launch to March 15th. Mike, can you update the landing page copy by end of week? We also need to finalize pricing — Sarah will send a proposal to the team. Main topics were launch timeline and pricing strategy."
+
+Output:
+{
+  "summary": "Team agreed to move the product launch to March 15th. Pricing finalization and landing page updates were identified as key blockers.",
+  "decisions": ["Move launch date to March 15th"],
+  "topics": ["Launch timeline", "Pricing strategy", "Landing page"],
+  "actionItems": [
+    {"text": "Mike: Update landing page copy by end of week", "done": false},
+    {"text": "Sarah: Send pricing proposal to team", "done": false}
+  ]
+}
+
+Guidelines:
+- Extract only explicitly stated decisions and action items, not implied ones
+- If a field has no content, return an empty array []
+- For short transcripts, extract whatever information is available
+- If the audio is non-English, respond in English
+- If speakers overlap or content is unclear, capture the best interpretation in topics
+- Output ONLY the JSON object — no explanation, no markdown fences`;
 
 export function parseStructuredOutput(
   raw: string,
@@ -126,7 +145,12 @@ class StructuredSummarizerService {
     // Send config as the first message so the child knows the model name etc.
     // cacheDir redirects @xenova's cache to the HF hub path that model-cache.ts
     // already monitors, so Settings correctly reflects the download state.
-    const cacheDir = path.join(app.getPath('home'), '.cache', 'huggingface', 'hub');
+    const cacheDir = path.join(
+      app.getPath('home'),
+      '.cache',
+      'huggingface',
+      'hub',
+    );
     child.postMessage({
       type: 'config',
       modelName: DEFAULT_MODELS.text2structuredSummary,

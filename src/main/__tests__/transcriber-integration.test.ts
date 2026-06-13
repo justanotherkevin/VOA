@@ -58,10 +58,6 @@ vi.mock('@/main/pipeline/asr-factory', () => ({
   AsrFactory: { createTranscriber: vi.fn() },
 }));
 
-vi.mock('@/main/pipeline/style-transfer', () => ({
-  default: { processTranscript: vi.fn() },
-}));
-
 vi.mock('@/main/pipeline/structured-summarizer', () => ({
   default: { summarize: vi.fn(async () => null) },
 }));

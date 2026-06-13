@@ -6,7 +6,6 @@ import {
   getModelPreferences,
   generateTitle,
 } from '@/main/store';
-import styleTransferService from '@/main/pipeline/style-transfer';
 import structuredSummarizerService from '@/main/pipeline/structured-summarizer';
 import { cleanText } from '@/main/pipeline/text-cleaner';
 import { pasteTextToActiveWindow, shouldPasteText } from '@/main/util';
@@ -44,7 +43,7 @@ export interface TranscriberCallbacks {
 }
 
 export interface TranscribeArgs {
-  audio: any;
+  audio: Float32Array | number[];
   startedAt?: number;
   endedAt?: number;
   source?: 'mic' | 'system';
@@ -448,12 +447,6 @@ class TranscriberService {
       }
 
       const { outputText, outputChunks } = result;
-
-      try {
-        styleTransferService.processTranscript(outputText);
-      } catch (error) {
-        log('[TranscriberService] Error applying style transfer:', error);
-      }
 
       if (shouldPasteText()) {
         log(

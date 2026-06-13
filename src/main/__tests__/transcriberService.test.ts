@@ -9,12 +9,6 @@ vi.mock('@/main/store', () => ({
   generateTitle: vi.fn((text: string) => text.split(' ').slice(0, 8).join(' ')),
 }));
 
-vi.mock('@/main/pipeline/style-transfer', () => ({
-  default: {
-    processTranscript: vi.fn((text) => `[STYLED] ${text}`),
-  },
-}));
-
 vi.mock('@/main/pipeline/structured-summarizer', () => ({
   default: {
     initialize: vi.fn(async () => {}),

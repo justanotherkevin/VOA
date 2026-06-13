@@ -13,9 +13,9 @@ let config: {
   cacheDir: string;
 } | null = null;
 
-// Qwen2.5 uses ChatML format.
+// Qwen2.5 uses ChatML format with distinct system and user roles.
 function formatChatML(systemPrompt: string, userContent: string): string {
-  return `<|im_start|>user\n${systemPrompt}${userContent}<|im_end|>\n<|im_start|>assistant\n`;
+  return `<|im_start|>system\n${systemPrompt}<|im_end|>\n<|im_start|>user\n${userContent}<|im_end|>\n<|im_start|>assistant\n`;
 }
 
 function extractAssistantReply(generated: string): string {
@@ -69,7 +69,8 @@ process.parentPort.on('message', async ({ data: msg }: { data: any }) => {
     }
     try {
       const transcript = (msg.text ?? '').slice(0, config.maxChars);
-      const formattedInput = formatChatML(config.promptTemplate, transcript);
+      const userContent = `Extract structured information from this transcript:\n\n${transcript}`;
+      const formattedInput = formatChatML(config.promptTemplate, userContent);
       const output = await pipe(formattedInput, { max_new_tokens: 512, do_sample: false });
       const generated: string = output[0]?.generated_text ?? '';
       const responseText = extractAssistantReply(generated);

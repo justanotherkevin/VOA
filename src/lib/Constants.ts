@@ -44,8 +44,6 @@ export const DEFAULT_MODEL_PREFERENCES = {
 };
 
 export const DEFAULT_MODELS = {
-	audio2text: 'Xenova/flan-t5-small',
-	text2text: 'Xenova/flan-t5-base',
 	text2summary: 'Xenova/distilbart-cnn-6-6',
 	text2structuredSummary: 'onnx-community/Qwen2.5-1.5B-Instruct',
 };
@@ -203,10 +201,6 @@ export const CACHED_MODEL_META: Record<string, { subtitle: string; description: 
 		subtitle: 'for text summary',
 		description: "A distilled version of Facebook's BART model, fine-tuned on CNN/DailyMail news articles for abstractive summarization. Generates a short summary of your transcript. The \"6-6\" means 6 encoder layers + 6 decoder layers (the full BART-large has 12+12).",
 	},
-	'flan-t5-base': {
-		subtitle: 'for style transfer',
-		description: "Google's FLAN-T5 base model, instruction-tuned on a large mixture of tasks. Used for rewriting transcripts into different tones or formats (e.g. formal, bullet points).",
-	},
 	'whisper-tiny': {
 		subtitle: 'for transcription · fastest',
 		description: "OpenAI's smallest Whisper model (~75 MB). Optimized for speed on resource-constrained devices; lower accuracy on accents and background noise.",
@@ -243,7 +237,5 @@ export const CACHED_MODEL_META: Record<string, { subtitle: string; description: 
 
 export const DOCS_PATHS = {
 	WHISPER_CONFIG: 'docs/whisper-config.md',
-	FLAN_T5_GUIDE: 'docs/FLAN-T5_STYLE_TRANSFER_GUIDE.md',
 	SUMMARIZATION: 'docs/summarization.md',
-	TEXT2TEXT_GENERATION: 'docs/text2text-generation.md',
 };
