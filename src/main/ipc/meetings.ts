@@ -12,7 +12,7 @@ import {
 } from '../store';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { getMainWindow } from '../state/volatile';
-import transcriberService from '../services/transcriber';
+import enrichmentService from '../services/enrichment';
 
 export function registerMeetingsHandlers() {
   ipcMain.handle(CHANNELS.MEETINGS.GET_ALL, async () => {
@@ -50,13 +50,15 @@ export function registerMeetingsHandlers() {
     updateMeeting(meetingId, { summaryStatus: 'pending' });
     const updated = getMeetingById(meetingId);
     if (updated) getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, updated);
-    void transcriberService.triggerEnrichment(meetingId);
+    void enrichmentService.triggerEnrichment(meetingId);
     return { success: true };
   });
 
   if (process.env.E2E_TEST === 'true') {
     ipcMain.handle('meetings:e2e-seed', async (_event, data: Omit<Meeting, 'id'>) => {
-      return saveMeeting(data);
+      const saved = saveMeeting(data);
+      getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, saved);
+      return saved;
     });
   }
 }

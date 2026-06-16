@@ -130,6 +130,13 @@ const electronAPI = {
     },
   },
 
+  // ── LM Studio ────────────────────────────────────────────────────────────
+  lmStudio: {
+    getPreferences: () => ipcRenderer.invoke(CHANNELS.LM_STUDIO.GET),
+    savePreferences: (prefs: Record<string, unknown>) => ipcRenderer.invoke(CHANNELS.LM_STUDIO.SET, prefs),
+    testConnection: (baseUrl: string) => ipcRenderer.invoke(CHANNELS.LM_STUDIO.TEST, baseUrl),
+  },
+
   // ── Shell ─────────────────────────────────────────────────────────────────
   shell: {
     openPath: (filePath: string) => ipcRenderer.invoke(CHANNELS.SHELL.OPEN_PATH, filePath),
@@ -138,6 +145,7 @@ const electronAPI = {
   // ── Summarizer ────────────────────────────────────────────────────────────
   summarizer: {
     prefetch: () => ipcRenderer.invoke(CHANNELS.MODEL.SUMMARIZER_PREFETCH),
+    submitChunk: (text: string) => ipcRenderer.invoke(CHANNELS.SUMMARIZER.SUBMIT_CHUNK, text),
     on: {
       progress: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.SUMMARIZER.PROGRESS, cb),
       ready: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.SUMMARIZER.READY, cb),

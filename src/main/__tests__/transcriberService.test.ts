@@ -157,40 +157,6 @@ describe('TranscriberService - Helper Methods', () => {
     });
   });
 
-  describe('getStructuredSummary', () => {
-    it('should return a StructuredSummaryResult on success', async () => {
-      const { default: summarizer } =
-        await import('@/main/pipeline/structured-summarizer');
-
-      (summarizer.summarize as any).mockResolvedValueOnce({
-        summary: '[SUMMARY] processed',
-        decisions: ['Decision A'],
-        topics: ['topic1'],
-        actionItems: [{ text: 'Do something', done: false }],
-      });
-
-      const service = transcriberService as any;
-      const result = await service.getStructuredSummary('original text');
-
-      expect(result?.summary).toBe('[SUMMARY] processed');
-      expect(result?.decisions).toEqual(['Decision A']);
-    });
-
-    it('should return null if summarization fails', async () => {
-      const { default: summarizer } =
-        await import('@/main/pipeline/structured-summarizer');
-
-      (summarizer.summarize as any).mockRejectedValueOnce(
-        new Error('Summary failed'),
-      );
-
-      const service = transcriberService as any;
-      const result = await service.getStructuredSummary('original text');
-
-      expect(result).toBeNull();
-    });
-  });
-
   describe('persistMeeting', () => {
     it('saves meeting and sends completion callbacks when isMeeting=true', async () => {
       const { saveMeeting } = await import('@/main/store');

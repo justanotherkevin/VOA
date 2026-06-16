@@ -59,7 +59,7 @@ vi.mock('@/main/pipeline/asr-factory', () => ({
 }));
 
 vi.mock('@/main/pipeline/structured-summarizer', () => ({
-  default: { summarize: vi.fn(async () => null) },
+  default: { summarize: vi.fn(async () => null), resetSession: vi.fn(), submitChunk: vi.fn(async () => null) },
 }));
 
 vi.mock('@/main/pipeline/text-cleaner', () => ({

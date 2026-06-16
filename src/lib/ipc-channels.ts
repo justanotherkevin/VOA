@@ -55,6 +55,7 @@ export const CHANNELS = {
     PROGRESS: 'summarizer:progress',
     READY: 'summarizer:ready',
     ERROR: 'summarizer:error',
+    SUBMIT_CHUNK: 'summarizer:submitChunk',
   },
   SHELL: {
     OPEN_PATH: 'shell:openPath',
@@ -89,5 +90,10 @@ export const CHANNELS = {
   UI_PREFERENCES: {
     GET: 'uiPreferences:get',
     UPDATE: 'uiPreferences:update',
+  },
+  LM_STUDIO: {
+    GET: 'lmStudio:get',
+    SET: 'lmStudio:set',
+    TEST: 'lmStudio:test',
   },
 } as const;

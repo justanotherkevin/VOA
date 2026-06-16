@@ -2,6 +2,7 @@
 import {
   parseStructuredOutput,
   extractFieldsWithRegex,
+  splitIntoChunks,
 } from '../structured-summarizer';
 
 // ── parseStructuredOutput ────────────────────────────────────────────────────
@@ -119,70 +120,76 @@ describe('extractFieldsWithRegex', () => {
   });
 });
 
-// ── StructuredSummarizerService.summarize() ──────────────────────────────────
-//
-// The service delegates all heavy work (model download + ONNX inference) to a
-// child process so a SIGSEGV from onnxruntime-node on ARM64 cannot propagate
-// to the Electron main process. Tests inject a fake process via _processFactory.
+// ── splitIntoChunks ──────────────────────────────────────────────────────────
 
-type FakeChild = {
-  messageHandler: ((msg: any) => void) | null;
-  on: ReturnType<typeof vi.fn>;
-  postMessage: ReturnType<typeof vi.fn>;
-  kill: ReturnType<typeof vi.fn>;
-  /** Simulate a message arriving from the child process. */
-  emit: (msg: any) => void;
-};
+describe('splitIntoChunks', () => {
+  it('returns the full text as a single chunk when under limit', () => {
+    const text = 'Short text.';
+    expect(splitIntoChunks(text, 2000)).toEqual([text]);
+  });
 
-function makeFakeChild(): FakeChild {
-  const c: FakeChild = {
-    messageHandler: null,
-    on: vi.fn((event: string, handler: any) => {
-      if (event === 'message') c.messageHandler = handler;
-    }),
-    postMessage: vi.fn(),
-    kill: vi.fn(),
-    emit: (msg: any) => c.messageHandler?.(msg),
-  };
-  return c;
-}
+  it('splits text into multiple chunks when over limit', () => {
+    const text = 'word '.repeat(500); // 2500 chars
+    const chunks = splitIntoChunks(text, 2000);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.join(' ').replace(/\s+/g, ' ').trim()).toBe(text.trim());
+  });
+
+  it('each chunk is at or under the max size', () => {
+    const text = 'word '.repeat(1000); // 5000 chars
+    const chunks = splitIntoChunks(text, 2000);
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(2000);
+    }
+  });
+
+  it('prefers splitting at newlines', () => {
+    const line = 'x'.repeat(1000);
+    const text = `${line}\n${line}\n${line}`;
+    const chunks = splitIntoChunks(text, 2000);
+    for (const chunk of chunks) {
+      expect(chunk).not.toContain('\n');
+    }
+  });
+});
+
+// ── StructuredSummarizerService (fetch-based) ────────────────────────────────
+
+const makeOkResponse = (content: string) =>
+  Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({ choices: [{ message: { content } }] }),
+  } as Response);
+
+const makeErrorResponse = (status: number) =>
+  Promise.resolve({
+    ok: false,
+    status,
+    statusText: 'Bad Request',
+    json: () => Promise.resolve({}),
+  } as Response);
 
 describe('StructuredSummarizerService.summarize()', () => {
   let service: any;
-  let fakeChild: FakeChild;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
 
     const mod = await import('../structured-summarizer');
     service = mod.default;
-
-    // Reset singleton state so each test starts fresh
-    service.child = null;
-    service.isInitialized = false;
-    service.initializationPromise = null;
-    service.initResolve = null;
-    service.initReject = null;
-    service.pendingSummarize = new Map();
-    service.summarizeCounter = 0;
-
-    // Inject a fake process factory instead of spawning a real child process
-    fakeChild = makeFakeChild();
-    service._processFactory = () => fakeChild;
+    service.currentSummary = null;
   });
 
-  /** Drive initialization to completion by simulating the child process responding. */
-  async function driveInit() {
-    await Promise.resolve();
-    queueMicrotask(() => fakeChild.emit({ type: 'initialized' }));
-    await Promise.resolve();
-    await Promise.resolve();
-  }
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-  it('returns null and skips the child process for text shorter than 200 chars', async () => {
+  it('returns null and skips fetch for text shorter than 200 chars', async () => {
     const result = await service.summarize('Short text.');
     expect(result).toBeNull();
-    expect(fakeChild.postMessage).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('returns StructuredSummaryResult on happy path', async () => {
@@ -192,118 +199,199 @@ describe('StructuredSummarizerService.summarize()', () => {
       topics: ['roadmap'],
       actionItems: [{ text: 'Update spec', done: false }],
     });
+    (fetch as any).mockReturnValueOnce(makeOkResponse(validJson));
 
-    const longText = 'word '.repeat(50); // 250 chars
-    const summarizePromise = service.summarize(longText);
-
-    await driveInit();
-
-    // Emit the summarize result using the id the service sent
-    const summarizeCall = fakeChild.postMessage.mock.calls.find(
-      (c: any) => c[0].type === 'summarize',
-    );
-    fakeChild.emit({
-      type: 'summarize-result',
-      id: summarizeCall[0].id,
-      responseText: validJson,
-    });
-
-    const result = await summarizePromise;
-    expect(result).not.toBeNull();
+    const result = await service.summarize('word '.repeat(50));
     expect(result?.summary).toBe('Team aligned on Q3 roadmap.');
     expect(result?.decisions).toEqual(['Launch in August']);
     expect(result?.actionItems).toEqual([{ text: 'Update spec', done: false }]);
   });
-  // intentionally causes error: logs "[StructuredSummarizer] Inference error: Error: CUDA out of memory"
-  it('returns null when the worker emits summarize-error, without propagating', async () => {
-    const longText = 'word '.repeat(50);
-    const summarizePromise = service.summarize(longText);
 
-    await driveInit();
+  it('returns null when LM Studio returns an error status', async () => {
+    (fetch as any).mockReturnValueOnce(makeErrorResponse(500));
 
-    const summarizeCall = fakeChild.postMessage.mock.calls.find(
-      (c: any) => c[0].type === 'summarize',
-    );
-    fakeChild.emit({
-      type: 'summarize-error',
-      id: summarizeCall[0].id,
-      message: 'CUDA out of memory',
-    });
-
-    await expect(summarizePromise).resolves.toBeNull();
+    const result = await service.summarize('word '.repeat(50));
+    expect(result).toBeNull();
   });
 
-  it('handles non-array generated_text (plain string) gracefully', async () => {
+  it('returns null when fetch rejects (LM Studio not running)', async () => {
+    (fetch as any).mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+    const result = await service.summarize('word '.repeat(50));
+    expect(result).toBeNull();
+  });
+
+  it('sends system prompt and transcript in messages array', async () => {
     const validJson = JSON.stringify({
-      summary: 'Plain string path.',
+      summary: 'ok',
       decisions: [],
       topics: [],
       actionItems: [],
     });
+    (fetch as any).mockReturnValueOnce(makeOkResponse(validJson));
 
-    const longText = 'word '.repeat(50);
-    const summarizePromise = service.summarize(longText);
+    await service.summarize('word '.repeat(50));
 
-    await driveInit();
+    const body = JSON.parse((fetch as any).mock.calls[0][1].body);
+    expect(body.messages[0].role).toBe('system');
+    expect(body.messages[1].role).toBe('user');
+    expect(body.messages[1].content).toContain('Extract structured information');
+    expect(body.temperature).toBe(0);
+  });
+});
 
-    const summarizeCall = fakeChild.postMessage.mock.calls.find(
-      (c: any) => c[0].type === 'summarize',
-    );
-    fakeChild.emit({
-      type: 'summarize-result',
-      id: summarizeCall[0].id,
-      responseText: validJson,
-    });
+// ── submitChunk / resetSession / getCurrentSummary / summarizeChunked ─────────
 
-    const result = await summarizePromise;
-    expect(result?.summary).toBe('Plain string path.');
+describe('StructuredSummarizerService rolling session methods', () => {
+  let service: any;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+
+    const mod = await import('../structured-summarizer');
+    service = mod.default;
+    service.currentSummary = null;
   });
 
-  it('parses structured output from a realistic monologue about payment schedules', async () => {
-    const monologue = `Glad to see things are going well and business is starting to pick up. Andrea told me about your outstanding numbers on Tuesday. Keep up the good work. Now to other business, I am going to suggest a payment schedule for the outstanding monies that is due. One, can you pay the balance of the license agreement as soon as possible? Two, I suggest we setup or you suggest, what you can pay on the back royalties, would you feel comfortable with paying every two weeks? Every month, I will like to catch up and maintain current royalties. So, if we can start the current royalties and maintain them every two weeks as all stores are required to do, I would appreciate it. Let me know if this works for you.`;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-    const realisticLlmResponse = JSON.stringify({
-      summary:
-        'A business update call covering strong recent performance and a proposed payment schedule for outstanding license fees and back royalties, suggesting bi-weekly payments going forward.',
-      decisions: [
-        'Establish bi-weekly royalty payment schedule',
-        'Maintain current royalties on the same bi-weekly cadence required of all stores',
-      ],
-      topics: [
-        'payment schedule',
-        'license agreement',
-        'back royalties',
-        'business performance',
-      ],
-      actionItems: [
-        {
-          text: 'Pay balance of the license agreement as soon as possible',
-          done: false,
-        },
-        { text: 'Propose a payment amount for back royalties', done: false },
-        { text: 'Confirm bi-weekly payment schedule works', done: false },
-      ],
+  it('getCurrentSummary() returns null before any chunk is submitted', () => {
+    expect(service.getCurrentSummary()).toBeNull();
+  });
+
+  it('resetSession() clears currentSummary to null', () => {
+    service.currentSummary = {
+      summary: 'Some prior summary',
+      decisions: ['Decision A'],
+      topics: ['Topic 1'],
+      actionItems: [],
+    };
+    service.resetSession();
+    expect(service.getCurrentSummary()).toBeNull();
+  });
+
+  it('resetSession() is idempotent when already null', () => {
+    service.resetSession();
+    expect(service.getCurrentSummary()).toBeNull();
+  });
+
+  it('submitChunk() returns currentSummary unchanged when delta is too short', async () => {
+    const existing = {
+      summary: 'Previous summary',
+      decisions: [],
+      topics: [],
+      actionItems: [],
+    };
+    service.currentSummary = existing;
+
+    const result = await service.submitChunk('Short.');
+    expect(result).toEqual(existing);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('submitChunk() uses PROMPT_TEMPLATE on first chunk (no previousSummary)', async () => {
+    const responseJson = JSON.stringify({
+      summary: 'First chunk summary',
+      decisions: [],
+      topics: [],
+      actionItems: [],
     });
+    (fetch as any).mockReturnValueOnce(makeOkResponse(responseJson));
 
-    const summarizePromise = service.summarize(monologue);
+    await service.submitChunk('word '.repeat(25));
 
-    await driveInit();
+    const body = JSON.parse((fetch as any).mock.calls[0][1].body);
+    expect(body.messages[0].role).toBe('system');
+    expect(body.messages[1].content).toContain('Extract structured information');
+    expect(body.messages[1].content).not.toContain('Previous summary');
+  });
 
-    const summarizeCall = fakeChild.postMessage.mock.calls.find(
-      (c: any) => c[0].type === 'summarize',
-    );
-    fakeChild.emit({
-      type: 'summarize-result',
-      id: summarizeCall[0].id,
-      responseText: realisticLlmResponse,
-    });
+  it('submitChunk() updates currentSummary on success', async () => {
+    const expected = {
+      summary: 'Chunk summary',
+      decisions: ['Use TypeScript'],
+      topics: ['architecture'],
+      actionItems: [{ text: 'Write ADR', done: false }],
+    };
+    (fetch as any).mockReturnValueOnce(makeOkResponse(JSON.stringify(expected)));
 
-    const result = await summarizePromise;
-    expect(result).not.toBeNull();
-    expect(result?.summary).toContain('payment');
-    expect(result?.decisions.length).toBeGreaterThan(0);
-    expect(result?.topics).toContain('payment schedule');
-    expect(result?.actionItems.length).toBeGreaterThan(0);
-    expect(result?.actionItems[0].done).toBe(false);
+    const result = await service.submitChunk('word '.repeat(25));
+    expect(result).toEqual(expected);
+    expect(service.getCurrentSummary()).toEqual(expected);
+  });
+
+  it('submitChunk() passes previousSummary in rolling prompt on subsequent chunks', async () => {
+    const firstResult = {
+      summary: 'Chunk 1',
+      decisions: ['Decision A'],
+      topics: ['Topic 1'],
+      actionItems: [],
+    };
+    const secondResult = {
+      summary: 'Chunk 1 + 2',
+      decisions: ['Decision A', 'Decision B'],
+      topics: ['Topic 1', 'Topic 2'],
+      actionItems: [],
+    };
+
+    (fetch as any)
+      .mockReturnValueOnce(makeOkResponse(JSON.stringify(firstResult)))
+      .mockReturnValueOnce(makeOkResponse(JSON.stringify(secondResult)));
+
+    await service.submitChunk('word '.repeat(25));
+    await service.submitChunk('word '.repeat(25));
+
+    const secondCallBody = JSON.parse((fetch as any).mock.calls[1][1].body);
+    expect(secondCallBody.messages[1].content).toContain('Previous summary');
+    expect(secondCallBody.messages[1].content).toContain('Chunk 1');
+    expect(service.getCurrentSummary()).toEqual(secondResult);
+  });
+
+  // intentionally causes error log
+  it('submitChunk() returns null and leaves currentSummary unchanged on fetch error', async () => {
+    const existing = {
+      summary: 'Safe prior state',
+      decisions: [],
+      topics: [],
+      actionItems: [],
+    };
+    service.currentSummary = existing;
+
+    (fetch as any).mockRejectedValueOnce(new Error('network error'));
+
+    const result = await service.submitChunk('word '.repeat(25));
+    expect(result).toBeNull();
+    expect(service.getCurrentSummary()).toEqual(existing);
+  });
+
+  it('summarizeChunked() resets session then processes each chunk sequentially', async () => {
+    service.currentSummary = { summary: 'stale', decisions: [], topics: [], actionItems: [] };
+
+    const chunkResult = {
+      summary: 'Fresh summary',
+      decisions: ['Decision X'],
+      topics: ['Topic Y'],
+      actionItems: [],
+    };
+    // Text long enough to produce 2 chunks at 2000 chars each
+    const text = 'word '.repeat(500); // 2500 chars → 2 chunks
+    (fetch as any)
+      .mockReturnValueOnce(makeOkResponse(JSON.stringify(chunkResult)))
+      .mockReturnValueOnce(makeOkResponse(JSON.stringify(chunkResult)));
+
+    const result = await service.summarizeChunked(text);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(result).toEqual(chunkResult);
+  });
+
+  it('summarizeChunked() returns null when all chunks fail', async () => {
+    (fetch as any).mockRejectedValue(new Error('offline'));
+
+    const text = 'word '.repeat(50); // short, single chunk
+    const result = await service.summarizeChunked(text);
+    expect(result).toBeNull();
   });
 });

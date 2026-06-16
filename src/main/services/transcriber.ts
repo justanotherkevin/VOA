@@ -6,7 +6,6 @@ import {
   getModelPreferences,
   generateTitle,
 } from '@/main/store';
-import structuredSummarizerService from '@/main/pipeline/structured-summarizer';
 import { cleanText } from '@/main/pipeline/text-cleaner';
 import { pasteTextToActiveWindow, shouldPasteText } from '@/main/util';
 import { getMainWindow } from '@/main/state/volatile';
@@ -212,25 +211,6 @@ class TranscriberService {
     }
   }
 
-  private async getStructuredSummary(text: string) {
-    try {
-      const win = getMainWindow();
-      const sendProgress = (data: any) => {
-        try { win?.webContents.send(CHANNELS.SUMMARIZER.PROGRESS, data); } catch {}
-      };
-      await structuredSummarizerService.initialize(sendProgress);
-      const result = await structuredSummarizerService.summarize(text);
-      log('[TranscriberService] Structured summarization complete');
-      win?.webContents.send(CHANNELS.SUMMARIZER.READY, {});
-      return result;
-    } catch (error) {
-      log('[TranscriberService] Error summarizing text:', error);
-      const win = getMainWindow();
-      try { win?.webContents.send(CHANNELS.SUMMARIZER.ERROR, String(error)); } catch {}
-      return null;
-    }
-  }
-
   private async persistMeeting(
     outputText: string,
     outputChunks: any[],
@@ -244,6 +224,11 @@ class TranscriberService {
       const durationMs = endedAt - startedAt;
       const title = generateTitle(outputText);
 
+      // TODO: generate a lightweight plain-text summary here using
+      // Xenova/distilbart-xsum-6-6 or Xenova/t5-small (<500 MB, fast) and
+      // store it in meeting.summary so users see something immediately.
+      // Structured enrichment (decisions / topics / action items via Qwen)
+      // remains on-demand via the "✨ Meeting details" button.
       const meeting = saveMeeting({
         title,
         startedAt,
@@ -287,45 +272,6 @@ class TranscriberService {
     } catch (error) {
       log('[TranscriberService] Error persisting meeting:', error);
       await this.onError(callbacks, error);
-    }
-  }
-
-  private async enrichMeetingWithStructuredSummary(
-    meetingId: string,
-    text: string,
-  ): Promise<void> {
-    if (process.env.E2E_TEST === 'true') {
-      // E2E tests inject mock enrichment via transcriber:e2e-mock-enrich-meeting.
-      // Skip the real Qwen model: onnxruntime-node@1.21 SIGSEGVs on ARM64 when
-      // loading models via HuggingFace XET streaming.
-      log('[TranscriberService] E2E mode: skipping Qwen enrichment, awaiting mock injection');
-      return;
-    }
-    try {
-      const result = await this.getStructuredSummary(text);
-      const updated = updateMeeting(meetingId, {
-        summary: result?.summary ?? '',
-        decisions: result?.decisions ?? [],
-        topics: result?.topics ?? [],
-        actionItems: result?.actionItems ?? [],
-        summaryStatus: 'ready',
-      });
-      if (updated) {
-        getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, updated);
-        log(
-          '[TranscriberService] Structured summary enriched for meeting:',
-          meetingId,
-        );
-      }
-    } catch (error) {
-      log('[TranscriberService] Background summarization failed:', error);
-      const updated = updateMeeting(meetingId, {
-        summary: '',
-        summaryStatus: 'failed',
-      });
-      if (updated) {
-        getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, updated);
-      }
     }
   }
 
@@ -492,12 +438,6 @@ class TranscriberService {
       }
     }
     return '';
-  }
-
-  async triggerEnrichment(meetingId: string): Promise<void> {
-    const meeting = getMeetingById(meetingId);
-    if (!meeting?.transcript) return;
-    return this.enrichMeetingWithStructuredSummary(meetingId, meeting.transcript);
   }
 
   dispose(): void {

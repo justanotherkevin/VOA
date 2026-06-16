@@ -82,6 +82,11 @@ export interface UIPreferences {
   density: 'comfortable' | 'compact';
 }
 
+export interface LMStudioPreferences {
+  baseUrl: string;
+  model: string;
+}
+
 interface StoreSchema {
   meetings: Meeting[];
   meetingsMigrated: boolean;
@@ -91,6 +96,7 @@ interface StoreSchema {
   appPreferences?: AppPreferences;
   audioPreferences?: AudioPreferences;
   uiPreferences?: UIPreferences;
+  lmStudioPreferences?: LMStudioPreferences;
   transcriptHistory?: StoredTranscript[];
   dismissedMeetingKeys?: string[];
 }
@@ -131,6 +137,11 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   density: 'comfortable',
 };
 
+export const DEFAULT_LM_STUDIO_PREFERENCES: LMStudioPreferences = {
+  baseUrl: 'http://localhost:1234',
+  model: '',
+};
+
 // ─── Store Init ───────────────────────────────────────────────────────────────
 
 export async function initializeStore() {
@@ -150,6 +161,7 @@ export async function initializeStore() {
       appPreferences: DEFAULT_APP_PREFERENCES,
       audioPreferences: DEFAULT_AUDIO_PREFERENCES,
       uiPreferences: DEFAULT_UI_PREFERENCES,
+      lmStudioPreferences: DEFAULT_LM_STUDIO_PREFERENCES,
       dismissedMeetingKeys: [],
     },
   });
@@ -322,6 +334,15 @@ export function saveMeetingPreferences(
   const current =
     store?.get('meetingPreferences') ?? DEFAULT_MEETING_PREFERENCES;
   store?.set('meetingPreferences', { ...current, ...prefs });
+}
+
+export function getLMStudioPreferences(): LMStudioPreferences {
+  return store?.get('lmStudioPreferences') ?? DEFAULT_LM_STUDIO_PREFERENCES;
+}
+
+export function saveLMStudioPreferences(prefs: Partial<LMStudioPreferences>): void {
+  const current = store?.get('lmStudioPreferences') ?? DEFAULT_LM_STUDIO_PREFERENCES;
+  store?.set('lmStudioPreferences', { ...current, ...prefs });
 }
 
 // ─── Dismissed Meeting Keys ───────────────────────────────────────────────────

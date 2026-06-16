@@ -21,6 +21,7 @@
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "BROWSERSLIST_IGNORE_OLD_DATA=true vitest run --config vitest.frontend.config.ts 2>&1 | ./scripts/filter-onnx-warnings.sh",
     "test:backend": "vitest run --config vitest.backend.config.ts 2>&1 | ./scripts/filter-onnx-warnings.sh",
+    "test:backend:file": "vitest run --config vitest.backend.config.ts",
     "test:ui": "vitest --ui 2>&1 | ./scripts/filter-onnx-warnings.sh",
     "dev:renderer": "vite --config vite.renderer.config.ts",
     "test:e2e": "npm run build && playwright test --config playwright.config.ts",

@@ -10,9 +10,12 @@ import {
   saveAudioPreferences,
   getUIPreferences,
   saveUIPreferences,
+  getLMStudioPreferences,
+  saveLMStudioPreferences,
   type AppPreferences,
   type AudioPreferences,
   type UIPreferences,
+  type LMStudioPreferences,
 } from '../store';
 import { listCachedModels, deleteModel, clearAllCache, getCachePaths } from '../model-cache';
 import structuredSummarizerService from '../pipeline/structured-summarizer';
@@ -142,22 +145,25 @@ export function registerSettingsHandlers() {
     return getCachePaths();
   });
 
-  // Summarizer Prefetch
+  // Summarizer Prefetch — no-op with LM Studio; model lifecycle is external
   ipcMain.handle(CHANNELS.MODEL.SUMMARIZER_PREFETCH, async (event: IpcMainInvokeEvent) => {
     const win = BrowserWindow.fromWebContents(event.sender as any);
     const send = (channel: string, payload: unknown) => {
       try { win?.webContents.send(channel, payload); } catch {}
     };
     try {
-      await structuredSummarizerService.initialize((data: any) =>
-        send(CHANNELS.SUMMARIZER.PROGRESS, data),
-      );
+      await structuredSummarizerService.initialize();
       send(CHANNELS.SUMMARIZER.READY, {});
       return { success: true };
     } catch (error) {
       send(CHANNELS.SUMMARIZER.ERROR, String(error));
       return { success: false, message: String(error) };
     }
+  });
+
+  // Summarizer Submit Chunk — real-time rolling enrichment during recording
+  ipcMain.handle(CHANNELS.SUMMARIZER.SUBMIT_CHUNK, async (_event, text: string) => {
+    return structuredSummarizerService.submitChunk(text);
   });
 
   // Shell — constrained to known cache dirs only
@@ -168,6 +174,53 @@ export function registerSettingsHandlers() {
       return;
     }
     await shell.openPath(filePath);
+  });
+
+  // LM Studio Preferences
+  ipcMain.handle(CHANNELS.LM_STUDIO.GET, async () => {
+    return getLMStudioPreferences();
+  });
+
+  ipcMain.handle(CHANNELS.LM_STUDIO.SET, async (_event, prefs: Partial<LMStudioPreferences>) => {
+    try {
+      saveLMStudioPreferences(prefs);
+      return { success: true };
+    } catch (error) {
+      logError('[IPC] Error saving LM Studio preferences:', error);
+      return { success: false, message: String(error) };
+    }
+  });
+
+  ipcMain.handle(CHANNELS.LM_STUDIO.TEST, async (_event, baseUrl: string) => {
+    try {
+      const url = new URL(`${baseUrl}/v1/models`);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return { ok: false, error: 'Only http:// and https:// URLs are supported' };
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      let response: Response;
+      try {
+        response = await fetch(url.toString(), { signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        return { ok: false, error: `HTTP ${response.status}: ${errorText}` };
+      }
+
+      const json = await response.json();
+      const models: string[] = (json?.data ?? []).map((m: { id: string }) => m.id).filter(Boolean);
+      return { ok: true, models };
+    } catch (error: unknown) {
+      const message = (error as any)?.name === 'AbortError'
+        ? 'Connection timed out after 3s'
+        : ((error as any)?.message ?? String(error));
+      return { ok: false, error: message };
+    }
   });
 
   // ASR Type Management

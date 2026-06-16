@@ -20,12 +20,6 @@ export default defineConfig({
         external: ['node-web-audio-api'],
         input: {
           main: path.resolve(__dirname, 'src/main/main.ts'),
-          // Qwen process runs in a separate child_process so a SIGSEGV from
-          // onnxruntime-node on ARM64 cannot propagate to the Electron main process.
-          'structured-summarizer-process': path.resolve(
-            __dirname,
-            'src/main/pipeline/structured-summarizer-process.ts',
-          ),
         },
       },
     },

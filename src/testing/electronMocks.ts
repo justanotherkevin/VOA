@@ -135,6 +135,7 @@ export function attachGlobalElectronMock() {
     // ── Summarizer ────────────────────────────────────────────────────────────
     summarizer: {
       prefetch: vi.fn(async () => {}),
+      submitChunk: vi.fn(async () => {}),
       on: {
         progress: vi.fn(() => () => {}),
         ready: vi.fn(() => () => {}),

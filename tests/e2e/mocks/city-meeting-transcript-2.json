@@ -1,0 +1,1104 @@
+{
+  "source": "city-meeting.mp3",
+  "model": "Xenova/whisper-medium.en",
+  "generated_at": "2026-06-14T15:31:20.747Z",
+  "duration_s": 892.34,
+  "segment_count": 219,
+  "segments": [
+    {
+      "start": 0.34,
+      "end": 7.12,
+      "text": "Okay, so, um, yeah, that's the sign in."
+    },
+    {
+      "start": 7.12,
+      "end": 11.32,
+      "text": "There are meeting minutes from last month if you guys aren't really here, but it was basically"
+    },
+    {
+      "start": 11.32,
+      "end": 14.32,
+      "text": "the meeting that was the email that I sent."
+    },
+    {
+      "start": 14.32,
+      "end": 16.62,
+      "text": "I just need you guys to approve."
+    },
+    {
+      "start": 27.72,
+      "end": 34.84,
+      "text": "Louisa, did you see the minutes from last month was just the email that I sent you guys because we didn't actually have a meeting online"
+    },
+    {
+      "start": 34.84,
+      "end": 36.84,
+      "text": "Yes, okay cool"
+    },
+    {
+      "start": 37.3,
+      "end": 40.96,
+      "text": "So if you have any issues with any of the details, let me know."
+    },
+    {
+      "start": 42.41,
+      "end": 43.61,
+      "text": "And then..."
+    },
+    {
+      "start": 44.31,
+      "end": 45.85,
+      "text": "Ummm..."
+    },
+    {
+      "start": 46.48,
+      "end": 53.48,
+      "text": "Happy Hour Surveys."
+    },
+    {
+      "start": 60.95,
+      "end": 67.95,
+      "text": "some."
+    },
+    {
+      "start": 69.61,
+      "end": 71.61,
+      "text": "I would be madness to keep that."
+    },
+    {
+      "start": 73.63,
+      "end": 75.63,
+      "text": "Hold on, I got you."
+    },
+    {
+      "start": 81.08,
+      "end": 83.68,
+      "text": "Maybe I'll, I think I might go buy them for coffee in the morning."
+    },
+    {
+      "start": 83.68,
+      "end": 84.18,
+      "text": "Maybe I'll."
+    },
+    {
+      "start": 93.83,
+      "end": 94.67,
+      "text": "Oh, is this for a man?"
+    },
+    {
+      "start": 94.67,
+      "end": 95.51,
+      "text": "This is not."
+    },
+    {
+      "start": 97.14,
+      "end": 97.98,
+      "text": "What is that?"
+    },
+    {
+      "start": 104.57,
+      "end": 106.57,
+      "text": "I mean, this isn't bad."
+    },
+    {
+      "start": 111.38,
+      "end": 113.54,
+      "text": "(mumbles)"
+    },
+    {
+      "start": 115.5,
+      "end": 117.34,
+      "text": "- This is just a job."
+    },
+    {
+      "start": 118.34,
+      "end": 120.18,
+      "text": "- Sorry, I'll be back."
+    },
+    {
+      "start": 121.32,
+      "end": 123.98,
+      "text": "- Okay, hold on, he sent me."
+    },
+    {
+      "start": 124.91,
+      "end": 126.43,
+      "text": "I can't find it."
+    },
+    {
+      "start": 127.08,
+      "end": 128.6,
+      "text": "I believe so."
+    },
+    {
+      "start": 128.93,
+      "end": 138.93,
+      "text": "[BLANK_AUDIO]"
+    },
+    {
+      "start": 155.82,
+      "end": 157.82,
+      "text": "They were there, yeah."
+    },
+    {
+      "start": 191.06,
+      "end": 193.06,
+      "text": "Okay, so we have..."
+    },
+    {
+      "start": 195.09,
+      "end": 199.09,
+      "text": "Latimer? Did you guys meet real Latimer?"
+    },
+    {
+      "start": 199.78,
+      "end": 201.22,
+      "text": "That's the business name?"
+    },
+    {
+      "start": 202.88,
+      "end": 206.24,
+      "text": "Oh yes, Lattimer. That's Daniel."
+    },
+    {
+      "start": 206.63,
+      "end": 207.63,
+      "text": "Yeah."
+    },
+    {
+      "start": 207.63,
+      "end": 208.63,
+      "text": "Oh, yeah."
+    },
+    {
+      "start": 208.63,
+      "end": 209.63,
+      "text": "Yeah."
+    },
+    {
+      "start": 209.63,
+      "end": 210.63,
+      "text": "Okay."
+    },
+    {
+      "start": 210.63,
+      "end": 216.11,
+      "text": "Um, so biggest challenge as a business owner is getting my company name out there."
+    },
+    {
+      "start": 216.57,
+      "end": 221.73,
+      "text": "biggest need is more visibility and how do you think we can help maybe more research."
+    },
+    {
+      "start": 222.25,
+      "end": 225.25,
+      "text": "maybe more resources for outreach."
+    },
+    {
+      "start": 228.89,
+      "end": 232.37,
+      "text": "And then Bob Bandit basically said the same thing,"
+    },
+    {
+      "start": 232.37,
+      "end": 234.97,
+      "text": "getting recognition, and we're only one and a half."
+    },
+    {
+      "start": 235.53,
+      "end": 237.27,
+      "text": "Um, how do you think we can help?"
+    },
+    {
+      "start": 237.27,
+      "end": 239.55,
+      "text": "Not sure, but I'll take all the help I can get."
+    },
+    {
+      "start": 239.55,
+      "end": 242.09,
+      "text": "And they do want to be part of our scavenger hunt."
+    },
+    {
+      "start": 242.09,
+      "end": 242.93,
+      "text": "- Oh yay."
+    },
+    {
+      "start": 242.93,
+      "end": 243.89,
+      "text": "- And so that's fun."
+    },
+    {
+      "start": 243.89,
+      "end": 245.45,
+      "text": "So there, that's a brick and mortar"
+    },
+    {
+      "start": 245.45,
+      "end": 246.89,
+      "text": "that definitely wants to."
+    },
+    {
+      "start": 253.29,
+      "end": 254.53,
+      "text": "the school bag."
+    },
+    {
+      "start": 255.03,
+      "end": 256.03,
+      "text": "Yeah."
+    },
+    {
+      "start": 256.03,
+      "end": 255.91,
+      "text": "Designer."
+    },
+    {
+      "start": 256.67,
+      "end": 261.05,
+      "text": "Um, so their biggest challenge as a business owner was marketing, getting the word out about"
+    },
+    {
+      "start": 261.05,
+      "end": 261.75,
+      "text": "my brand."
+    },
+    {
+      "start": 262.46,
+      "end": 263.3,
+      "text": "Biggest need."
+    },
+    {
+      "start": 263.65,
+      "end": 265.89,
+      "text": "financing and sales. How do you think we can help connect?"
+    },
+    {
+      "start": 266.77,
+      "end": 271.93,
+      "text": "now because there are any commerce at least that's now."
+    },
+    {
+      "start": 271.4,
+      "end": 272.4,
+      "text": "And then who is this?"
+    },
+    {
+      "start": 272.4,
+      "end": 274.08,
+      "text": "Oh, this was Robert also."
+    },
+    {
+      "start": 274.08,
+      "end": 275.48,
+      "text": "They also do design."
+    },
+    {
+      "start": 275.48,
+      "end": 277.4,
+      "text": "They're also e-commerce."
+    },
+    {
+      "start": 277.4,
+      "end": 280.12,
+      "text": "So I'm guessing it's gonna be around similar issues,"
+    },
+    {
+      "start": 280.12,
+      "end": 281.72,
+      "text": "building a reliable sales funnel."
+    },
+    {
+      "start": 282.17,
+      "end": 284.41,
+      "text": "- Are there people from like two doors down?"
+    },
+    {
+      "start": 284.61,
+      "end": 288.21,
+      "text": "There's a design studio fancy looking thing that I feel like is like..."
+    },
+    {
+      "start": 296.49,
+      "end": 297.33,
+      "text": "Damn."
+    },
+    {
+      "start": 304.72,
+      "end": 305.72,
+      "text": "I don't think so."
+    },
+    {
+      "start": 305.72,
+      "end": 306.72,
+      "text": "Oh, that's cool."
+    },
+    {
+      "start": 306.72,
+      "end": 307.72,
+      "text": "I like that voice card."
+    },
+    {
+      "start": 307.72,
+      "end": 308.72,
+      "text": "Yeah, pretty cool."
+    },
+    {
+      "start": 308.72,
+      "end": 310.72,
+      "text": "This is a freelance EUI, it's an EUI visual."
+    },
+    {
+      "start": 310.72,
+      "end": 312.72,
+      "text": "Oh, and that guy."
+    },
+    {
+      "start": 312.72,
+      "end": 314.52,
+      "text": "Yeah, he's like tall."
+    },
+    {
+      "start": 317.25,
+      "end": 320.61,
+      "text": "I was going to say, I feel like you was, but maybe not."
+    },
+    {
+      "start": 321,
+      "end": 326,
+      "text": "So biggest need just to network with other businesses and institutions."
+    },
+    {
+      "start": 326,
+      "end": 329,
+      "text": "How do you think you can help posting and organizing events forums for business?"
+    },
+    {
+      "start": 330.79,
+      "end": 333.35,
+      "text": "me networking."
+    },
+    {
+      "start": 332.21,
+      "end": 334.45,
+      "text": "Um, and they said they would be interested."
+    },
+    {
+      "start": 386.12,
+      "end": 397.68,
+      "text": "No, we just need to know if it's there."
+    },
+    {
+      "start": 398.98,
+      "end": 401.78,
+      "text": "Yeah, but they have, I think they have braces in the morning."
+    },
+    {
+      "start": 401.78,
+      "end": 402.78,
+      "text": "Oh that's true."
+    },
+    {
+      "start": 402.78,
+      "end": 404.98,
+      "text": "So I'll reach out and be like, \"I'm stopping by in the morning, please run.\""
+    },
+    {
+      "start": 404.98,
+      "end": 405.98,
+      "text": "Yeah."
+    },
+    {
+      "start": 405.98,
+      "end": 406.98,
+      "text": "Yeah, because when I was leaving..."
+    },
+    {
+      "start": 407.54,
+      "end": 409.14,
+      "text": "The table's all clean. The spine's cleaning up."
+    },
+    {
+      "start": 412.99,
+      "end": 414.79,
+      "text": "Yeah, I say it's a re-arm my friend, so..."
+    },
+    {
+      "start": 415.4,
+      "end": 416.6,
+      "text": "Me and my friend, Raj,"
+    },
+    {
+      "start": 416.6,
+      "end": 418.64,
+      "text": "so I didn't really see anything on the stage."
+    },
+    {
+      "start": 420.64,
+      "end": 424.96,
+      "text": "No one picks up a clipboard with paper seeing people's like personal"
+    },
+    {
+      "start": 430.96,
+      "end": 436.66,
+      "text": "Okay, especially if you like at least for when I work in hospitality we do a lot of events at the end of an event night"
+    },
+    {
+      "start": 436.66,
+      "end": 441.92,
+      "text": "It's start over for anyone. So we scrap everything unless you do it away. Yeah, we're done"
+    },
+    {
+      "start": 441.92,
+      "end": 446.46,
+      "text": "They're events over and if people leave things behind is a sign that it's not necessary"
+    },
+    {
+      "start": 448.16,
+      "end": 450.16,
+      "text": "Yes"
+    },
+    {
+      "start": 448.84,
+      "end": 449.84,
+      "text": "That's just us."
+    },
+    {
+      "start": 449.84,
+      "end": 450.84,
+      "text": "They could be different."
+    },
+    {
+      "start": 450.84,
+      "end": 451.1,
+      "text": "[BLANK_AUDIO]"
+    },
+    {
+      "start": 453.51,
+      "end": 455.51,
+      "text": "I think it would just be less than one."
+    },
+    {
+      "start": 466.7,
+      "end": 470.7,
+      "text": "You're gonna text and say I'm gonna swing by tomorrow?"
+    },
+    {
+      "start": 470.7,
+      "end": 471.7,
+      "text": "Yeah, yeah, yeah."
+    },
+    {
+      "start": 471.7,
+      "end": 472.7,
+      "text": "Just work check him, yeah, but..."
+    },
+    {
+      "start": 472.7,
+      "end": 473.7,
+      "text": "No, I am."
+    },
+    {
+      "start": 473.7,
+      "end": 474.05,
+      "text": "... thank you."
+    },
+    {
+      "start": 474.69,
+      "end": 476.69,
+      "text": "No, I was thinking about being a second person."
+    },
+    {
+      "start": 476.69,
+      "end": 480.13,
+      "text": "Did Zante-- was Zante still there when you left?"
+    },
+    {
+      "start": 480.13,
+      "end": 481.57,
+      "text": "No."
+    },
+    {
+      "start": 481.57,
+      "end": 482.17,
+      "text": "OK."
+    },
+    {
+      "start": 482.17,
+      "end": 482.67,
+      "text": "No, OK."
+    },
+    {
+      "start": 482.67,
+      "end": 486.73,
+      "text": "So it was just me and my friend Rob, and we left with that."
+    },
+    {
+      "start": 492.75,
+      "end": 493.59,
+      "text": "I think it's also--"
+    },
+    {
+      "start": 493.59,
+      "end": 494.43,
+      "text": "- Ask all of them."
+    },
+    {
+      "start": 495.14,
+      "end": 509.14,
+      "text": "I think it's also time to look at all the channels, outreach channels, I don't know what they"
+    },
+    {
+      "start": 509.14,
+      "end": 514.02,
+      "text": "were, but how people found out about this and maybe it's just so maybe we make, was"
+    },
+    {
+      "start": 514.02,
+      "end": 517.9,
+      "text": "this the Google form at any point?"
+    },
+    {
+      "start": 523.15,
+      "end": 525.19,
+      "text": "from the CB9 email box."
+    },
+    {
+      "start": 525.19,
+      "end": 526.79,
+      "text": "- Yeah, so that's the same."
+    },
+    {
+      "start": 526.79,
+      "end": 530.43,
+      "text": "- And like pretty much, I mean, the bop bandit,"
+    },
+    {
+      "start": 530.43,
+      "end": 532.59,
+      "text": "I reached out to her directly,"
+    },
+    {
+      "start": 532.59,
+      "end": 536.35,
+      "text": "but she was like the only, and the green room."
+    },
+    {
+      "start": 536.35,
+      "end": 539.27,
+      "text": "So it was the only two people that were brick and mortars"
+    },
+    {
+      "start": 539.27,
+      "end": 541.35,
+      "text": "that came that I invited."
+    },
+    {
+      "start": 541.35,
+      "end": 542.19,
+      "text": "- So can we read that book?"
+    },
+    {
+      "start": 542.19,
+      "end": 545.07,
+      "text": "- And so, the trial was there, right in the,"
+    },
+    {
+      "start": 545.07,
+      "end": 546.91,
+      "text": "yeah, right next to the green room."
+    },
+    {
+      "start": 546.91,
+      "end": 547.75,
+      "text": "- Really, yeah?"
+    },
+    {
+      "start": 547.75,
+      "end": 549.59,
+      "text": "- A trial, a trial."
+    },
+    {
+      "start": 549.59,
+      "end": 550.43,
+      "text": "- Oh yeah, a trial."
+    },
+    {
+      "start": 550.43,
+      "end": 551.27,
+      "text": "- She was there."
+    },
+    {
+      "start": 551.4,
+      "end": 556.9,
+      "text": "Could we potentially write a blurb for the next female blast that says,"
+    },
+    {
+      "start": 556.9,
+      "end": 560.2,
+      "text": "\"Economics Development Committee has a living, great success,"
+    },
+    {
+      "start": 560.2,
+      "end": 562.7,
+      "text": "thanks for those who came if you didn't come.\""
+    },
+    {
+      "start": 564.15,
+      "end": 565.45,
+      "text": "and you want to fill out this."
+    },
+    {
+      "start": 565.45,
+      "end": 566.77,
+      "text": "- Yeah, you can still fill it out."
+    },
+    {
+      "start": 566.77,
+      "end": 569.33,
+      "text": "- So why don't we get them to fill out the survey online"
+    },
+    {
+      "start": 569.33,
+      "end": 571.93,
+      "text": "and then it's another way to say if you did come."
+    },
+    {
+      "start": 572.81,
+      "end": 575.61,
+      "text": "We can blast it out today if we had the list"
+    },
+    {
+      "start": 575.61,
+      "end": 577.77,
+      "text": "of everybody that was there, it would be so much easier."
+    },
+    {
+      "start": 577.77,
+      "end": 578.61,
+      "text": "- I know."
+    },
+    {
+      "start": 578.61,
+      "end": 582.61,
+      "text": "- Do we have a, like I know we did this"
+    },
+    {
+      "start": 582.61,
+      "end": 585.27,
+      "text": "for the business breakfast, a spreadsheet"
+    },
+    {
+      "start": 585.27,
+      "end": 586.81,
+      "text": "of the people that responded."
+    },
+    {
+      "start": 586.81,
+      "end": 588.05,
+      "text": "- Yeah, Dante has that."
+    },
+    {
+      "start": 588.05,
+      "end": 590.97,
+      "text": "- We need that again so we can start compiling."
+    },
+    {
+      "start": 590.97,
+      "end": 592.37,
+      "text": "And we can make it an event."
+    },
+    {
+      "start": 592.27,
+      "end": 597.55,
+      "text": "newsletter glass. Well I think that the lid he was sending out"
+    },
+    {
+      "start": 597.59,
+      "end": 600.15,
+      "text": "emails just to register for this event."
+    },
+    {
+      "start": 600.15,
+      "end": 602.15,
+      "text": "Were you guys also getting those?"
+    },
+    {
+      "start": 602.15,
+      "end": 602.99,
+      "text": "- Yes."
+    },
+    {
+      "start": 602.99,
+      "end": 603.81,
+      "text": "- Yes."
+    },
+    {
+      "start": 603.81,
+      "end": 605.61,
+      "text": "- You were, you were not, you were."
+    },
+    {
+      "start": 605.61,
+      "end": 606.45,
+      "text": "- Yeah."
+    },
+    {
+      "start": 606.45,
+      "end": 608.51,
+      "text": "- Okay, so I'm wondering if."
+    },
+    {
+      "start": 608.97,
+      "end": 612.47,
+      "text": "Everybody on CB9 got those or just people who are"
+    },
+    {
+      "start": 612.95,
+      "end": 614.71,
+      "text": "on the business class."
+    },
+    {
+      "start": 614.71,
+      "end": 616.19,
+      "text": "- I can't verify but."
+    },
+    {
+      "start": 616.63,
+      "end": 624.47,
+      "text": "The way the email was worded was just like if it was a whatever at Empire Boulevard."
+    },
+    {
+      "start": 624.47,
+      "end": 625.47,
+      "text": "Yeah, yeah, yeah, yeah."
+    },
+    {
+      "start": 625.47,
+      "end": 626.47,
+      "text": "That's what I think."
+    },
+    {
+      "start": 626.47,
+      "end": 628.91,
+      "text": "That's how it was the same format."
+    },
+    {
+      "start": 629.89,
+      "end": 632.53,
+      "text": "I kind of I have the same general impression that this"
+    },
+    {
+      "start": 634.02,
+      "end": 638.06,
+      "text": "I thought everybody was getting it so, but yes it could have been."
+    },
+    {
+      "start": 638.35,
+      "end": 639.19,
+      "text": "specific brand."
+    },
+    {
+      "start": 639.43,
+      "end": 641.43,
+      "text": "I don't think my email would have been on that one."
+    },
+    {
+      "start": 646.04,
+      "end": 648.04,
+      "text": "businesses that we know were there."
+    },
+    {
+      "start": 653.11,
+      "end": 657.07,
+      "text": "So we know Robert, the designer, was there."
+    },
+    {
+      "start": 657.07,
+      "end": 657.95,
+      "text": "Real Latimer."
+    },
+    {
+      "start": 658.28,
+      "end": 660.28,
+      "text": "which is Danielle."
+    },
+    {
+      "start": 660.28,
+      "end": 665.28,
+      "text": "We know the Bob Fandit, we know Trove, we know Green Room."
+    },
+    {
+      "start": 665.28,
+      "end": 668.28,
+      "text": "We know S. Brave."
+    },
+    {
+      "start": 668.28,
+      "end": 674.28,
+      "text": "Not a small business, but Jonathan from Brooklyn Chamber was there."
+    },
+    {
+      "start": 674.28,
+      "end": 679.28,
+      "text": "I also had Chacho, another small business owner looking to do..."
+    },
+    {
+      "start": 679.28,
+      "end": 680.28,
+      "text": "Remember we connected them?"
+    },
+    {
+      "start": 680.28,
+      "end": 683.28,
+      "text": "Yes, with Mark and Chacho."
+    },
+    {
+      "start": 683.28,
+      "end": 685.28,
+      "text": "Was that a choice from Goodwill?"
+    },
+    {
+      "start": 685.28,
+      "end": 686.28,
+      "text": "Yeah, Goodwill."
+    },
+    {
+      "start": 686.38,
+      "end": 690.84,
+      "text": ">> [CROSSTALK]"
+    },
+    {
+      "start": 691.33,
+      "end": 692.69,
+      "text": "- And I have a very nice time too."
+    },
+    {
+      "start": 692.69,
+      "end": 693.53,
+      "text": "- Yeah."
+    },
+    {
+      "start": 700.68,
+      "end": 703.08,
+      "text": "I don't know if this is the person I got on me either, sorry."
+    },
+    {
+      "start": 703.95,
+      "end": 704.95,
+      "text": "Oh, you know what?"
+    },
+    {
+      "start": 704.95,
+      "end": 705.95,
+      "text": "Girls love you."
+    },
+    {
+      "start": 705.95,
+      "end": 706.46,
+      "text": "I do."
+    },
+    {
+      "start": 716.61,
+      "end": 718.15,
+      "text": "The survey is different."
+    },
+    {
+      "start": 718.88,
+      "end": 721.44,
+      "text": "and one of the conversations that we had as well."
+    },
+    {
+      "start": 726.07,
+      "end": 727.21,
+      "text": "and do not judge me."
+    },
+    {
+      "start": 728.21,
+      "end": 730.45,
+      "text": "(laughter)"
+    },
+    {
+      "start": 731.78,
+      "end": 736.94,
+      "text": "And these busters, even busters. Gotta look for it. It's in here somewhere."
+    },
+    {
+      "start": 743.32,
+      "end": 744.78,
+      "text": "- This is Joyce."
+    },
+    {
+      "start": 744.78,
+      "end": 746.32,
+      "text": "- Joyce is Joyce as well."
+    },
+    {
+      "start": 746.32,
+      "end": 747.44,
+      "text": "We have Danielle, right?"
+    },
+    {
+      "start": 747.44,
+      "end": 748.28,
+      "text": "We said, okay."
+    },
+    {
+      "start": 755.79,
+      "end": 756.71,
+      "text": "- Okay, that's all."
+    },
+    {
+      "start": 757.73,
+      "end": 760.53,
+      "text": "I have Wilbur's information."
+    },
+    {
+      "start": 765.35,
+      "end": 769.95,
+      "text": "Chacha was another like, um, gosh, marketing agent."
+    },
+    {
+      "start": 769.95,
+      "end": 771.95,
+      "text": "I don't know how to say this."
+    },
+    {
+      "start": 771.95,
+      "end": 774.63,
+      "text": "They do something similar to what Art does."
+    },
+    {
+      "start": 774.63,
+      "end": 776.95,
+      "text": "Or is looking to do something similar."
+    },
+    {
+      "start": 776.95,
+      "end": 778.27,
+      "text": "Connecting with local."
+    },
+    {
+      "start": 778.27,
+      "end": 779.75,
+      "text": "Oh no, I just want to write his name."
+    },
+    {
+      "start": 779.75,
+      "end": 780.87,
+      "text": "That runs up there."
+    },
+    {
+      "start": 780.87,
+      "end": 784.23,
+      "text": "And the bottom line is that his name is..."
+    },
+    {
+      "start": 784.23,
+      "end": 785.07,
+      "text": "What true name is this?"
+    },
+    {
+      "start": 785.07,
+      "end": 785.91,
+      "text": "I know."
+    },
+    {
+      "start": 785.91,
+      "end": 786.75,
+      "text": "So that's why."
+    },
+    {
+      "start": 786.75,
+      "end": 788.59,
+      "text": "We should have followed up with him."
+    },
+    {
+      "start": 788.59,
+      "end": 790.75,
+      "text": "(mumbles)"
+    },
+    {
+      "start": 792.75,
+      "end": 793.59,
+      "text": "I think I..."
+    },
+    {
+      "start": 816.91,
+      "end": 820.67,
+      "text": "I was saying overwhelmingly I think the people that we interacted with were not"
+    },
+    {
+      "start": 820.67,
+      "end": 822.67,
+      "text": "for-store owners, restaurant owners."
+    },
+    {
+      "start": 822.67,
+      "end": 825.33,
+      "text": "I mean there were restaurant owners that were within arms reach."
+    },
+    {
+      "start": 825.33,
+      "end": 827.33,
+      "text": "Oh, Joelle came."
+    },
+    {
+      "start": 827.33,
+      "end": 829.33,
+      "text": "Oh right, Joelle from Brooklyn Park."
+    },
+    {
+      "start": 831.82,
+      "end": 836.42,
+      "text": "So I think that there's something to be said for that and thinking about how whether it's"
+    },
+    {
+      "start": 836.42,
+      "end": 841.5,
+      "text": "the next iteration of the map and the business directory, right?"
+    },
+    {
+      "start": 841.5,
+      "end": 844.98,
+      "text": "It's like there are people in apartments."
+    },
+    {
+      "start": 860.47,
+      "end": 864.63,
+      "text": "such a large percentage of the turnout and people who were like i need this to work"
+    },
+    {
+      "start": 872.59,
+      "end": 877.31,
+      "text": "event, whether that's the scavenger hunt or something."
+    },
+    {
+      "start": 877.31,
+      "end": 880.15,
+      "text": "Or maybe that's the group that we do more of a networking"
+    },
+    {
+      "start": 880.15,
+      "end": 884.31,
+      "text": "breakfast or whatever that it is and trying to figure out"
+    },
+    {
+      "start": 884.31,
+      "end": 887.27,
+      "text": "what are the needs that we know of, like the community."
+    },
+    {
+      "start": 887.27,
+      "end": 888.35,
+      "text": "(laughs)"
+    },
+    {
+      "start": 888.35,
+      "end": 890.51,
+      "text": "(mumbles)"
+    }
+  ]
+}

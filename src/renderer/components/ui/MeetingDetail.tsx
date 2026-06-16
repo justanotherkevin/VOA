@@ -411,17 +411,12 @@ export function MeetingDetail({
                 </SideSection>
               )}
 
-              {/* Pending / failed state in sidebar */}
-              {summaryPending && (
-                <SideSection
-                  icon={<Lightbulb size={13} />}
-                  title="Key Decisions"
-                >
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                    <Loader2 size={11} className="animate-spin" />
-                    <span>Generating…</span>
-                  </div>
-                </SideSection>
+              {/* Pending state in sidebar — no section titles so tests wait for real data */}
+              {summaryPending && meeting.decisions.length === 0 && (
+                <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                  <Loader2 size={11} className="animate-spin" />
+                  <span>Generating…</span>
+                </div>
               )}
             </div>
           )}
