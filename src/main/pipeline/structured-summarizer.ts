@@ -1,5 +1,22 @@
 import { getLMStudioPreferences } from '@/main/store';
 
+export async function checkConnection(baseUrl: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    try {
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/v1/models`, {
+        signal: controller.signal,
+      });
+      return response.ok;
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch {
+    return false;
+  }
+}
+
 export interface StructuredSummaryResult {
   summary: string;
   decisions: string[];
@@ -229,7 +246,11 @@ class StructuredSummarizerService {
     this.resetSession();
     const chunks = splitIntoChunks(text, MAX_DELTA_CHARS);
     for (const chunk of chunks) {
-      await this.submitChunk(chunk);
+      const result = await this.submitChunk(chunk);
+      if (result === null) {
+        this.resetSession();
+        return null;
+      }
     }
     return this.getCurrentSummary();
   }

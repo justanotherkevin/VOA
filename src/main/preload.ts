@@ -142,17 +142,6 @@ const electronAPI = {
     openPath: (filePath: string) => ipcRenderer.invoke(CHANNELS.SHELL.OPEN_PATH, filePath),
   },
 
-  // ── Summarizer ────────────────────────────────────────────────────────────
-  summarizer: {
-    prefetch: () => ipcRenderer.invoke(CHANNELS.MODEL.SUMMARIZER_PREFETCH),
-    submitChunk: (text: string) => ipcRenderer.invoke(CHANNELS.SUMMARIZER.SUBMIT_CHUNK, text),
-    on: {
-      progress: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.SUMMARIZER.PROGRESS, cb),
-      ready: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.SUMMARIZER.READY, cb),
-      error: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.SUMMARIZER.ERROR, cb),
-    },
-  },
-
   // ── Recordings ────────────────────────────────────────────────────────────
   recordings: {
     toggle: () => ipcRenderer.send(CHANNELS.RECORDING.TOGGLE),

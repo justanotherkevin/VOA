@@ -11,6 +11,7 @@ export default defineConfig({
       '**/node_modules/**',
       '**/asr-accuracy.test.ts',
       '**/qwen-download.test.ts',
+      '**/lmstudio-integration.test.ts',
     ],
   },
   resolve: {

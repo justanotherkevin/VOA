@@ -28,6 +28,7 @@
     "test:e2e:build": "npm run build && playwright test --config=playwright.build.config.ts",
     "test:asr": "vitest run --config vitest.asr.config.ts src/main/__tests__/asr-accuracy.test.ts 2>&1 | ./scripts/filter-onnx-warnings.sh",
     "test:qwen": "vitest run --config vitest.qwen.config.ts src/main/__tests__/qwen-download.test.ts",
+    "test:lmstudio": "vitest run --config vitest.lmstudio.config.ts src/main/__tests__/lmstudio-integration.test.ts",
     "prepare": "husky",
     "postinstall": "electron-builder install-app-deps"
   },

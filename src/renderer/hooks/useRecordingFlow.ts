@@ -1,6 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 
-export const CHUNK_INTERVAL_MS = 5 * 60 * 1000;
 import type { Transcriber } from '@/renderer/hooks/useTranscriber';
 import type { UseAudioRecorderReturn } from '@/renderer/hooks/useAudioRecorder';
 import type { UseSystemAudioRecorderReturn } from '@/renderer/hooks/useSystemAudioRecorder';
@@ -42,7 +41,6 @@ export function useRecordingFlow({
   transcriber,
 }: UseRecordingFlowParams): void {
   const transcriberRef = useRef(transcriber);
-  const deltaIndexRef = useRef(0);
   const [isRecordingActive, setIsRecordingActive] = useState(false);
   const [systemAudioEnabled, setSystemAudioEnabled] = useState(false);
   // Tracks whether a session was explicitly started so the done-trigger never
@@ -191,25 +189,6 @@ export function useRecordingFlow({
       cleanupRecordingFlowTestHooks();
     };
   }, [handleRecordingComplete, setOnRecordingComplete]);
-
-  // Send transcript deltas to the summarizer at regular intervals while recording.
-  // Resets the delta index each session so only new text is sent on each tick.
-  useEffect(() => {
-    if (!isRecordingActive) return;
-
-    deltaIndexRef.current = 0;
-
-    const timer = setInterval(() => {
-      const text = transcriberRef.current.output?.text ?? '';
-      const delta = text.slice(deltaIndexRef.current).trim();
-      if (delta) {
-        deltaIndexRef.current = text.length;
-        window.electronAPI.summarizer.submitChunk(delta);
-      }
-    }, CHUNK_INTERVAL_MS);
-
-    return () => clearInterval(timer);
-  }, [isRecordingActive]);
 
   // When recording stops, end the session and transition to done state.
   // Uses hasActiveSessionRef instead of transcriber.output?.text because VAD-only

@@ -1,5 +1,4 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 
@@ -11,7 +10,6 @@ export interface CachedModel {
   name: string;
   size: number;
   path: string;
-  source: 'xenova' | 'hf';
 }
 
 const CACHE_BASE_PATH = path.join(
@@ -25,14 +23,8 @@ const CACHE_BASE_PATH = path.join(
   'Xenova',
 );
 
-const HF_CACHE_BASE = path.join(os.homedir(), '.cache', 'huggingface', 'hub');
-// @huggingface/transformers JS library writes to {cacheDir}/{org}/{model}/ (not
-// the Python hub's models--{org}--{model} format).
-const QWEN_CACHE_PATH = path.join(HF_CACHE_BASE, 'onnx-community', 'Qwen2.5-1.5B-Instruct');
-const QWEN_MODEL_NAME = 'Qwen2.5-1.5B-Instruct';
-
-export function getCachePaths(): { xenova: string; hf: string } {
-  return { xenova: CACHE_BASE_PATH, hf: HF_CACHE_BASE };
+export function getCachePaths(): string {
+  return CACHE_BASE_PATH;
 }
 
 async function getDirectorySize(dirPath: string): Promise<number> {
@@ -69,33 +61,22 @@ export async function listCachedModels(): Promise<CachedModel[]> {
         if (dir.isDirectory()) {
           const modelPath = path.join(CACHE_BASE_PATH, dir.name);
           const size = await getDirectorySize(modelPath);
-          models.push({ name: dir.name, size, path: modelPath, source: 'xenova' });
+          models.push({ name: dir.name, size, path: modelPath });
         }
       }
     }
   } catch (error) {
-    console.error('Error listing Xenova cached models:', error);
-  }
-
-  try {
-    if (fs.existsSync(QWEN_CACHE_PATH)) {
-      const size = await getDirectorySize(QWEN_CACHE_PATH);
-      models.push({ name: QWEN_MODEL_NAME, size, path: QWEN_CACHE_PATH, source: 'hf' });
-    }
-  } catch (error) {
-    console.error('Error listing HF cached models:', error);
+    console.error('Error listing cached models:', error);
   }
 
   return models.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function deleteModel(modelName: string, source: 'xenova' | 'hf' = 'xenova'): Promise<boolean> {
+export async function deleteModel(modelName: string): Promise<boolean> {
   try {
-    const modelPath = source === 'hf'
-      ? QWEN_CACHE_PATH
-      : path.join(CACHE_BASE_PATH, modelName);
+    const modelPath = path.join(CACHE_BASE_PATH, modelName);
 
-    if (source === 'xenova' && !modelPath.startsWith(CACHE_BASE_PATH + path.sep)) {
+    if (!modelPath.startsWith(CACHE_BASE_PATH + path.sep)) {
       console.error(`[model-cache] Refusing to delete outside cache: ${modelPath}`);
       return false;
     }
@@ -121,23 +102,13 @@ export async function clearAllCache(): Promise<number> {
       const modelDirs = await readdir(CACHE_BASE_PATH, { withFileTypes: true });
       for (const dir of modelDirs) {
         if (dir.isDirectory()) {
-          const success = await deleteModel(dir.name, 'xenova');
+          const success = await deleteModel(dir.name);
           if (success) deletedCount++;
         }
       }
     }
   } catch (error) {
-    console.error('Error clearing Xenova cache:', error);
-  }
-
-  try {
-    const qwenPath = QWEN_CACHE_PATH;
-    if (fs.existsSync(qwenPath)) {
-      await rm(qwenPath, { recursive: true, force: true });
-      deletedCount++;
-    }
-  } catch (error) {
-    console.error('Error clearing HF cache:', error);
+    console.error('Error clearing cache:', error);
   }
 
   return deletedCount;

@@ -394,4 +394,24 @@ describe('StructuredSummarizerService rolling session methods', () => {
     const result = await service.summarizeChunked(text);
     expect(result).toBeNull();
   });
+
+  it('summarizeChunked() stops processing and resets session when a mid-chunk fetch fails', async () => {
+    const firstChunkResult = {
+      summary: 'First chunk summary',
+      decisions: ['Decision A'],
+      topics: ['Topic A'],
+      actionItems: [],
+    };
+    // Text long enough for 2 chunks; first succeeds, second fails
+    const text = 'word '.repeat(500); // ~2500 chars → 2 chunks
+    (fetch as any)
+      .mockReturnValueOnce(makeOkResponse(JSON.stringify(firstChunkResult)))
+      .mockRejectedValueOnce(new Error('network error'));
+
+    const result = await service.summarizeChunked(text);
+
+    expect(result).toBeNull();
+    expect(service.getCurrentSummary()).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
 });

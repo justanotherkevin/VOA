@@ -90,12 +90,12 @@ export default function Settings() {
   const [appPrefs, setAppPrefs] = useState({ launchAtLogin: false, showMenuBar: true, showDockIcon: true });
   const [audioPrefs, setAudioPrefs] = useState({ micGain: 62, noiseSuppression: true, labelSpeakers: true });
   const [modelPrefs, setModelPrefs] = useState({ selectedModel: 'Xenova/whisper-tiny', asrType: 'whisper' as const });
-  const [cachedModels, setCachedModels] = useState<Array<{ name: string; size: number; path: string; source: 'xenova' | 'hf' }>>([]);
+  const [cachedModels, setCachedModels] = useState<Array<{ name: string; size: number; path: string }>>([]);
   const [isDeletingModel, setIsDeletingModel] = useState<string | null>(null);
-  const [summarizerStatus, setSummarizerStatus] = useState<'idle' | 'downloading' | 'ready' | 'error'>('idle');
-  // progress: null = file started but percentage unknown (large files saved to HF disk cache)
-  const [summarizerProgress, setSummarizerProgress] = useState<Array<{ file: string; progress: number | null }>>([]);
-  const [cachePaths, setCachePaths] = useState<{ xenova: string; hf: string } | null>(null);
+  const [cachePaths, setCachePaths] = useState<string | null>(null);
+  const [lmStudioPrefs, setLmStudioPrefs] = useState({ baseUrl: 'http://localhost:1234', model: '' });
+  const [lmStudioTestResult, setLmStudioTestResult] = useState<{ ok: boolean; models?: string[] } | null>(null);
+  const [lmStudioTesting, setLmStudioTesting] = useState(false);
 
   const [isShortcutDialogOpen, setIsShortcutDialogOpen] = useState(false);
 
@@ -132,62 +132,16 @@ export default function Settings() {
         }
 
         const cacheRes = await window.electronAPI.settings.model.cache.list();
-        if (cacheRes?.success) {
-          setCachedModels(cacheRes.models);
-          const hasQwen = cacheRes.models.some((m: any) => m.source === 'hf');
-          setSummarizerStatus(hasQwen ? 'ready' : 'idle');
-        }
+        if (cacheRes?.success) setCachedModels(cacheRes.models);
         const paths = await window.electronAPI.settings.model.cache.getPaths();
         if (paths) setCachePaths(paths);
+        const lmPrefs = await window.electronAPI.lmStudio.getPreferences();
+        if (lmPrefs) setLmStudioPrefs((prev) => ({ ...prev, ...lmPrefs }));
       } catch (error) {
         console.error('Failed to load settings:', error);
       }
     };
     loadAllPrefs();
-  }, []);
-
-  useEffect(() => {
-    const refreshModels = () =>
-      window.electronAPI.settings.model.cache.list().then((res: any) => {
-        if (res?.success) setCachedModels(res.models);
-      });
-
-    const unsubProgress = window.electronAPI.summarizer.on.progress((data: any) => {
-      if (!data?.file) return;
-      // 'initiate'/'download' fire for all files including large ones saved to HF disk cache.
-      // Those never emit 'progress' (no byte-level streaming in Node.js file path mode),
-      // so we show them with an indeterminate bar (progress: null).
-      if (data.status === 'initiate' || data.status === 'download') {
-        setSummarizerStatus('downloading');
-        setSummarizerProgress((prev) => {
-          if (prev.some((p) => p.file === data.file)) return prev;
-          return [...prev, { file: data.file, progress: null }];
-        });
-        return;
-      }
-      if (data.status === 'progress' && typeof data.progress === 'number') {
-        setSummarizerStatus('downloading');
-        setSummarizerProgress((prev) => {
-          const idx = prev.findIndex((p) => p.file === data.file);
-          if (idx >= 0) {
-            const updated = [...prev];
-            updated[idx] = { file: data.file, progress: data.progress };
-            return updated;
-          }
-          return [...prev, { file: data.file, progress: data.progress }];
-        });
-      }
-    });
-    const unsubReady = window.electronAPI.summarizer.on.ready(() => {
-      setSummarizerStatus('ready');
-      setSummarizerProgress([]);
-      refreshModels();
-    });
-    const unsubError = window.electronAPI.summarizer.on.error(() => {
-      setSummarizerStatus('error');
-      setSummarizerProgress([]);
-    });
-    return () => { unsubProgress(); unsubReady(); unsubError(); };
   }, []);
 
   function applyTheme(prefs: typeof uiPrefs) {
@@ -252,12 +206,11 @@ export default function Settings() {
     return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
   }
 
-  async function handleDeleteModel(model: { name: string; source: 'xenova' | 'hf' }) {
+  async function handleDeleteModel(model: { name: string }) {
     if (!window.confirm(`Delete ${model.name}?`)) return;
     setIsDeletingModel(model.name);
     try {
-      await window.electronAPI.settings.model.cache.delete(model.name, model.source);
-      if (model.source === 'hf') setSummarizerStatus('idle');
+      await window.electronAPI.settings.model.cache.delete(model.name);
       const res = await window.electronAPI.settings.model.cache.list();
       if (res?.success) setCachedModels(res.models);
     } finally {
@@ -265,14 +218,27 @@ export default function Settings() {
     }
   }
 
-  async function handlePrefetchSummarizer() {
-    setSummarizerStatus('downloading');
-    setSummarizerProgress([]);
+  async function handleLmStudioPrefChange(key: 'baseUrl' | 'model', value: string) {
+    const updated = { ...lmStudioPrefs, [key]: value };
+    setLmStudioPrefs(updated);
+    setLmStudioTestResult(null);
+    await window.electronAPI.lmStudio.savePreferences(updated);
+  }
+
+  async function saveLmStudioPrefs() {
+    await window.electronAPI.lmStudio.savePreferences(lmStudioPrefs);
+  }
+
+  async function handleTestLmStudio() {
+    setLmStudioTesting(true);
+    setLmStudioTestResult(null);
     try {
-      await window.electronAPI.summarizer.prefetch();
+      const result = await window.electronAPI.lmStudio.testConnection(lmStudioPrefs.baseUrl);
+      setLmStudioTestResult(result ?? { ok: false });
     } catch {
-      setSummarizerStatus('error');
-      setSummarizerProgress([]);
+      setLmStudioTestResult({ ok: false });
+    } finally {
+      setLmStudioTesting(false);
     }
   }
 
@@ -983,158 +949,164 @@ export default function Settings() {
                 </div>
               </div>
 
-              {(() => {
-                const whisperModels = cachedModels.filter((m) => m.source === 'xenova');
-                const qwenModel = cachedModels.find((m) => m.source === 'hf');
-                const qwenMeta = CACHED_MODEL_META['Qwen2.5-1.5B-Instruct'];
-                const showClearAll = cachedModels.length > 1 || (summarizerStatus === 'ready' && whisperModels.length > 0);
-
-                return (
-                  <div style={{ marginBottom: 22 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text2)', margin: '0 0 7px 3px' }}>
-                      AI models
+              {/* AI Provider */}
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text2)', margin: '0 0 7px 3px' }}>AI Provider</div>
+                <div className="s-card-rows">
+                  <div className="s-row">
+                    <Globe size={17} color="var(--s-text2)" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Provider</div>
+                      <div style={{ fontSize: 12, color: 'var(--s-text2)', marginTop: 2 }}>Preset or enter a custom URL below</div>
                     </div>
-                    <div className="s-card-rows">
-                      {/* Qwen row — always visible */}
-                      <div className="s-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <ModelInfoTooltip description={qwenMeta.description}>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Qwen2.5-1.5B-Instruct</div>
-                              <div style={{ fontSize: 12, color: 'var(--s-text2)', marginTop: 2 }}>
-                                {summarizerStatus === 'ready' && qwenModel
-                                  ? `${qwenMeta.subtitle} · ${formatBytes(qwenModel.size)}`
-                                  : summarizerStatus === 'downloading'
-                                  ? `${qwenMeta.subtitle} · downloading…`
-                                  : `${qwenMeta.subtitle}`}
-                              </div>
-                            </div>
-                          </ModelInfoTooltip>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
-                            {summarizerStatus === 'ready' ? (
-                              <button
-                                className="s-btn s-btn-danger"
-                                onClick={() => handleDeleteModel({ name: 'Qwen2.5-1.5B-Instruct', source: 'hf' })}
-                                disabled={isDeletingModel === 'Qwen2.5-1.5B-Instruct'}
-                              >
-                                {isDeletingModel === 'Qwen2.5-1.5B-Instruct' ? 'Deleting…' : 'Delete'}
-                              </button>
-                            ) : summarizerStatus === 'downloading' ? (
-                              <span style={{ fontSize: 12, color: 'var(--s-text3)' }}>Downloading…</span>
-                            ) : summarizerStatus === 'error' ? (
-                              <button className="s-btn" onClick={handlePrefetchSummarizer}>
-                                <Download size={13} />
-                                Retry
-                              </button>
-                            ) : (
-                              <button className="s-btn" onClick={handlePrefetchSummarizer}>
-                                <Download size={13} />
-                                Download
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        {summarizerStatus === 'downloading' && summarizerProgress.length > 0 && (
-                          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
-                            {summarizerProgress.map((item) => (
-                              <div key={item.file}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--s-text2)', marginBottom: 3 }}>
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>{item.file}</span>
-                                  <span>{item.progress === null ? '…' : `${Math.round(item.progress)}%`}</span>
-                                </div>
-                                <div style={{ width: '100%', height: 4, borderRadius: 2, background: 'var(--s-border)', overflow: 'hidden' }}>
-                                  {item.progress === null ? (
-                                    <div
-                                      style={{
-                                        height: 4, borderRadius: 2,
-                                        background: 'var(--s-accent)',
-                                        width: '30%',
-                                        animation: 'summarizer-indeterminate 1.4s ease-in-out infinite',
-                                      }}
-                                    />
-                                  ) : (
-                                    <div
-                                      style={{
-                                        height: 4, borderRadius: 2,
-                                        background: 'var(--s-accent)',
-                                        width: `${item.progress}%`,
-                                        transition: 'width 0.2s ease',
-                                      }}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Whisper cached models */}
-                      {whisperModels.map((m) => {
-                        const meta = CACHED_MODEL_META[m.name];
-                        const leftCol = (
-                          <>
-                            <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>{m.name}</div>
-                            <div style={{ fontSize: 12, color: 'var(--s-text2)', marginTop: 2 }}>
-                              {meta ? `${meta.subtitle} · ${formatBytes(m.size)}` : formatBytes(m.size)}
-                            </div>
-                          </>
-                        );
-                        return (
-                          <div key={m.name} className="s-row">
-                            {meta
-                              ? <ModelInfoTooltip description={meta.description}>{leftCol}</ModelInfoTooltip>
-                              : <div style={{ flex: 1, minWidth: 0 }}>{leftCol}</div>
-                            }
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
-                              <button
-                                className="s-btn s-btn-danger"
-                                onClick={() => handleDeleteModel(m)}
-                                disabled={isDeletingModel === m.name}
-                              >
-                                {isDeletingModel === m.name ? 'Deleting…' : 'Delete'}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Clear all */}
-                      {showClearAll && (
-                        <div
-                          className="s-row s-row-btn"
-                          onClick={async () => {
-                            await window.electronAPI.settings.model.cache.clearAll();
-                            setSummarizerStatus('idle');
-                            const res = await window.electronAPI.settings.model.cache.list();
-                            if (res?.success) setCachedModels(res.models);
-                          }}
-                        >
-                          <Trash2 size={17} color="var(--s-text2)" style={{ flexShrink: 0 }} />
-                          <div style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Clear all</div>
-                        </div>
+                    <div style={{ flexShrink: 0 }}>
+                      <SegmentedControl
+                        options={[
+                          { label: 'LM Studio', value: 'lmstudio' },
+                          { label: 'Ollama', value: 'ollama', disabled: true, tooltip: 'Coming soon' },
+                        ]}
+                        value={lmStudioPrefs.baseUrl === 'http://localhost:11434' ? 'ollama' : 'lmstudio'}
+                        onChange={(v) => handleLmStudioPrefChange('baseUrl', v === 'ollama' ? 'http://localhost:11434' : 'http://localhost:1234')}
+                      />
+                    </div>
+                  </div>
+                  <div className="s-row">
+                    <ArrowUpRight size={17} color="var(--s-text2)" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Base URL</div>
+                    </div>
+                    <input
+                      value={lmStudioPrefs.baseUrl}
+                      onChange={(e) => { setLmStudioPrefs((prev) => ({ ...prev, baseUrl: e.target.value })); setLmStudioTestResult(null); }}
+                      onBlur={saveLmStudioPrefs}
+                      style={{
+                        width: 210,
+                        background: 'var(--s-field)',
+                        border: '0.5px solid var(--s-field-line)',
+                        borderRadius: 7,
+                        padding: '4px 9px',
+                        fontSize: 12.5,
+                        color: 'var(--s-text)',
+                        fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                  <div className="s-row">
+                    <Cpu size={17} color="var(--s-text2)" style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Model</div>
+                      <div style={{ fontSize: 12, color: 'var(--s-text2)', marginTop: 2 }}>Leave empty to use loaded model</div>
+                    </div>
+                    <input
+                      value={lmStudioPrefs.model}
+                      onChange={(e) => setLmStudioPrefs((prev) => ({ ...prev, model: e.target.value }))}
+                      onBlur={saveLmStudioPrefs}
+                      placeholder="e.g. qwen2.5-1.5b-instruct"
+                      style={{
+                        width: 210,
+                        background: 'var(--s-field)',
+                        border: '0.5px solid var(--s-field-line)',
+                        borderRadius: 7,
+                        padding: '4px 9px',
+                        fontSize: 12.5,
+                        color: 'var(--s-text)',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                  <div className="s-row">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {lmStudioTestResult !== null && (
+                        lmStudioTestResult.ok ? (
+                          <span className="s-pill s-pill-good">
+                            <span className="s-pdot" />
+                            {`Connected — ${lmStudioTestResult.models?.length ?? 0} model${(lmStudioTestResult.models?.length ?? 0) !== 1 ? 's' : ''} available`}
+                          </span>
+                        ) : (
+                          <span className="s-pill s-pill-danger">
+                            <span className="s-pdot" />
+                            Unreachable — is LM Studio running?
+                          </span>
+                        )
                       )}
                     </div>
+                    <button
+                      className="s-btn"
+                      onClick={handleTestLmStudio}
+                      disabled={lmStudioTesting}
+                    >
+                      {lmStudioTesting ? 'Testing…' : 'Test Connection'}
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-                    {/* Cache path footer */}
-                    {cachePaths && (
-                      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--s-text3)' }}>
-                        <Folder size={12} color="var(--s-text3)" style={{ flexShrink: 0 }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                          {cachePaths.hf}
-                        </span>
-                        <button
-                          className="s-btn"
-                          style={{ padding: '2px 8px', fontSize: 11.5, flexShrink: 0 }}
-                          onClick={() => window.electronAPI.shell.openPath(cachePaths.hf)}
-                        >
-                          Reveal
-                        </button>
+              {/* Cached Whisper models */}
+              {cachedModels.length > 0 && (
+                <div style={{ marginBottom: 22 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text2)', margin: '0 0 7px 3px' }}>AI models</div>
+                  <div className="s-card-rows">
+                    {cachedModels.map((m) => {
+                      const meta = CACHED_MODEL_META[m.name];
+                      const leftCol = (
+                        <>
+                          <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>{m.name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--s-text2)', marginTop: 2 }}>
+                            {meta ? `${meta.subtitle} · ${formatBytes(m.size)}` : formatBytes(m.size)}
+                          </div>
+                        </>
+                      );
+                      return (
+                        <div key={m.name} className="s-row">
+                          {meta
+                            ? <ModelInfoTooltip description={meta.description}>{leftCol}</ModelInfoTooltip>
+                            : <div style={{ flex: 1, minWidth: 0 }}>{leftCol}</div>
+                          }
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+                            <button
+                              className="s-btn s-btn-danger"
+                              onClick={() => handleDeleteModel(m)}
+                              disabled={isDeletingModel === m.name}
+                            >
+                              {isDeletingModel === m.name ? 'Deleting…' : 'Delete'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {cachedModels.length > 1 && (
+                      <div
+                        className="s-row s-row-btn"
+                        onClick={async () => {
+                          await window.electronAPI.settings.model.cache.clearAll();
+                          const res = await window.electronAPI.settings.model.cache.list();
+                          if (res?.success) setCachedModels(res.models);
+                        }}
+                      >
+                        <Trash2 size={17} color="var(--s-text2)" style={{ flexShrink: 0 }} />
+                        <div style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: 'var(--s-text)' }}>Clear all</div>
                       </div>
                     )}
                   </div>
-                );
-              })()}
+                  {cachePaths && (
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'var(--s-text3)' }}>
+                      <Folder size={12} color="var(--s-text3)" style={{ flexShrink: 0 }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {cachePaths}
+                      </span>
+                      <button
+                        className="s-btn"
+                        style={{ padding: '2px 8px', fontSize: 11.5, flexShrink: 0 }}
+                        onClick={() => window.electronAPI.shell.openPath(cachePaths!)}
+                      >
+                        Reveal
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--s-text2)', margin: '0 0 7px 3px' }}>Language</div>

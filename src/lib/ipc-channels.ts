@@ -49,13 +49,6 @@ export const CHANNELS = {
     CACHE_PATHS: 'modelCache:paths',
     GET_ASR_TYPE: 'settings:get-asr-type',
     SET_ASR_TYPE: 'settings:set-asr-type',
-    SUMMARIZER_PREFETCH: 'summarizer:prefetch',
-  },
-  SUMMARIZER: {
-    PROGRESS: 'summarizer:progress',
-    READY: 'summarizer:ready',
-    ERROR: 'summarizer:error',
-    SUBMIT_CHUNK: 'summarizer:submitChunk',
   },
   SHELL: {
     OPEN_PATH: 'shell:openPath',

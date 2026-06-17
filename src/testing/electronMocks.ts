@@ -132,10 +132,16 @@ export function attachGlobalElectronMock() {
       openPath: vi.fn(async () => {}),
     },
 
+    // ── LM Studio ─────────────────────────────────────────────────────────────
+    lmStudio: {
+      getPreferences: vi.fn(async () => ({ baseUrl: 'http://localhost:1234', model: '' })),
+      savePreferences: vi.fn(async () => {}),
+      testConnection: vi.fn(async () => ({ ok: true, models: [] })),
+    },
+
     // ── Summarizer ────────────────────────────────────────────────────────────
     summarizer: {
       prefetch: vi.fn(async () => {}),
-      submitChunk: vi.fn(async () => {}),
       on: {
         progress: vi.fn(() => () => {}),
         ready: vi.fn(() => () => {}),

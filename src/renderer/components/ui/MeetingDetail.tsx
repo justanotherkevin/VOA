@@ -11,7 +11,6 @@ import {
   Tag,
   Loader2,
   Sparkles,
-  Download,
 } from 'lucide-react';
 import type { Meeting } from '@/renderer/hooks/useMeetings';
 import {
@@ -23,7 +22,6 @@ import {
 
 interface MeetingDetailProps {
   meeting: Meeting | null;
-  summarizerReady: boolean;
   onDelete?: (id: string) => void;
   onTitleChange?: (id: string, title: string) => void;
 }
@@ -65,7 +63,6 @@ const HAS_TAGS_RE = /\[(Meeting|Mic)\]/i;
 
 export function MeetingDetail({
   meeting,
-  summarizerReady,
   onDelete,
   onTitleChange,
 }: MeetingDetailProps) {
@@ -234,20 +231,7 @@ export function MeetingDetail({
                 Summary unavailable.
               </p>
             )}
-            {meeting.isMeeting && summaryNotStarted && !summarizerReady && (
-              <div className="flex items-start gap-3 p-3 rounded-lg border border-[#2a2a2a] bg-[#161616]">
-                <Download size={15} className="text-gray-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm text-gray-300 font-medium">Get AI meeting insights</p>
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    Download the AI model in{' '}
-                    <span className="text-gray-400">Settings → Transcription</span>{' '}
-                    to extract summary, decisions, topics, and action items.
-                  </p>
-                </div>
-              </div>
-            )}
-            {meeting.isMeeting && summaryNotStarted && summarizerReady && (
+            {meeting.isMeeting && summaryNotStarted && (
               <button
                 onClick={handleEnrich}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"

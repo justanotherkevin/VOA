@@ -4,7 +4,7 @@
 | ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
 | ![Meeting transcript with AI summary](docs/screenshots/city-meeting-transcript.webp) | ![Available LLM models](docs/screenshots/model-list.webp) |
 
-**VOA** is a macOS desktop app that turns any meeting or call into structured notes — summary, key decisions, and action items — automatically, using on-device AI. Press a hotkey from any app, speak, and get a searchable transcript with an LLM-generated summary. No cloud, no API keys, nothing leaves your machine.
+**VOA** is a macOS desktop app that turns any meeting or call into structured notes — summary, key decisions, and action items — automatically, using local AI. Press a hotkey from any app, speak, and get a searchable transcript with an LLM-generated structured summary. Transcription runs fully on-device via Whisper; structured summaries use LM Studio. No cloud, no API keys, your audio never leaves your machine.
 
 ![Electron](https://img.shields.io/badge/Electron-2B2E3A?logo=electron&logoColor=9FEAF9)
 ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
@@ -16,9 +16,9 @@
 
 ## Why VOA
 
-Most meeting recorders give you a raw transcript and stop there, or they send your audio to a cloud LLM to extract action items. VOA runs two AI models on your Mac — [Whisper](https://github.com/openai/whisper) for speech-to-text, and [Qwen2.5-1.5B](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct) for structured extraction — so every meeting ends with a summary, a decisions list, tagged topics, and concrete action items, all generated locally.
+Most meeting recorders give you a raw transcript and stop there, or they send your audio to a cloud LLM to extract action items. VOA uses [Whisper](https://github.com/openai/whisper) for on-device speech-to-text and [LM Studio](https://lmstudio.ai) for structured extraction — so every meeting ends with a summary, a decisions list, tagged topics, and concrete action items, generated entirely on your Mac.
 
-The on-device approach is also the privacy answer: no cloud subscription, no bot joining your call, no API keys, no audio ever leaving your machine. It works with any app — Zoom, Teams, Google Meet, phone calls, in-person conversations, or your own voice memos.
+The local approach is also the privacy answer: no cloud subscription, no bot joining your call, no API keys, no audio ever leaving your machine. It works with any app — Zoom, Teams, Google Meet, phone calls, in-person conversations, or your own voice memos.
 
 ---
 
@@ -28,7 +28,7 @@ The on-device approach is also the privacy answer: no cloud subscription, no bot
 - **On-device Whisper transcription** — runs locally via `@xenova/transformers` + ONNX Runtime; no cloud
 - **Voice Activity Detection** — automatically segments speech from silence using `@ricky0123/vad-web`
 - **Smart meeting detection** — detects active calls in Zoom, Teams, Google Meet, and Slack via Accessibility API
-- **AI summaries and action items** — structured meeting summaries generated locally with Qwen2.5-1.5B
+- **AI summaries and action items** — structured meeting summaries via LM Studio (local OpenAI-compatible inference); bring your own model
 - **Meetings and monologues** — distinguishes group calls from solo voice capture
 - **macOS-native settings UI** — System Settings-style interface with 7 panes, light/dark/auto theme
 - **Privacy-first** — all audio processing stays on your Mac; no telemetry, no account required
@@ -37,13 +37,10 @@ The on-device approach is also the privacy answer: no cloud subscription, no bot
 
 ## AI Stack
 
-VOA uses three on-device models — all downloaded once and cached locally:
-
-| Purpose              | Model                                       | Notes                                          |
-| -------------------- | ------------------------------------------- | ---------------------------------------------- |
-| Speech-to-text       | OpenAI Whisper (via `@xenova/transformers`) | Runs in Node.js via ONNX Runtime               |
-| Structured summaries | Qwen2.5-1.5B-Instruct                       | Local LLM for meeting summaries + action items |
-| Summarization        | DistilBART CNN                              | Abstractive text summarization                 |
+| Purpose              | Model / Tool                                | Notes                                                        |
+| -------------------- | ------------------------------------------- | ------------------------------------------------------------ |
+| Speech-to-text       | OpenAI Whisper (via `@xenova/transformers`) | Runs in Node.js via ONNX Runtime; downloaded and cached locally |
+| Structured summaries | Any model via LM Studio                     | Local OpenAI-compatible inference server; user picks the model |
 
 ### Whisper model options
 
@@ -68,7 +65,7 @@ sequenceDiagram
     participant VAD as VAD (useVAD)
     participant IPC as IPC Bridge
     participant Transcriber as TranscriberService
-    participant Qwen as Qwen2.5 (utilityProcess)
+    participant LMStudio as LM Studio
 
     User->>Main: Press hotkey (any app)
     Main->>Renderer: recording:toggle
@@ -91,12 +88,12 @@ sequenceDiagram
     User->>Renderer: Click "Meeting details"
     Renderer->>IPC: meetings:enrich(meetingId)
     IPC->>Transcriber: triggerEnrichment()
-    Transcriber->>Qwen: summarize(transcript)
-    Qwen-->>Transcriber: summary + decisions + action items
+    Transcriber->>LMStudio: POST /v1/chat/completions
+    LMStudio-->>Transcriber: structured JSON (summary + decisions + action items)
     Transcriber-->>Renderer: meeting:updated (summaryStatus: ready)
 ```
 
-The main process registers a global shortcut and handles all AI inference. The renderer manages audio capture via Web Audio API + VAD, streaming raw `Float32Array` segments over IPC. Whisper runs in the Node.js main process via ONNX Runtime. Qwen2.5 runs in an Electron `utilityProcess` child to isolate ONNX crashes from the main process. Meeting summaries are generated on-demand when the user explicitly requests them — nothing runs automatically after recording ends.
+The main process registers a global shortcut and handles all AI inference. The renderer manages audio capture via Web Audio API + VAD, streaming raw `Float32Array` segments over IPC. Whisper runs in the Node.js main process via ONNX Runtime. Structured summaries are generated on-demand via a `fetch()` call to LM Studio's OpenAI-compatible endpoint (`/v1/chat/completions`) — nothing runs automatically after recording ends, and LM Studio must be running with a model loaded for enrichment to work.
 
 ---
 
@@ -121,7 +118,7 @@ appreciate it. Let me know if this works for you.
 
 Strips filler words and spoken disfluencies ("um", "uh", false starts) from the raw transcript. For clean speech the output is nearly identical; the cleaner mainly targets artifacts introduced by VAD segmentation.
 
-**Stage 3 — Qwen2.5 structured summary** (generated on demand when you click "Meeting details")
+**Stage 3 — LM Studio structured summary** (generated on demand when you click "Meeting details")
 
 ```json
 {
@@ -153,6 +150,7 @@ The summary, decisions, topics, and action items are rendered in the meeting det
 - Apple Silicon or Intel Mac
 - Node.js 18+
 - ~500 MB disk space for the Tiny Whisper model (more for larger models)
+- [LM Studio](https://lmstudio.ai) (optional — required for AI meeting summaries)
 
 ### Quick start
 
@@ -185,8 +183,9 @@ VOA's built-in permissions screen walks you through granting each one.
 | ------------------------ | ----------------------------------------------------- |
 | Desktop shell            | Electron 35                                           |
 | UI                       | React 19, TypeScript, Tailwind CSS v4, shadcn/ui      |
-| AI inference             | `@xenova/transformers` (Whisper, DistilBART, Qwen2.5) |
+| AI inference (ASR)       | `@xenova/transformers` (Whisper)                      |
 | ONNX Runtime             | `onnxruntime-node` + `onnxruntime-web`                |
+| Structured summaries     | LM Studio (local OpenAI-compatible server)            |
 | Voice Activity Detection | `@ricky0123/vad-web`                                  |
 | Persistent storage       | `electron-store`                                      |
 | Build                    | `electron-vite`, `electron-builder`                   |
@@ -214,17 +213,17 @@ A second edge case: when the user stops recording mid-speech via hotkey, the 500
 </details>
 
 <details>
-<summary><strong>RCA-2: Qwen2.5 ONNX Crashes in Electron</strong> — SIGTRAP crashes killing the entire Electron main process</summary>
+<summary><strong>RCA-2: Why we moved off on-device ONNX for structured summaries</strong> — Qwen2.5 ONNX crashes and JSON reliability drove the migration to LM Studio</summary>
 
-Three independent failure modes, each requiring its own fix:
+Three compounding problems made on-device ONNX inference for structured summaries untenable:
 
-**Process isolation:** Running a large ONNX model in the main process means any native crash from `onnxruntime-node` immediately terminates the app. Electron's `utilityProcess` API provides an isolated child process with its own heap and a `MessagePort`-based communication channel — a crash there cannot propagate up.
+**SIGTRAP crashes:** Running Qwen2.5-1.5B via `onnxruntime-node` in the Electron main process caused `SIGTRAP` crashes that killed the entire app. Isolating it to an Electron `utilityProcess` helped contain crashes but added IPC complexity.
 
-**Quantization:** `dtype: 'q4'` downloads `model_q4.onnx` (1.7 GB) and triggers `SIGTRAP` inside `onnxruntime-node`. Switching to `dtype: 'q8'` downloads `model_quantized.onnx` (~900 MB, INT8) which runs without crashing. Additionally, `package.json` pins the transitive `onnxruntime-node` dependency to `1.14.0` via `overrides` — without this pin, nested version drift reintroduced the crash.
+**Quantization fragility:** `dtype: 'q4'` (1.7 GB) triggered crashes; `dtype: 'q8'` (~900 MB) did not. `onnxruntime-node` had to be pinned to `1.14.0` via `package.json` overrides — any drift reintroduced the crash.
 
-**Model cache detection:** The `@huggingface/transformers` child process defaults to an internal cache path that `model-cache.ts` cannot discover. Explicitly setting `env.cacheDir` to `~/.cache/huggingface/hub` before loading the pipeline ensures the Settings UI can detect the downloaded model and show "Delete" instead of "Download."
+**JSON schema reliability:** Small models (1.5B–3B parameters) cannot reliably follow strict key-name contracts. The model consistently paraphrased field names (`"summarize"` instead of `"summary"`, `"action_items"` instead of `"actionItems"`) despite explicit one-shot examples. This is a known limitation at this parameter count; reliable structured output requires 7B+ models.
 
-**Key files:** `src/main/pipeline/structured-summarizer.ts`, `src/main/pipeline/structured-summarizer-process.ts`, `src/main/model-cache.ts`, `package.json`
+**Resolution:** Migrated structured summaries to LM Studio, an OpenAI-compatible local inference server that handles model management, hardware acceleration, and model selection. The app now sends `POST /v1/chat/completions` to `http://localhost:1234` — no bundled model, no ONNX crashes, user picks any 7B+ model they already have. See `docs/lm-studio-migration.md` for the full analysis.
 
 </details>
 
