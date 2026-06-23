@@ -340,8 +340,11 @@ export function getLMStudioPreferences(): LMStudioPreferences {
   return store?.get('lmStudioPreferences') ?? DEFAULT_LM_STUDIO_PREFERENCES;
 }
 
-export function saveLMStudioPreferences(prefs: Partial<LMStudioPreferences>): void {
-  const current = store?.get('lmStudioPreferences') ?? DEFAULT_LM_STUDIO_PREFERENCES;
+export function saveLMStudioPreferences(
+  prefs: Partial<LMStudioPreferences>,
+): void {
+  const current =
+    store?.get('lmStudioPreferences') ?? DEFAULT_LM_STUDIO_PREFERENCES;
   store?.set('lmStudioPreferences', { ...current, ...prefs });
 }
 

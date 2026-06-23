@@ -23,8 +23,8 @@ import { CHANNELS } from '@/lib/ipc-channels';
 type ChannelLeaves<T> = T extends string
   ? T
   : T extends Record<string, unknown>
-  ? { [K in keyof T]: ChannelLeaves<T[K]> }[keyof T]
-  : never;
+    ? { [K in keyof T]: ChannelLeaves<T[K]> }[keyof T]
+    : never;
 
 export type Channels = ChannelLeaves<typeof CHANNELS>;
 
@@ -41,37 +41,50 @@ function subscribe(channel: Channels, listener: (...args: unknown[]) => void) {
 const electronAPI = {
   // ── Transcriber ────────────────────────────────────────────────────────────
   transcriber: {
-    start: (options?: unknown) => ipcRenderer.invoke(CHANNELS.TRANSCRIBER.START, options),
+    start: (options?: unknown) =>
+      ipcRenderer.invoke(CHANNELS.TRANSCRIBER.START, options),
     startSession: (startedAt: number) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_START, { startedAt }),
     endSession: (endedAt: number) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_END, { endedAt }),
-    initiate: (payload?: unknown) => ipcRenderer.send(CHANNELS.TRANSCRIBER.INITIATE, payload),
+    initiate: (payload?: unknown) =>
+      ipcRenderer.send(CHANNELS.TRANSCRIBER.INITIATE, payload),
     on: {
-      update: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.TRANSCRIBER.UPDATE, cb),
-      progress: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.TRANSCRIBER.PROGRESS, cb),
-      initiate: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.TRANSCRIBER.INITIATE, cb),
-      ready: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.TRANSCRIBER.READY, cb),
-      done: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.TRANSCRIBER.DONE, cb),
-      error: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.TRANSCRIBER.ERROR, cb),
-      complete: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.TRANSCRIBER.COMPLETE, cb),
+      update: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.UPDATE, cb),
+      progress: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.PROGRESS, cb),
+      initiate: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.INITIATE, cb),
+      ready: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.READY, cb),
+      done: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.DONE, cb),
+      error: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.ERROR, cb),
+      complete: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.COMPLETE, cb),
     },
   },
 
   // ── Meetings ───────────────────────────────────────────────────────────────
   meetings: {
     getAll: () => ipcRenderer.invoke(CHANNELS.MEETINGS.GET_ALL),
-    getById: (id: string) => ipcRenderer.invoke(CHANNELS.MEETINGS.GET_BY_ID, id),
+    getById: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.MEETINGS.GET_BY_ID, id),
     update: (id: string, patch: Record<string, unknown>) =>
       ipcRenderer.invoke(CHANNELS.MEETINGS.UPDATE, id, patch),
     delete: (id: string) => ipcRenderer.invoke(CHANNELS.MEETINGS.DELETE, id),
     clear: () => ipcRenderer.invoke(CHANNELS.MEETINGS.CLEAR),
-    enrich: (meetingId: string) => ipcRenderer.invoke(CHANNELS.MEETINGS.ENRICH, meetingId),
+    enrich: (meetingId: string) =>
+      ipcRenderer.invoke(CHANNELS.MEETINGS.ENRICH, meetingId),
     dismiss: (meetingKey: string) =>
       ipcRenderer.invoke(CHANNELS.MEETING_DETECTOR.DISMISS, meetingKey),
     on: {
-      saved: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.MEETINGS.SAVED, cb),
-      cleared: (cb: (...args: unknown[]) => void) => subscribe(CHANNELS.MEETINGS.CLEARED, cb),
+      saved: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.MEETINGS.SAVED, cb),
+      cleared: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.MEETINGS.CLEARED, cb),
       detected: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.MEETING_DETECTOR.DETECTED, cb),
       ended: (cb: (...args: unknown[]) => void) =>
@@ -84,7 +97,10 @@ const electronAPI = {
     shortcuts: {
       get: () => ipcRenderer.invoke(CHANNELS.SHORTCUTS.GET),
       updateRecordingToggle: (shortcut: string) =>
-        ipcRenderer.invoke(CHANNELS.SHORTCUTS.UPDATE_RECORDING_TOGGLE, shortcut),
+        ipcRenderer.invoke(
+          CHANNELS.SHORTCUTS.UPDATE_RECORDING_TOGGLE,
+          shortcut,
+        ),
       on: {
         triggered: (cb: (...args: unknown[]) => void) =>
           subscribe(CHANNELS.SHORTCUTS.TRIGGERED, cb),
@@ -102,7 +118,11 @@ const electronAPI = {
       cache: {
         list: () => ipcRenderer.invoke(CHANNELS.MODEL.CACHE_LIST),
         delete: (modelName: string, source?: 'xenova' | 'hf') =>
-          ipcRenderer.invoke(CHANNELS.MODEL.CACHE_DELETE, modelName, source ?? 'xenova'),
+          ipcRenderer.invoke(
+            CHANNELS.MODEL.CACHE_DELETE,
+            modelName,
+            source ?? 'xenova',
+          ),
         clearAll: () => ipcRenderer.invoke(CHANNELS.MODEL.CACHE_CLEAR_ALL),
         getPaths: () => ipcRenderer.invoke(CHANNELS.MODEL.CACHE_PATHS),
       },
@@ -133,13 +153,18 @@ const electronAPI = {
   // ── LM Studio ────────────────────────────────────────────────────────────
   lmStudio: {
     getPreferences: () => ipcRenderer.invoke(CHANNELS.LM_STUDIO.GET),
-    savePreferences: (prefs: Record<string, unknown>) => ipcRenderer.invoke(CHANNELS.LM_STUDIO.SET, prefs),
-    testConnection: (baseUrl: string) => ipcRenderer.invoke(CHANNELS.LM_STUDIO.TEST, baseUrl),
+    savePreferences: (prefs: Record<string, unknown>) =>
+      ipcRenderer.invoke(CHANNELS.LM_STUDIO.SET, prefs),
+    testConnection: (baseUrl: string) =>
+      ipcRenderer.invoke(CHANNELS.LM_STUDIO.TEST, baseUrl),
   },
 
   // ── Shell ─────────────────────────────────────────────────────────────────
   shell: {
-    openPath: (filePath: string) => ipcRenderer.invoke(CHANNELS.SHELL.OPEN_PATH, filePath),
+    openPath: (filePath: string) =>
+      ipcRenderer.invoke(CHANNELS.SHELL.OPEN_PATH, filePath),
+    openExternal: (url: string) =>
+      ipcRenderer.invoke(CHANNELS.SHELL.OPEN_EXTERNAL, url),
   },
 
   // ── Recordings ────────────────────────────────────────────────────────────
@@ -150,14 +175,16 @@ const electronAPI = {
   // ── Permissions ────────────────────────────────────────────────────────────
   permissions: {
     check: () => ipcRenderer.invoke(CHANNELS.PERMISSIONS.CHECK),
-    refresh: (type: string) => ipcRenderer.invoke(CHANNELS.PERMISSIONS.REFRESH, type),
+    refresh: (type: string) =>
+      ipcRenderer.invoke(CHANNELS.PERMISSIONS.REFRESH, type),
     openSettings: (type: 'microphone' | 'accessibility' | 'screenRecording') =>
       ipcRenderer.invoke(CHANNELS.PERMISSIONS.OPEN_SETTINGS, type),
   },
 
   // ── Notifications ──────────────────────────────────────────────────────────
   notifications: {
-    getActiveWindow: () => ipcRenderer.invoke(CHANNELS.NOTIFICATIONS.GET_ACTIVE_WINDOW),
+    getActiveWindow: () =>
+      ipcRenderer.invoke(CHANNELS.NOTIFICATIONS.GET_ACTIVE_WINDOW),
     updateState: (payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.NOTIFICATIONS.UPDATE_STATE, payload),
     on: {
@@ -179,14 +206,14 @@ const electronAPI = {
 
   // ── Platform info ─────────────────────────────────────────────────────────
   platform: process.platform,
-
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 
 if (process.env.E2E_TEST === 'true') {
   contextBridge.exposeInMainWorld('__e2eTestAPI', {
-    forceMeetingNextSession: () => ipcRenderer.invoke('transcriber:e2e-force-meeting'),
+    forceMeetingNextSession: () =>
+      ipcRenderer.invoke('transcriber:e2e-force-meeting'),
     transcribeFileForTest: (filePath: string) =>
       ipcRenderer.invoke('transcriber:e2e-transcribe-file', { filePath }),
     mockEnrichMeeting: () =>

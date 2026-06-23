@@ -1,8 +1,8 @@
 # VOA
 
-| Meeting transcript                                                                   | Model selection                                           |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| ![Meeting transcript with AI summary](docs/screenshots/city-meeting-transcript.webp) | ![Available LLM models](docs/screenshots/model-list.webp) |
+| On boarding                                                                                                                           | Structured Data Preview                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| <video src="https://github.com/user-attachments/assets/563177b7-e329-40ed-bd36-76ffc375a7b9" autoplay loop muted playsinline></video> | ![Available LLM models](docs/screenshots/smart-summary.png) |
 
 **VOA** is a macOS desktop app that turns any meeting or call into structured notes — summary, key decisions, and action items — automatically, using local AI. Press a hotkey from any app, speak, and get a searchable transcript with an LLM-generated structured summary. Transcription runs fully on-device via Whisper; structured summaries use LM Studio. No cloud, no API keys, your audio never leaves your machine.
 
@@ -16,9 +16,9 @@
 
 ## Why VOA
 
-Most meeting recorders give you a raw transcript and stop there, or they send your audio to a cloud LLM to extract action items. VOA uses [Whisper](https://github.com/openai/whisper) for on-device speech-to-text and [LM Studio](https://lmstudio.ai) for structured extraction — so every meeting ends with a summary, a decisions list, tagged topics, and concrete action items, generated entirely on your Mac.
+Most meeting recorders give you a raw transcript and stop there, or they send your audio to a cloud LLM to extract action items. VOA uses [Whisper](https://github.com/openai/whisper) for on-device speech-to-text and [LM Studio](https://lmstudio.ai) for structured extraction. Every meeting ends with a summary, a decisions list, tagged topics, and concrete action items, generated entirely on your Mac.
 
-The local approach is also the privacy answer: no cloud subscription, no bot joining your call, no API keys, no audio ever leaving your machine. It works with any app — Zoom, Teams, Google Meet, phone calls, in-person conversations, or your own voice memos.
+The local approach is also the privacy answer: no cloud subscription, no bot joining your call, no API keys, no audio saved and ever leaving your machine. It works with any app — Zoom, Teams, Google Meet, phone calls, in-person conversations, or your own voice memos.
 
 ---
 
@@ -30,17 +30,16 @@ The local approach is also the privacy answer: no cloud subscription, no bot joi
 - **Smart meeting detection** — detects active calls in Zoom, Teams, Google Meet, and Slack via Accessibility API
 - **AI summaries and action items** — structured meeting summaries via LM Studio (local OpenAI-compatible inference); bring your own model
 - **Meetings and monologues** — distinguishes group calls from solo voice capture
-- **macOS-native settings UI** — System Settings-style interface with 7 panes, light/dark/auto theme
 - **Privacy-first** — all audio processing stays on your Mac; no telemetry, no account required
 
 ---
 
 ## AI Stack
 
-| Purpose              | Model / Tool                                | Notes                                                        |
-| -------------------- | ------------------------------------------- | ------------------------------------------------------------ |
+| Purpose              | Model / Tool                                | Notes                                                           |
+| -------------------- | ------------------------------------------- | --------------------------------------------------------------- |
 | Speech-to-text       | OpenAI Whisper (via `@xenova/transformers`) | Runs in Node.js via ONNX Runtime; downloaded and cached locally |
-| Structured summaries | Any model via LM Studio                     | Local OpenAI-compatible inference server; user picks the model |
+| Structured summaries | Any model instruct via LM Studio            | Local OpenAI-compatible inference server; bring your own model  |
 
 ### Whisper model options
 
@@ -179,17 +178,17 @@ VOA's built-in permissions screen walks you through granting each one.
 
 ## Tech Stack
 
-| Layer                    | Technology                                            |
-| ------------------------ | ----------------------------------------------------- |
-| Desktop shell            | Electron 35                                           |
-| UI                       | React 19, TypeScript, Tailwind CSS v4, shadcn/ui      |
-| AI inference (ASR)       | `@xenova/transformers` (Whisper)                      |
-| ONNX Runtime             | `onnxruntime-node` + `onnxruntime-web`                |
-| Structured summaries     | LM Studio (local OpenAI-compatible server)            |
-| Voice Activity Detection | `@ricky0123/vad-web`                                  |
-| Persistent storage       | `electron-store`                                      |
-| Build                    | `electron-vite`, `electron-builder`                   |
-| Testing                  | Vitest, Playwright                                    |
+| Layer                    | Technology                                       |
+| ------------------------ | ------------------------------------------------ |
+| Desktop shell            | Electron 35                                      |
+| UI                       | React 19, TypeScript, Tailwind CSS v4, shadcn/ui |
+| AI inference (ASR)       | `@xenova/transformers` (Whisper)                 |
+| ONNX Runtime             | `onnxruntime-node` + `onnxruntime-web`           |
+| Structured summaries     | LM Studio (local OpenAI-compatible server)       |
+| Voice Activity Detection | `@ricky0123/vad-web`                             |
+| Persistent storage       | `electron-store`                                 |
+| Build                    | `electron-vite`, `electron-builder`              |
+| Testing                  | Vitest, Playwright                               |
 
 ---
 

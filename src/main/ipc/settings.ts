@@ -144,7 +144,12 @@ export function registerSettingsHandlers() {
     return getCachePaths();
   });
 
-  // Shell — constrained to xenova cache dir only
+  // Shell — openExternal for https URLs only; openPath constrained to xenova cache dir
+  ipcMain.handle(CHANNELS.SHELL.OPEN_EXTERNAL, async (_event, url: string) => {
+    if (!url.startsWith('https://')) return;
+    await shell.openExternal(url);
+  });
+
   ipcMain.handle(CHANNELS.SHELL.OPEN_PATH, async (_event, filePath: string) => {
     const xenova = getCachePaths();
     if (filePath !== xenova && !filePath.startsWith(xenova)) {

@@ -52,6 +52,7 @@ export const CHANNELS = {
   },
   SHELL: {
     OPEN_PATH: 'shell:openPath',
+    OPEN_EXTERNAL: 'shell:openExternal',
   },
   PERMISSIONS: {
     CHECK: 'permissions:check',
