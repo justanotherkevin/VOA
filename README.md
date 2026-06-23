@@ -28,7 +28,7 @@ The local approach is also the privacy answer: no cloud subscription, no bot joi
 - **On-device Whisper transcription** — runs locally via `@xenova/transformers` + ONNX Runtime; no cloud
 - **Voice Activity Detection** — automatically segments speech from silence using `@ricky0123/vad-web`
 - **Smart meeting detection** — detects active calls in Zoom, Teams, Google Meet, and Slack via Accessibility API
-- **AI summaries and action items** — structured meeting summaries via LM Studio (local OpenAI-compatible inference); bring your own model
+- **AI summaries with rolling context** — for long meetings, the transcript is processed in chunks and the summary is updated incrementally; bring your own model via LM Studio or Ollama
 - **Meetings and monologues** — distinguishes group calls from solo voice capture
 - **Privacy-first** — all audio processing stays on your Mac; no telemetry, no account required
 
@@ -39,7 +39,7 @@ The local approach is also the privacy answer: no cloud subscription, no bot joi
 | Purpose              | Model / Tool                                | Notes                                                           |
 | -------------------- | ------------------------------------------- | --------------------------------------------------------------- |
 | Speech-to-text       | OpenAI Whisper (via `@xenova/transformers`) | Runs in Node.js via ONNX Runtime; downloaded and cached locally |
-| Structured summaries | Any model instruct via LM Studio            | Local OpenAI-compatible inference server; bring your own model  |
+| Structured summaries | Any instruct model via LM Studio or Ollama  | Local OpenAI-compatible inference server; bring your own model  |
 
 ### Whisper model options
 
@@ -92,7 +92,7 @@ sequenceDiagram
     Transcriber-->>Renderer: meeting:updated (summaryStatus: ready)
 ```
 
-The main process registers a global shortcut and handles all AI inference. The renderer manages audio capture via Web Audio API + VAD, streaming raw `Float32Array` segments over IPC. Whisper runs in the Node.js main process via ONNX Runtime. Structured summaries are generated on-demand via a `fetch()` call to LM Studio's OpenAI-compatible endpoint (`/v1/chat/completions`) — nothing runs automatically after recording ends, and LM Studio must be running with a model loaded for enrichment to work.
+The main process registers a global shortcut and handles all AI inference. The renderer manages audio capture via Web Audio API + VAD, streaming raw `Float32Array` segments over IPC. Whisper runs in the Node.js main process via ONNX Runtime. Structured summaries are generated on-demand via a `fetch()` call to an OpenAI-compatible endpoint (`/v1/chat/completions`) — LM Studio and Ollama both work. Nothing runs automatically after recording ends. If the inference server is unreachable when you click "Meeting details", VOA fails fast with a system notification and marks the meeting as failed — no silent errors, and you can retry at any time once a server is running. The transcript is always preserved.
 
 ---
 
@@ -149,7 +149,7 @@ The summary, decisions, topics, and action items are rendered in the meeting det
 - Apple Silicon or Intel Mac
 - Node.js 18+
 - ~500 MB disk space for the Tiny Whisper model (more for larger models)
-- [LM Studio](https://lmstudio.ai) (optional — required for AI meeting summaries)
+- [LM Studio](https://lmstudio.ai) or [Ollama](https://ollama.com) — required for AI meeting summaries; transcription works without it
 
 ### Quick start
 
@@ -184,7 +184,7 @@ VOA's built-in permissions screen walks you through granting each one.
 | UI                       | React 19, TypeScript, Tailwind CSS v4, shadcn/ui |
 | AI inference (ASR)       | `@xenova/transformers` (Whisper)                 |
 | ONNX Runtime             | `onnxruntime-node` + `onnxruntime-web`           |
-| Structured summaries     | LM Studio (local OpenAI-compatible server)       |
+| Structured summaries     | LM Studio / Ollama (local OpenAI-compatible)     |
 | Voice Activity Detection | `@ricky0123/vad-web`                             |
 | Persistent storage       | `electron-store`                                 |
 | Build                    | `electron-vite`, `electron-builder`              |

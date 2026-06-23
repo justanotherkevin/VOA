@@ -43,6 +43,9 @@ npm-debug.log.*
 /.paul
 /docs/notes.md
 
+# Local scratch files
+/feature-tracker.html
+
 # Git worktrees
 .worktrees/
 
