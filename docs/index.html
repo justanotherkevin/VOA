@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>VOA | On-Device AI Transcription for macOS</title>
+    <title>VOA | Meeting Transcriber to actions</title>
     <meta
-      content="Privacy-first meeting recorder for Mac. No cloud, no account, no internet required."
+      content="Privacy-first meeting transcriber for Mac. No cloud, no account, no internet required."
       name="description"
     />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -258,11 +258,9 @@
             <div
               class="inline-flex items-center gap-2 px-3 py-1 bg-primary-fixed text-on-primary-fixed rounded-full mb-6"
             >
+              <span class="font-label-md">Open source &middot;</span>
               <span class="material-symbols-outlined text-[14px]"
                 >auto_awesome</span
-              >
-              <span class="font-label-md"
-                >Open source &middot; MIT licensed</span
               >
             </div>
             <h1
@@ -275,7 +273,8 @@
               class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-lg"
             >
               Press F1 in any app to start recording. Whisper transcribes in
-              real time. Qwen2.5 writes your summary. Nothing touches a cloud.
+              real time. Your own LLM writes your summary. Nothing touches a
+              cloud.
             </p>
             <div class="flex flex-col sm:flex-row gap-4">
               <a
@@ -294,8 +293,7 @@
               </a>
             </div>
             <p class="mt-4 font-label-md text-on-surface-variant opacity-60">
-              No account needed &middot; Works offline after first model
-              download
+              No account needed &middot; Works offline after setup
             </p>
           </div>
           <div class="relative">
@@ -305,11 +303,14 @@
             <div
               class="relative glass rounded-xl border border-subtle soft-shadow overflow-hidden p-1 animate-float"
             >
-              <img
-                alt="VOA meeting transcript with AI summary"
+              <video
+                autoplay
+                loop
+                muted
+                playsinline
                 class="w-full h-auto rounded-lg"
-                src="screenshots/city-meeting-transcript.webp"
-              />
+                src="screenshots/onboarding-compressed.mp4"
+              ></video>
             </div>
           </div>
         </div>
@@ -322,9 +323,7 @@
             <h2 class="font-headline-xl text-headline-xl mb-3 text-on-surface">
               How it works
             </h2>
-            <p class="font-body-lg text-body-lg text-on-surface-variant">
-              Three keypresses. No accounts, no setup.
-            </p>
+            <p class="font-body-lg text-body-lg text-on-surface-variant"></p>
           </div>
           <div
             class="grid grid-cols-1 md:grid-cols-3 gap-8 stagger-reveal"
@@ -354,8 +353,8 @@
                 Speak normally
               </h3>
               <p class="font-body-md text-on-surface-variant">
-                Voice Activity Detection splits speech from silence. Whisper
-                runs on your CPU and transcribes as you go.
+                VOA detect silence on speech then perform transcription without
+                interuption
               </p>
             </div>
             <div class="flex flex-col items-center text-center p-6">
@@ -368,8 +367,8 @@
                 Get your transcript
               </h3>
               <p class="font-body-md text-on-surface-variant">
-                Your recording saves with a full-text searchable transcript.
-                Request an AI summary whenever you need it.
+                Your transcript saves on your machine. Connect your own AI model
+                to unlock VOA's full power.
               </p>
             </div>
           </div>
@@ -431,8 +430,9 @@
                 Runs on your machine
               </h3>
               <p class="font-body-md text-on-surface-variant">
-                Whisper handles transcription. Qwen2.5 handles summaries. Both
-                run via ONNX Runtime and never send a byte outside your Mac.
+                Whisper AI handles transcription. Connect your own instruct
+                model handles summaries. Both run on your machine and never send
+                a byte outside your Mac.
               </p>
             </div>
             <!-- Feature 3 -->
@@ -471,9 +471,8 @@
                   Summaries, not just transcripts
                 </h3>
                 <p class="font-body-md text-on-surface-variant mb-4">
-                  Qwen2.5 reads your transcript and pulls out what mattered:
-                  decisions made, tasks assigned, and topics that took the most
-                  time.
+                  Reads your transcript and pulls out what mattered: decisions
+                  made, tasks assigned, and topics that took the most time.
                 </p>
                 <ul class="space-y-2">
                   <li
@@ -511,7 +510,13 @@
                 <img
                   src="screenshots/smart-summary.png"
                   alt="Whisper model selection"
-                  class="w-full h-auto rounded"
+                  class="rounded"
+                  style="
+                    object-fit: cover;
+                    height: 100%;
+                    width: 100%;
+                    object-position: 100% 0;
+                  "
                 />
               </div>
             </div>
@@ -813,7 +818,7 @@
           <p
             class="font-body-lg text-body-lg text-white/70 mb-8 max-w-xl mx-auto"
           >
-            Free, open source, and runs on your Mac. No subscription, ever.
+            Free, open source, and runs on your Mac.
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <a

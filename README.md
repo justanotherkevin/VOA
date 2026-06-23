@@ -48,7 +48,7 @@ The local approach is also the privacy answer: no cloud subscription, no bot joi
 | Tiny   | ~75 MB  | ⚡⚡⚡⚡ | ★★☆☆     |
 | Base   | ~142 MB | ⚡⚡⚡   | ★★★☆     |
 | Small  | ~466 MB | ⚡⚡     | ★★★★     |
-| Medium | ~1.5 GB | ⚡       | ★★★★★    |
+| Medium | ~1.5 GB | ⚡       | ★★★★     |
 
 English-only variants available for each model (faster, smaller).
 
