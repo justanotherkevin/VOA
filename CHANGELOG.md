@@ -4,6 +4,19 @@ All notable changes to VOA are documented here.
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Whisper Base/Small/Medium no longer freeze or crash the app.** Model load and inference now run in an isolated `utilityProcess`, not the main process — a known `onnxruntime-node` native bug could otherwise hang the whole app indefinitely or crash it outright. See `docs/whisper-onnxruntime-crash.md` for the investigation.
+
+### Changed
+
+- **Base/Small/Medium Whisper models are temporarily disabled** in Settings — Tiny is the only model confirmed stable against the crash above. Disabled rows are dimmed with an "Unavailable" indicator and an explanatory tooltip; a stale preference pointing at one of them now resets to Tiny automatically.
+- All Whisper transcription requests are now processed one at a time through an explicit queue, guaranteeing only one job runs against the isolated process at once.
+
+---
+
 ## [1.0.0] — 2025
 
 Initial public release.
