@@ -305,18 +305,6 @@ export function getModelPreferences(): ModelPreferences {
     store.set('modelPreferences', preferences);
   }
 
-  // Xenova/whisper-base|small|medium reliably SIGTRAP-crash the whisper
-  // process (onnxruntime-node BFCArena bug — see
-  // docs/whisper-onnxruntime-crash.md). A model picked before this was known
-  // shouldn't keep trying and failing on every launch.
-  if (
-    preferences.selectedModel &&
-    /\/whisper-(base|small|medium)(\.en)?$/.test(preferences.selectedModel)
-  ) {
-    preferences.selectedModel = DEFAULT_MODEL_PREFERENCES.selectedModel;
-    store.set('modelPreferences', preferences);
-  }
-
   if (!preferences.asrType) {
     preferences.asrType = 'whisper';
     store.set('modelPreferences', preferences);

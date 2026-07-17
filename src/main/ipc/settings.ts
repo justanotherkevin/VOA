@@ -51,6 +51,16 @@ export function registerSettingsHandlers() {
     },
   );
 
+  // Restarting after a Whisper model change starts the new model's load in
+  // a fresh process — the only condition confirmed reliable against the
+  // onnxruntime-node crash (docs/whisper-onnxruntime-crash.md). Renderer
+  // confirms with the user before calling this.
+  ipcMain.handle(CHANNELS.APP.RELAUNCH, () => {
+    info('[settings] Relaunching app for model change');
+    app.relaunch();
+    app.exit(0);
+  });
+
   // Model Cache
   ipcMain.handle(CHANNELS.MODEL.CACHE_LIST, async () => {
     try {

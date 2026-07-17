@@ -137,6 +137,7 @@ const electronAPI = {
       get: () => ipcRenderer.invoke(CHANNELS.APP_PREFERENCES.GET),
       update: (prefs: Record<string, unknown>) =>
         ipcRenderer.invoke(CHANNELS.APP_PREFERENCES.UPDATE, prefs),
+      relaunch: () => ipcRenderer.invoke(CHANNELS.APP.RELAUNCH),
     },
     audio: {
       get: () => ipcRenderer.invoke(CHANNELS.AUDIO_PREFERENCES.GET),
