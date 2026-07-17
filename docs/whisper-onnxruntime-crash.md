@@ -1,5 +1,13 @@
 # Whisper Base/Small/Medium: onnxruntime-node Crash
 
+## Status (current)
+
+Tiny is the only reliable Whisper model. Base/Small/Medium are disabled in
+Settings. Two in-app mitigations were tried and both failed to make them
+usable — see "Tried" sections below. **Decision: stop trying to work around
+this from application code and move Whisper off `onnxruntime-node` entirely
+(`whisper.cpp` is the leading candidate)** — see "Decision" at the bottom.
+
 ## Problem
 
 Only `Xenova/whisper-tiny` works reliably. Selecting Base, Small, or Medium
@@ -174,10 +182,65 @@ class of issue) getting lucky across a small number of trials, not with a
 threshold being crossed. Neither the arena-disable mitigation nor forcing a
 fresh process per model load are things application code can rely on to
 prevent this. Base/Small/Medium stay disabled with no in-app mitigation
-currently believed to close the gap — see Suggestions below.
+currently believed to close the gap — see the Decision below.
 
-## Suggestions going forward
+## Why not just retest with a newer `onnxruntime-node`?
 
-1. **Retest after an `onnxruntime-node` version bump.** Currently pinned to `1.14.0` (via `package.json` `overrides`) specifically to dodge a _different_ SIGSEGV in `1.21` that affected the old Qwen pipeline (now moot — Qwen no longer runs on-device). Since that constraint may no longer apply, a newer `onnxruntime-node` is worth trying against this exact bug — no fix is confirmed, but none is ruled out either.
-2. **Migrate Whisper to `whisper.cpp`** (GGML models, Metal acceleration) instead of ONNX/`onnxruntime-node`. This sidesteps the bug entirely rather than working around it, and multiple sources point to it as the standard choice for Whisper specifically on Apple Silicon. The most promising path by a wide margin now — both in-app mitigations tried show the ONNX allocator itself is unreliable in this environment in a way application code can't dependably work around.
-3. Whichever path is taken, keep the `utilityProcess` isolation and queue — even once Base/Small/Medium work again, a single wedged native call should never be able to take the whole app down or block the main thread. That property is independent of which backend ends up running inference.
+`onnxruntime-node` is currently pinned to `1.14.0` (via `package.json`
+`overrides`) specifically to dodge a *different* SIGSEGV in `1.21` that hit
+the old Qwen summarizer pipeline. That constraint is now moot — Qwen no
+longer runs on-device (see `docs/lm-studio-migration.md`) — so a version
+bump is technically unblocked and would be a legitimate one-line experiment.
+
+Not pursuing it as the primary path: two independent mitigations
+(arena-disable, fresh-process-per-load) both looked like fixes in small
+samples and both failed under closer testing, in a way consistent with a
+non-deterministic native bug rather than a config problem. A version bump
+is the same category of bet — "maybe this environment variable changes the
+odds" — with no confirmed report that any later version fixes this specific
+`BFCArena` crash (searched changelogs 1.14 through 1.21+, nothing found).
+Worth a quick try if someone has spare cycles, but not worth blocking the
+migration decision on.
+
+## Decision: moving off `onnxruntime-node`
+
+Two in-app mitigations were tried and both failed against the same
+`BFCArena` crash. That's enough signal that this isn't a configuration
+problem reachable from application code — it's a bug inside the native
+allocator itself, on this platform/library-version combination, and no
+amount of session-options tuning or process lifecycle management from our
+side reliably avoids it. **Migrate Whisper off ONNX/`onnxruntime-node` to
+`whisper.cpp`** (GGML models, Metal acceleration on Apple Silicon) — this
+sidesteps the bug entirely rather than working around it, and it's the
+ecosystem's de facto standard for Whisper on Apple Silicon specifically
+(multiple independent sources point to it over ONNX Runtime for this exact
+platform/model combination).
+
+**Not yet researched — needed before implementation starts:**
+- Node.js binding for `whisper.cpp` (native addon vs. spawning the `main`/
+  `whisper-cli` binary as a subprocess) — which is more viable inside an
+  Electron `utilityProcess`, and what the packaging/distribution story looks
+  like (prebuilt binaries per platform vs. building from source at install
+  time).
+- GGML model file availability/licensing for the sizes currently in
+  `MODEL_META_DATA` (tiny/base/small/medium, English-only `.en` variants)
+  and where they'd be hosted/downloaded from (mirroring today's
+  `model-cache.ts` download-and-cache flow).
+- How much of `whisper-transcriber.ts`'s public interface (`AsrTranscriber`
+  in `src/main/pipeline/types.ts`) survives unchanged — `initialize()`/
+  `transcribe()` signatures, `chunk_length_s`/`stride_length_s`-style
+  windowing behavior, timestamp/chunk output shape `TranscriberService`
+  already depends on.
+- Whether accuracy/output is comparable to the current ONNX Whisper exports
+  for the same model size (whisper.cpp uses the original OpenAI weights
+  converted to GGML, not the `Xenova/whisper-*` ONNX exports currently used
+  — same underlying model, different conversion pipeline).
+- Performance expectations on Apple Silicon (Metal acceleration) vs. the
+  current CPU-only ONNX path — likely a net win, not yet measured here.
+
+**Keep regardless of backend:** the `utilityProcess` isolation and FIFO
+queue in `whisper-transcriber.ts`/`whisper-process.ts`. Even once
+`whisper.cpp` is in place, a single wedged native call should never be able
+to take the whole app down or block the main thread — that property is
+independent of which backend ends up running inference, and this migration
+should preserve rather than remove it.
