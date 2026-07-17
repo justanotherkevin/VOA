@@ -160,8 +160,8 @@ starts in a process untouched by a previous model's session state.
 ## Tried: forcing a full app relaunch on model change
 
 Reasoning: every isolated single-model test (6/6) passed — a model's
-*first* load in a genuinely fresh process was the one condition that looked
-reliable, even though the *same* model loaded a second time in an
+_first_ load in a genuinely fresh process was the one condition that looked
+reliable, even though the _same_ model loaded a second time in an
 already-used process reliably crashed. So: make every model change force a
 full app relaunch (`app.relaunch()` + `app.exit()`), confirmed with the
 user first, so every load is that "first load in a fresh process" case.
@@ -187,7 +187,7 @@ currently believed to close the gap — see the Decision below.
 ## Why not just retest with a newer `onnxruntime-node`?
 
 `onnxruntime-node` is currently pinned to `1.14.0` (via `package.json`
-`overrides`) specifically to dodge a *different* SIGSEGV in `1.21` that hit
+`overrides`) specifically to dodge a _different_ SIGSEGV in `1.21` that hit
 the old Qwen summarizer pipeline. That constraint is now moot — Qwen no
 longer runs on-device (see `docs/lm-studio-migration.md`) — so a version
 bump is technically unblocked and would be a legitimate one-line experiment.
@@ -217,6 +217,7 @@ ecosystem's de facto standard for Whisper on Apple Silicon specifically
 platform/model combination).
 
 **Not yet researched — needed before implementation starts:**
+
 - Node.js binding for `whisper.cpp` (native addon vs. spawning the `main`/
   `whisper-cli` binary as a subprocess) — which is more viable inside an
   Electron `utilityProcess`, and what the packaging/distribution story looks
