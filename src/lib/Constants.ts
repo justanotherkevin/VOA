@@ -153,13 +153,14 @@ export const LANGUAGES = {
   su: 'sundanese',
 };
 
-// Base/Small/Medium used to reliably SIGTRAP-crash the whisper process on
-// ONNX weight load (onnxruntime-node BFCArena allocator bug, filed at
-// https://github.com/microsoft/onnxruntime/issues/29763) when a different
-// model was loaded into an already-running app. Re-enabled now that
-// Settings forces a full app relaunch on model change, so every model load
-// happens in a fresh process — the one condition confirmed reliable. See
-// docs/whisper-onnxruntime-crash.md.
+// Base/Small/Medium reliably SIGTRAP-crash the whisper process on ONNX
+// weight load (onnxruntime-node BFCArena allocator bug) — reproduced with
+// and without quantization, during both model load and inference. Disabled
+// until upstream fixes it or Whisper moves off onnxruntime-node. See
+// docs/whisper-onnxruntime-crash.md for the investigation and research.
+const ONNXRUNTIME_CRASH_REASON =
+  'Currently unavailable: larger Whisper models trigger a known onnxruntime-node crash bug (not fixable in-app) — confirmed on Small and Medium, and disabled here as a precaution. See docs/whisper-onnxruntime-crash.md. Only Tiny is stable right now.';
+
 export const MODEL_META_DATA = [
   {
     name: 'Tiny',
@@ -180,6 +181,8 @@ export const MODEL_META_DATA = [
     accuracy: 3,
     details:
       'Balanced model optimized for English, good balance between speed and accuracy',
+    disabled: true,
+    disabledReason: ONNXRUNTIME_CRASH_REASON,
   },
   {
     name: 'Small',
@@ -190,6 +193,8 @@ export const MODEL_META_DATA = [
     accuracy: 3,
     details:
       'Improved accuracy with moderate performance, good for general-purpose use',
+    disabled: true,
+    disabledReason: ONNXRUNTIME_CRASH_REASON,
   },
   {
     name: 'Medium',
@@ -199,6 +204,8 @@ export const MODEL_META_DATA = [
     speed: 1,
     accuracy: 4,
     details: 'Highest accuracy model, best for critical transcription tasks',
+    disabled: true,
+    disabledReason: ONNXRUNTIME_CRASH_REASON,
   },
 ];
 

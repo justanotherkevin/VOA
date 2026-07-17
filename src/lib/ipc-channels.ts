@@ -77,9 +77,6 @@ export const CHANNELS = {
     GET: 'appPreferences:get',
     UPDATE: 'appPreferences:update',
   },
-  APP: {
-    RELAUNCH: 'app:relaunch',
-  },
   AUDIO_PREFERENCES: {
     GET: 'audioPreferences:get',
     UPDATE: 'audioPreferences:update',

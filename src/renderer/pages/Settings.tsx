@@ -43,6 +43,7 @@ import {
   RotateCcw,
   Monitor,
   Accessibility,
+  AlertTriangle,
 } from 'lucide-react';
 import { SettingSwitch } from '@/renderer/components/settings/SettingSwitch';
 import { SegmentedControl } from '@/renderer/components/settings/SegmentedControl';
@@ -330,26 +331,6 @@ export default function Settings() {
     const newPrefs = { ...modelPrefs, [key]: value };
     setModelPrefs(newPrefs as any);
     await window.electronAPI.settings.model.update({ [key]: value });
-  }
-
-  // Loading a different Whisper model into an already-running app can crash
-  // the transcription process (onnxruntime-node bug — see
-  // docs/whisper-onnxruntime-crash.md). Restarting the app so the new
-  // model's first load happens in a fresh process is the one condition
-  // confirmed reliable, so a model change requires a full relaunch.
-  async function handleModelSelect(model: string) {
-    if (model === modelPrefs.selectedModel) return;
-    const modelName =
-      MODEL_META_DATA.find((m) => m.model === model)?.name ?? model;
-    if (
-      !window.confirm(
-        `Switching to ${modelName} requires restarting VOA to apply safely. Restart now?`,
-      )
-    ) {
-      return;
-    }
-    await updateModelPref('selectedModel', model);
-    await window.electronAPI.settings.app.relaunch();
   }
 
   function isModelDownloaded(modelPath: string) {
@@ -1819,21 +1800,9 @@ export default function Settings() {
                   </span>
                 </div>
                 <div className="s-card-rows">
-                  {MODEL_META_DATA.map((m) => (
-                    <div
-                      key={m.model}
-                      role="radio"
-                      aria-checked={modelPrefs.selectedModel === m.model}
-                      tabIndex={0}
-                      className={`s-row s-pick${modelPrefs.selectedModel === m.model ? ' s-selected' : ''}`}
-                      onClick={() => handleModelSelect(m.model)}
-                      onKeyDown={(e) =>
-                        (e.key === 'Enter' || e.key === ' ') &&
-                        handleModelSelect(m.model)
-                      }
-                    >
-                      <span className="s-radio" />
-                      <div style={{ flex: 1 }}>
+                  {MODEL_META_DATA.map((m) => {
+                    const infoCol = (
+                      <>
                         <div
                           style={{
                             fontSize: 13.5,
@@ -1899,27 +1868,77 @@ export default function Settings() {
                             />
                           </span>
                         </div>
-                      </div>
-                      <div style={{ flexShrink: 0 }}>
-                        {isModelDownloaded(m.model) ? (
-                          <span className="s-pill s-pill-good">
-                            <span className="s-pdot" />
-                            Active
-                          </span>
-                        ) : (
-                          <button
-                            className="s-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
+                      </>
+                    );
+                    return (
+                      <div
+                        key={m.model}
+                        role="radio"
+                        aria-checked={modelPrefs.selectedModel === m.model}
+                        aria-disabled={m.disabled || undefined}
+                        tabIndex={m.disabled ? -1 : 0}
+                        className={`s-row s-pick${modelPrefs.selectedModel === m.model ? ' s-selected' : ''}${m.disabled ? ' s-row-disabled' : ''}`}
+                        style={
+                          m.disabled
+                            ? { opacity: 0.5, cursor: 'not-allowed' }
+                            : undefined
+                        }
+                        onClick={() =>
+                          !m.disabled &&
+                          updateModelPref('selectedModel', m.model)
+                        }
+                        onKeyDown={(e) =>
+                          !m.disabled &&
+                          (e.key === 'Enter' || e.key === ' ') &&
+                          updateModelPref('selectedModel', m.model)
+                        }
+                      >
+                        <span className="s-radio" />
+                        {m.disabled ? (
+                          <ModelInfoTooltip
+                            description={
+                              m.disabledReason ?? 'Currently unavailable.'
+                            }
                           >
-                            <Download size={13} />
-                            Get
-                          </button>
+                            {infoCol}
+                          </ModelInfoTooltip>
+                        ) : (
+                          <div style={{ flex: 1 }}>{infoCol}</div>
                         )}
+                        <div style={{ flexShrink: 0 }}>
+                          {m.disabled ? (
+                            <span
+                              className="s-pill"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                color: 'var(--s-text3)',
+                              }}
+                            >
+                              <AlertTriangle size={12} />
+                              Unavailable
+                            </span>
+                          ) : isModelDownloaded(m.model) ? (
+                            <span className="s-pill s-pill-good">
+                              <span className="s-pdot" />
+                              Active
+                            </span>
+                          ) : (
+                            <button
+                              className="s-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                              }}
+                            >
+                              <Download size={13} />
+                              Get
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
