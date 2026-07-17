@@ -6,13 +6,24 @@ import { AsrTranscriber, TranscriptionResult } from './types';
 
 // Model load (ONNX weight prepacking) and inference both happen in
 // whisper-process.ts, isolated in a utilityProcess child — see that file and
-// docs/whisper-onnxruntime-crash.md for why (a known onnxruntime-node
-// issue can hang or SIGTRAP-crash on base/small/medium models; a
-// worker_thread can't contain that since it shares the main process's
-// address space, a utilityProcess can). Everything routed through this
-// class runs one job at a time via an explicit FIFO queue: only one child
-// process exists, and a new job is never posted to it until the previous
-// one has resolved.
+// docs/whisper-onnxruntime-crash.md for why (a known onnxruntime-node issue
+// could hang or SIGTRAP-crash on base/small/medium models — mitigated there
+// via disabling the CPU memory arena, but the isolation stays as
+// defense-in-depth: a worker_thread can't contain a native crash since it
+// shares the main process's address space, a utilityProcess can). Everything
+// routed through this class runs one job at a time via an explicit FIFO
+// queue: only one child process exists, and a new job is never posted to it
+// until the previous one has resolved.
+//
+// initialize() always kills and respawns the child when the model changes,
+// rather than asking the same long-lived child to dispose one ONNX session
+// and load another — reloading a *different* model into an already-used
+// child process still reproduces the BFCArena crash even with the arena
+// disabled (confirmed: works reliably for a model's first load in a fresh
+// process, crashes on the second distinct model loaded into that same
+// process). A fresh child per model keeps every load in a pristine process,
+// matching the only condition under which the arena fix was actually
+// verified to hold.
 interface QueueItem {
   id: number;
   message: Record<string, unknown>;
@@ -139,6 +150,17 @@ class WhisperTranscriber implements AsrTranscriber {
     log('[WhisperTranscriber] Queuing initialize for model:', model);
 
     this.pendingInitPromise = (async () => {
+      // Loading a different model into an already-used child process
+      // reproduces the BFCArena crash even with the arena disabled — force
+      // a fresh child rather than letting the existing one dispose/reload
+      // in place. See the class-level comment above.
+      if (this.child && this.currentModel !== null && key !== `${this.currentModel}:${this.currentQuantized}`) {
+        this.disposing = true;
+        this.child.kill();
+        this.child = null;
+        this.disposing = false;
+      }
+
       await this.enqueue(
         { type: 'initialize', model, quantized },
         progressCallback,

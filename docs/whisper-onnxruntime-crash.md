@@ -110,9 +110,47 @@ selected from Settings, and if somehow still selected (stale preference,
 IPC call bypassing the UI) they now fail with a clean error instead of
 freezing or crashing the app.
 
+## Tried: disabling the CPU memory arena (onnxruntime#15087's mitigation)
+
+Patched `InferenceSession.create` on the exact `onnxruntime-node` instance
+`@xenova/transformers` resolves (`whisper-process.ts`, before any session is
+created) to force `enableCpuMemArena: false`, `enableMemPattern: false`,
+`executionMode: 'sequential'`, `intraOpNumThreads: 1`, `interOpNumThreads: 1`
+— the mitigation from onnxruntime#15087, otherwise unreachable through
+`@xenova/transformers`'s API (see above).
+
+**Isolated single runs (fresh Electron process, one model load, then done):**
+100% pass rate across 6 runs — small, small-quantized, medium,
+medium-quantized, each producing a correct transcript with no crash.
+
+**Sequential runs in one long-lived app session (tiny, then small, then
+small-quantized, then medium, then medium-quantized, back to back — closer
+to how the app actually gets used across a session where the user might try
+a few models):** crashes again, at the second distinct model loaded, even
+with a fresh `utilityProcess` child forced for every model change (so it
+isn't simply "the same process reused" either — each crash was in a
+genuinely fresh OS process). System `vm_stat` at the time showed roughly
+2.7 GB free out of 18 GB total, well below what the isolated runs had
+available.
+
+**Conclusion: this is a real, measurable mitigation, not a fix.** It raises
+the bar for how much memory pressure the same crash needs to trigger under —
+enough to pass every isolated test, not enough to survive realistic repeated
+use on a memory-constrained machine. Re-enabling Base/Small/Medium on the
+strength of the isolated results alone would have shipped a bug that's
+merely harder to hit, not gone. Kept in `whisper-process.ts` as a real
+improvement (worth having regardless), but Base/Small/Medium stay disabled
+in Settings until something eliminates the crash rather than narrowing its
+window.
+
+The `utilityProcess`-per-model-change behavior (kill and respawn the child
+on every distinct model load, added while investigating this) is kept in
+`whisper-transcriber.ts` too — it didn't fix this crash, but it's a
+correctness improvement independent of it: it guarantees every model load
+starts in a process untouched by a previous model's session state.
+
 ## Suggestions going forward
 
 1. **Retest after an `onnxruntime-node` version bump.** Currently pinned to `1.14.0` (via `package.json` `overrides`) specifically to dodge a _different_ SIGSEGV in `1.21` that affected the old Qwen pipeline (now moot — Qwen no longer runs on-device). Since that constraint may no longer apply, a newer `onnxruntime-node` is worth trying against this exact bug — no fix is confirmed, but none is ruled out either.
-2. **Patch `@xenova/transformers`'s `constructSession()`** (via `patch-package` or a local fork) to pass through the arena/threading mitigation options from onnxruntime#15087. Untested here — the library is pinned to an old major version (2.x, project already also depends on the newer `@huggingface/transformers` 3.x for other models) and vendoring a patch adds maintenance surface, but it's the lowest-effort thing that directly targets the observed crash.
-3. **Migrate Whisper to `whisper.cpp`** (GGML models, Metal acceleration) instead of ONNX/`onnxruntime-node`. This sidesteps the bug entirely rather than working around it, and multiple sources point to it as the standard choice for Whisper specifically on Apple Silicon. Biggest lift of the three: new native binding, new model file format, re-plumbing the whole transcription pipeline.
-4. Whichever path is taken, keep the `utilityProcess` isolation and queue — even once Base/Small/Medium work again, a single wedged native call should never be able to take the whole app down or block the main thread. That property is independent of which backend ends up running inference.
+2. **Migrate Whisper to `whisper.cpp`** (GGML models, Metal acceleration) instead of ONNX/`onnxruntime-node`. This sidesteps the bug entirely rather than working around it, and multiple sources point to it as the standard choice for Whisper specifically on Apple Silicon. Now the most promising path — the arena mitigation above shows the ONNX allocator itself is the problem, not something app-code can fully paper over.
+3. Whichever path is taken, keep the `utilityProcess` isolation and queue — even once Base/Small/Medium work again, a single wedged native call should never be able to take the whole app down or block the main thread. That property is independent of which backend ends up running inference.

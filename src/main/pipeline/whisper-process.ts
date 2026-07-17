@@ -1,13 +1,42 @@
 /* eslint-disable camelcase */
 // Runs as a utilityProcess.fork() child — isolated from Electron's
 // main/renderer/GPU processes, both in address space and OS process
-// lifecycle. Model load (ONNX weight prepacking) and inference for
-// base/small/medium Whisper models can otherwise hang or SIGTRAP-crash
-// (a known, unresolved onnxruntime-node issue — see
-// docs/whisper-onnxruntime-crash.md); isolating it here means that
-// failure can't take the whole app down, and this process gets a clean,
-// uncontended heap instead of competing with the other Electron processes.
+// lifecycle. This isolation means a native crash here can't take the whole
+// app down (see docs/whisper-onnxruntime-crash.md for why that mattered).
 // Communication uses process.parentPort (MessagePort).
+
+// Base/Small/Medium reliably SIGTRAP-crash (or hang) during ONNX weight
+// load — a BFCArena allocator bug in onnxruntime-node, filed upstream at
+// https://github.com/microsoft/onnxruntime/issues/29763. Disabling the CPU
+// memory arena and forcing single-threaded/sequential execution measurably
+// reduces how easily it triggers (passes reliably in isolation) but does
+// NOT eliminate it — it still reproduced under realistic sequential use on
+// a memory-constrained machine (see docs/whisper-onnxruntime-crash.md,
+// "Tried: disabling the CPU memory arena"). Kept because it's a genuine
+// improvement, not because it's sufficient on its own — Base/Small/Medium
+// stay disabled in Settings (src/lib/Constants.ts) until something
+// eliminates the crash rather than narrowing its window.
+// @xenova/transformers@2.17.2's pipeline() API has no session-options
+// passthrough, so this patches the exact onnxruntime-node instance it
+// resolves internally (its own nested node_modules copy) before any
+// session gets created.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { InferenceSession } = require('@xenova/transformers/node_modules/onnxruntime-node');
+const _originalCreate = InferenceSession.create.bind(InferenceSession);
+InferenceSession.create = function patchedCreate(...args: any[]) {
+  const last = args[args.length - 1];
+  if (last && typeof last === 'object' && !Buffer.isBuffer(last) && !ArrayBuffer.isView(last)) {
+    args[args.length - 1] = {
+      ...last,
+      enableCpuMemArena: false,
+      enableMemPattern: false,
+      executionMode: 'sequential',
+      intraOpNumThreads: 1,
+      interOpNumThreads: 1,
+    };
+  }
+  return _originalCreate(...args);
+};
 
 let transcriber: any = null;
 let currentModel: string | null = null;
