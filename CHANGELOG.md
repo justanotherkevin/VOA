@@ -15,6 +15,10 @@ All notable changes to VOA are documented here.
 - **Base/Small/Medium Whisper models are temporarily disabled** in Settings — Tiny is the only model confirmed stable against the crash above. Disabled rows are dimmed with an "Unavailable" indicator and an explanatory tooltip; a stale preference pointing at one of them now resets to Tiny automatically.
 - All Whisper transcription requests are now processed one at a time through an explicit queue, guaranteeing only one job runs against the isolated process at once.
 
+### Docs
+
+- Fixed markdown italics syntax in `docs/whisper-onnxruntime-crash.md`.
+
 ---
 
 ## [1.0.0] — 2025
