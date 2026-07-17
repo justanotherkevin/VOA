@@ -149,8 +149,35 @@ on every distinct model load, added while investigating this) is kept in
 correctness improvement independent of it: it guarantees every model load
 starts in a process untouched by a previous model's session state.
 
+## Tried: forcing a full app relaunch on model change
+
+Reasoning: every isolated single-model test (6/6) passed — a model's
+*first* load in a genuinely fresh process was the one condition that looked
+reliable, even though the *same* model loaded a second time in an
+already-used process reliably crashed. So: make every model change force a
+full app relaunch (`app.relaunch()` + `app.exit()`), confirmed with the
+user first, so every load is that "first load in a fresh process" case.
+
+Implemented (IPC relaunch path, Settings confirm dialog, Base/Small/Medium
+re-enabled) and re-verified directly against that exact condition — a fresh
+Electron process, `Xenova/whisper-small.en`, first and only model load in
+that process. **It crashed anyway** (`SIGTRAP`, exit code 5, identical
+`BFCArena` stack). `vm_stat` at the time showed ~3GB free, comparable to or
+higher than during the isolated runs that had passed. Reverted the
+re-enablement again.
+
+This is the more important data point of the two experiments: it means the
+crash isn't cleanly gated by "fresh process" or "memory pressure" the way
+the first round of testing suggested — those earlier passes were
+consistent with a flaky/non-deterministic bug (a race or heap-corruption
+class of issue) getting lucky across a small number of trials, not with a
+threshold being crossed. Neither the arena-disable mitigation nor forcing a
+fresh process per model load are things application code can rely on to
+prevent this. Base/Small/Medium stay disabled with no in-app mitigation
+currently believed to close the gap — see Suggestions below.
+
 ## Suggestions going forward
 
 1. **Retest after an `onnxruntime-node` version bump.** Currently pinned to `1.14.0` (via `package.json` `overrides`) specifically to dodge a _different_ SIGSEGV in `1.21` that affected the old Qwen pipeline (now moot — Qwen no longer runs on-device). Since that constraint may no longer apply, a newer `onnxruntime-node` is worth trying against this exact bug — no fix is confirmed, but none is ruled out either.
-2. **Migrate Whisper to `whisper.cpp`** (GGML models, Metal acceleration) instead of ONNX/`onnxruntime-node`. This sidesteps the bug entirely rather than working around it, and multiple sources point to it as the standard choice for Whisper specifically on Apple Silicon. Now the most promising path — the arena mitigation above shows the ONNX allocator itself is the problem, not something app-code can fully paper over.
+2. **Migrate Whisper to `whisper.cpp`** (GGML models, Metal acceleration) instead of ONNX/`onnxruntime-node`. This sidesteps the bug entirely rather than working around it, and multiple sources point to it as the standard choice for Whisper specifically on Apple Silicon. The most promising path by a wide margin now — both in-app mitigations tried show the ONNX allocator itself is unreliable in this environment in a way application code can't dependably work around.
 3. Whichever path is taken, keep the `utilityProcess` isolation and queue — even once Base/Small/Medium work again, a single wedged native call should never be able to take the whole app down or block the main thread. That property is independent of which backend ends up running inference.
