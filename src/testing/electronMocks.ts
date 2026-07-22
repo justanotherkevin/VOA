@@ -36,16 +36,21 @@ export function attachGlobalElectronMock() {
       on: {
         update: vi.fn((cb: (m: any) => void) => {
           updateCallback = cb;
-          return () => { updateCallback = null; };
+          return () => {
+            updateCallback = null;
+          };
         }),
         progress: vi.fn(() => () => {}),
+        processing: vi.fn(() => () => {}),
         initiate: vi.fn(() => () => {}),
         ready: vi.fn(() => () => {}),
         done: vi.fn(() => () => {}),
         error: vi.fn(() => () => {}),
         complete: vi.fn((cb: (m: any) => void) => {
           completeCallback = cb;
-          return () => { completeCallback = null; };
+          return () => {
+            completeCallback = null;
+          };
         }),
       },
     },
@@ -62,19 +67,27 @@ export function attachGlobalElectronMock() {
       on: {
         saved: vi.fn((cb: (m: any) => void) => {
           meetingSavedCallback = cb;
-          return () => { meetingSavedCallback = null; };
+          return () => {
+            meetingSavedCallback = null;
+          };
         }),
         cleared: vi.fn((cb: () => void) => {
           meetingClearedCallback = cb;
-          return () => { meetingClearedCallback = null; };
+          return () => {
+            meetingClearedCallback = null;
+          };
         }),
         detected: vi.fn((cb: (e: any) => void) => {
           meetingDetectedCallback = cb;
-          return () => { meetingDetectedCallback = null; };
+          return () => {
+            meetingDetectedCallback = null;
+          };
         }),
         ended: vi.fn((cb: (e: any) => void) => {
           meetingEndedCallback = cb;
-          return () => { meetingEndedCallback = null; };
+          return () => {
+            meetingEndedCallback = null;
+          };
         }),
       },
     },
@@ -88,7 +101,9 @@ export function attachGlobalElectronMock() {
           triggered: vi.fn(() => () => {}),
           recordingToggle: vi.fn((cb: () => void) => {
             recordingToggleCallback = cb;
-            return () => { recordingToggleCallback = null; };
+            return () => {
+              recordingToggleCallback = null;
+            };
           }),
         },
       },
@@ -110,19 +125,35 @@ export function attachGlobalElectronMock() {
         },
       },
       recording: {
-        get: vi.fn(async () => ({ systemAudioEnabled: false, autoRecordMode: 'manual' })),
+        get: vi.fn(async () => ({
+          systemAudioEnabled: false,
+          autoRecordMode: 'manual',
+        })),
         update: vi.fn(async () => ({ success: true })),
       },
       app: {
-        get: vi.fn(async () => ({ launchAtLogin: false, showMenuBar: true, showDockIcon: true })),
+        get: vi.fn(async () => ({
+          launchAtLogin: false,
+          showMenuBar: true,
+          showDockIcon: true,
+        })),
         update: vi.fn(async () => ({ success: true })),
       },
       audio: {
-        get: vi.fn(async () => ({ micGain: 62, noiseSuppression: true, labelSpeakers: true })),
+        get: vi.fn(async () => ({
+          micGain: 62,
+          noiseSuppression: true,
+          labelSpeakers: true,
+        })),
         update: vi.fn(async () => ({ success: true })),
       },
       ui: {
-        get: vi.fn(async () => ({ theme: 'dark', accentLight: '#2f6bed', accentDark: '#4f8cff', density: 'comfortable' })),
+        get: vi.fn(async () => ({
+          theme: 'dark',
+          accentLight: '#2f6bed',
+          accentDark: '#4f8cff',
+          density: 'comfortable',
+        })),
         update: vi.fn(async () => ({ success: true })),
       },
     },
@@ -134,7 +165,10 @@ export function attachGlobalElectronMock() {
 
     // ── LM Studio ─────────────────────────────────────────────────────────────
     lmStudio: {
-      getPreferences: vi.fn(async () => ({ baseUrl: 'http://localhost:1234', model: '' })),
+      getPreferences: vi.fn(async () => ({
+        baseUrl: 'http://localhost:1234',
+        model: '',
+      })),
       savePreferences: vi.fn(async () => {}),
       testConnection: vi.fn(async () => ({ ok: true, models: [] })),
     },
@@ -171,7 +205,9 @@ export function attachGlobalElectronMock() {
       on: {
         updateState: vi.fn((cb: (data: any) => void) => {
           notificationStateUpdateCallback = cb;
-          return () => { notificationStateUpdateCallback = null; };
+          return () => {
+            notificationStateUpdateCallback = null;
+          };
         }),
       },
     },

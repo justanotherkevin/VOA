@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/renderer/components/card';
 import { Button } from '@/renderer/components/button';
 import type { Transcriber } from '@/renderer/hooks/useTranscriber';
@@ -78,7 +79,8 @@ export default function AIModel({ transcriber }: AIModelProps) {
 
     try {
       setIsDeletingModel(modelName);
-      const result = await window.electronAPI.settings.model.cache.delete(modelName);
+      const result =
+        await window.electronAPI.settings.model.cache.delete(modelName);
 
       if (result?.success) {
         setSaveMessage({
@@ -159,12 +161,12 @@ export default function AIModel({ transcriber }: AIModelProps) {
       setSaveMessage(null);
 
       // Update preferences in backend store
-      const success = await updatePreferences({
+      const result = await updatePreferences({
         selectedModel,
         asrType: selectedAsrType,
       });
 
-      if (success) {
+      if (result.success) {
         console.log(
           '[AIModel] Model updated to:',
           selectedModel,
@@ -176,15 +178,18 @@ export default function AIModel({ transcriber }: AIModelProps) {
           type: 'success',
           text: 'Settings saved successfully! They will be used for the next transcription.',
         });
+        toast.success('Settings saved');
       } else {
-        throw new Error('Failed to save settings');
+        throw new Error(result.message || 'Failed to save settings');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
+      const message = error instanceof Error ? error.message : String(error);
       setSaveMessage({
         type: 'error',
-        text: `Failed to save settings: ${error}`,
+        text: `Failed to save settings: ${message}`,
       });
+      toast.error(message);
     } finally {
       setIsSavingModel(false);
     }
@@ -339,10 +344,15 @@ export default function AIModel({ transcriber }: AIModelProps) {
           <div className="space-y-2 ">
             {MODEL_META_DATA.map((modelOption, index) => {
               const isDownloaded = isModelDownloaded(modelOption.model);
+              const isDisabled = modelOption.disabled === true;
               return (
                 <div
                   key={modelOption.model}
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all text-left w-full ${
+                  className={`border-2 rounded-lg p-4 transition-all text-left w-full ${
+                    isDisabled
+                      ? 'cursor-not-allowed opacity-60'
+                      : 'cursor-pointer'
+                  } ${
                     selectedModel === modelOption.model
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 bg-white hover:border-gray-300'
@@ -351,10 +361,16 @@ export default function AIModel({ transcriber }: AIModelProps) {
                       ? ``
                       : `border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed`
                   }`}
-                  onKeyUp={() => handleModelSelect(modelOption.model)}
-                  onClick={() => {}}
+                  title={isDisabled ? modelOption.disabledReason : undefined}
+                  onKeyUp={() =>
+                    !isDisabled && handleModelSelect(modelOption.model)
+                  }
+                  onClick={() =>
+                    !isDisabled && handleModelSelect(modelOption.model)
+                  }
                   role="tab"
-                  tabIndex={index}
+                  aria-disabled={isDisabled}
+                  tabIndex={isDisabled ? -1 : index}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
@@ -362,28 +378,34 @@ export default function AIModel({ transcriber }: AIModelProps) {
                         {modelOption.name}
                       </h3>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="ml-4 flex items-center gap-2"
-                      disabled={
-                        isDownloaded ||
-                        transcriber.isModelLoading ||
-                        isSavingModel
-                      }
-                    >
-                      {isDownloaded ? (
-                        <>
-                          <Check className="text-green-500" size={16} />
-                          Downloaded
-                        </>
-                      ) : (
-                        <>
-                          <Download size={16} />
-                          Download
-                        </>
-                      )}
-                    </Button>
+                    {isDisabled ? (
+                      <span className="ml-4 flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium bg-gray-200 text-gray-500">
+                        Unavailable
+                      </span>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-4 flex items-center gap-2"
+                        disabled={
+                          isDownloaded ||
+                          transcriber.isModelLoading ||
+                          isSavingModel
+                        }
+                      >
+                        {isDownloaded ? (
+                          <>
+                            <Check className="text-green-500" size={16} />
+                            Downloaded
+                          </>
+                        ) : (
+                          <>
+                            <Download size={16} />
+                            Download
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
 
                   <div className="flex items-start gap-8 mb-3">

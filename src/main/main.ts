@@ -34,6 +34,9 @@ import {
 import { initializeStore } from '@/main/store';
 import { registerIpcHandlers } from '@/main/ipc';
 import { meetingDetector } from '@/main/services/meeting-detector';
+import transcriberService from '@/main/services/transcriber';
+import { CHANNELS } from '@/lib/ipc-channels';
+import { log } from 'electron-log';
 import {
   PermissionsService,
   OsPermissionProbe,
@@ -148,6 +151,26 @@ app
     await createWindow();
     createNotificationWindow();
     initCommands();
+
+    // Fire-and-forget: warm the currently-selected model so it's already
+    // loaded by the time the first recording starts, instead of loading
+    // lazily on the first transcribe() call. Must not be awaited here —
+    // window creation, tray, shortcuts, and IPC registration below must
+    // proceed immediately regardless of how long the model takes to load.
+    transcriberService
+      .preloadCurrentModel((data) => {
+        getMainWindow()?.webContents.send(CHANNELS.TRANSCRIBER.PROGRESS, data);
+      })
+      .then((result) => {
+        if (!result.success) {
+          log('[main] Eager model preload failed:', result.message);
+          getMainWindow()?.webContents.send(
+            CHANNELS.TRANSCRIBER.ERROR,
+            result.message,
+          );
+        }
+      })
+      .catch((err) => log('[main] Eager model preload threw:', err));
 
     const mainWindow = getMainWindow();
     if (mainWindow) {

@@ -16,6 +16,7 @@ import { useAudioRecorder } from '@/renderer/hooks/useAudioRecorder';
 import { useSystemAudioRecorder } from '@/renderer/hooks/useSystemAudioRecorder';
 import { useRecordingFlow } from '@/renderer/hooks/useRecordingFlow';
 import type { AppStatus } from '@/renderer/components/ui/Sidebar';
+import { Toaster } from '@/renderer/components/sonner';
 
 export default function App() {
   const transcriber = useTranscriber();
@@ -35,6 +36,7 @@ export default function App() {
 
   return (
     <PermissionsProvider>
+      <Toaster />
       <Router initialEntries={['/']}>
         <Routes>
           <Route path="/onboarding" element={<Onboarding />} />
