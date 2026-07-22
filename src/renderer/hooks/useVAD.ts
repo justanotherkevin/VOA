@@ -11,6 +11,12 @@ import { sendAudioToTranscriber } from '@/renderer/utils/ElectronAPIHelper';
 
 export interface UseVADReturn {
   isInitialized: boolean;
+  // True while a speech segment is still being combined/sent to the
+  // transcriber. Callers must wait for this to go false before ending a
+  // session, otherwise the trailing segment (e.g. flushed on stop) can arrive
+  // after session-end and get misattributed by the backend's late-segment
+  // recovery path instead of merging normally.
+  hasPendingSegment: boolean;
   startListening: () => void;
   stopListening: () => void;
   stopListeningAndFlush: () => void;
@@ -43,6 +49,7 @@ const combineAudioFrames = (frames: Float32Array[]): Float32Array => {
 export function useVAD(callbacks?: VADCallbacks): UseVADReturn {
   const vadRef = useRef<MicVAD | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [pendingSegmentCount, setPendingSegmentCount] = useState(0);
   const currentSegmentRef = useRef<Float32Array[]>([]);
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const forceSendOnNextSpeechEndRef = useRef<boolean>(false);
@@ -57,11 +64,14 @@ export function useVAD(callbacks?: VADCallbacks): UseVADReturn {
 
   const sendSegmentToTranscriber = useCallback(
     async (audioFrames: Float32Array[]): Promise<void> => {
+      setPendingSegmentCount((count) => count + 1);
       try {
         const combined = combineAudioFrames(audioFrames);
         await sendAudioToTranscriber(Array.from(combined));
       } catch (error) {
         console.error('[VAD] Error sending segment to transcriber:', error);
+      } finally {
+        setPendingSegmentCount((count) => count - 1);
       }
     },
     [],
@@ -79,13 +89,23 @@ export function useVAD(callbacks?: VADCallbacks): UseVADReturn {
       // when audio recording ends trigged by shortkey
       if (forceSendOnNextSpeechEndRef.current) {
         forceSendOnNextSpeechEndRef.current = false;
-        console.log('[VAD] Force-flush on recording stop — frames:', currentSegmentRef.current.length, 'samples:', currentSegmentRef.current.reduce((s, f) => s + f.length, 0));
+        console.log(
+          '[VAD] Force-flush on recording stop — frames:',
+          currentSegmentRef.current.length,
+          'samples:',
+          currentSegmentRef.current.reduce((s, f) => s + f.length, 0),
+        );
         flushCurrentSegments();
         callbacks?.onSpeechEnd?.(audio);
         return;
       }
       // when triggered by voice pausing detection
-      console.log('[VAD] Speech ended — scheduling flush in', VAD_CONFIG.PAUSE_TIMEOUT_MS, 'ms, frames:', currentSegmentRef.current.length);
+      console.log(
+        '[VAD] Speech ended — scheduling flush in',
+        VAD_CONFIG.PAUSE_TIMEOUT_MS,
+        'ms, frames:',
+        currentSegmentRef.current.length,
+      );
       pauseTimerRef.current = setTimeout(() => {
         flushCurrentSegments();
         pauseTimerRef.current = null;
@@ -155,6 +175,7 @@ export function useVAD(callbacks?: VADCallbacks): UseVADReturn {
 
   return {
     isInitialized,
+    hasPendingSegment: pendingSegmentCount > 0,
     startListening,
     stopListening,
     stopListeningAndFlush,

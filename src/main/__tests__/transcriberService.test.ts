@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import transcriberService from '../services/transcriber';
+import { createTranscriberCallbacks } from './helpers/transcriberTestHelpers';
 
 // Mock dependencies
 vi.mock('@/main/store', () => ({
@@ -64,13 +65,7 @@ vi.mock('@/main/pipeline/asr-factory', () => ({
 }));
 
 describe('TranscriberService - Helper Methods', () => {
-  const mockCallbacks = {
-    onUpdate: vi.fn(),
-    onProgress: vi.fn(),
-    onComplete: vi.fn(),
-    onError: vi.fn(),
-    onMeetingSaved: vi.fn(),
-  };
+  const mockCallbacks = createTranscriberCallbacks();
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -49,6 +49,7 @@ export function useRecordingFlow({
   const hasActiveSessionRef = useRef(false);
   const {
     isRecording,
+    hasPendingVadSegment,
     startRecording,
     stopRecording,
     setOnRecordingComplete,
@@ -120,9 +121,12 @@ export function useRecordingFlow({
     onAutoStop: useCallback(() => {
       if (isRecording) handleToggleRecording();
     }, [isRecording, handleToggleRecording]),
-    onAsk: useCallback((event) => {
-      showMeetingDetected(event.appName, event.meetingKey);
-    }, [showMeetingDetected]),
+    onAsk: useCallback(
+      (event) => {
+        showMeetingDetected(event.appName, event.meetingKey);
+      },
+      [showMeetingDetected],
+    ),
     onEnded: useCallback(() => {
       showMeetingEnded();
     }, [showMeetingEnded]),
@@ -143,9 +147,10 @@ export function useRecordingFlow({
   }, []);
 
   useEffect(() => {
-    const unsubscribe = window.electronAPI.settings.shortcuts.on.recordingToggle(() => {
-      handleToggleRecording();
-    });
+    const unsubscribe =
+      window.electronAPI.settings.shortcuts.on.recordingToggle(() => {
+        handleToggleRecording();
+      });
 
     return () => {
       unsubscribe();
@@ -194,10 +199,25 @@ export function useRecordingFlow({
   // Uses hasActiveSessionRef instead of transcriber.output?.text because VAD-only
   // mode never sets transcriber.isBusy, so transcript text may be undefined when
   // recording stops for the first time (causing the notification to hang in processing).
+  // Also waits on hasPendingVadSegment so the trailing mic segment flushed on stop
+  // (stopListeningAndFlush) has actually been sent before session-end fires —
+  // otherwise it arrives after the session/meeting is already saved and gets
+  // routed through the backend's late-segment recovery path instead of merging
+  // normally, producing a wrong audioSource and missing [Mic]/[Meeting] tags.
   useEffect(() => {
-    if (!isRecordingActive && !transcriber.isBusy && hasActiveSessionRef.current) {
+    if (
+      !isRecordingActive &&
+      !transcriber.isBusy &&
+      !hasPendingVadSegment &&
+      hasActiveSessionRef.current
+    ) {
       hasActiveSessionRef.current = false;
-      console.log('[RecordingFlow] Session ending — isRecordingActive:', isRecordingActive, 'isBusy:', transcriber.isBusy);
+      console.log(
+        '[RecordingFlow] Session ending — isRecordingActive:',
+        isRecordingActive,
+        'isBusy:',
+        transcriber.isBusy,
+      );
       window.electronAPI.transcriber.endSession(Date.now());
       showDone();
 
@@ -213,6 +233,7 @@ export function useRecordingFlow({
   }, [
     isRecordingActive,
     transcriber.isBusy,
+    hasPendingVadSegment,
     cleanup,
     showDone,
     showIdle,

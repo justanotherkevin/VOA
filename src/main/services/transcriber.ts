@@ -383,12 +383,25 @@ class TranscriberService {
       // Session had other segments — append to the saved meeting's transcript
       const existing = getMeetingById(this.lastSavedMeetingId);
       if (existing) {
+        // If this late segment's source differs from (or the meeting already
+        // spans) both sources, tag it the same way endSession tags segments
+        // when both mic and system audio are present, and upgrade audioSource
+        // to 'both' so the header/tag rendering stay accurate.
+        const bothSources =
+          existing.audioSource === 'both' || existing.audioSource !== source;
+        const label = source === 'mic' ? '[Mic]' : '[Meeting]';
+        const taggedText = bothSources ? `${label} ${outputText}` : outputText;
         const appendedTranscript = existing.transcript
-          ? `${existing.transcript} ${outputText}`
-          : outputText;
-        const updated = updateMeeting(this.lastSavedMeetingId, {
-          transcript: appendedTranscript,
-        });
+          ? `${existing.transcript} ${taggedText}`
+          : taggedText;
+        const patch: Partial<Meeting> = { transcript: appendedTranscript };
+        if (
+          existing.audioSource !== 'both' &&
+          existing.audioSource !== source
+        ) {
+          patch.audioSource = 'both';
+        }
+        const updated = updateMeeting(this.lastSavedMeetingId, patch);
         if (updated) {
           getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, updated);
           log(
