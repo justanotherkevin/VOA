@@ -2,11 +2,35 @@
 
 ## Status (current)
 
-Tiny is the only reliable Whisper model. Base/Small/Medium are disabled in
+Tiny is the only fully reliable Whisper model. Small/Medium are disabled in
 Settings. Two in-app mitigations were tried and both failed to make them
 usable — see "Tried" sections below. **Decision: stop trying to work around
 this from application code and move Whisper off `onnxruntime-node` entirely
 (`whisper.cpp` is the leading candidate)** — see "Decision" at the bottom.
+
+**Base is re-enabled** (unlike Small/Medium) at the user's request. A quick
+experiment tried bumping `@xenova/transformers`'s bundled `onnxruntime-node`
+from `1.14.0` to `1.24.1` via a `package.json` override, hoping a newer
+allocator implementation would fix the underlying bug — it made things worse
+(an immediate, different crash — exit code `1` instead of the original `5` —
+most likely because `@xenova/transformers@2.17.2`, a legacy/unmaintained
+package, isn't API-compatible with an `onnxruntime-node` that many versions
+ahead). That path was reverted; there is no cheap fix for the underlying
+`BFCArena` bug.
+
+Despite that, manual testing (switching back and forth between Tiny and Base
+repeatedly, in the real built app, across multiple sessions) has not
+reproduced the crash — both models loaded and transcribed correctly every
+time. This is a meaningfully different result from Small/Medium, which
+crashed reliably under the same kind of sequential-switching test. It's not
+proof the underlying allocator bug is gone for Base specifically (it's the
+same code path, same library, same bug class — a few dozen manual switches
+isn't the same as the doc's original repro conditions, e.g. sustained memory
+pressure), but it's the first real signal Base may be meaningfully more
+stable in practice than Small/Medium, not just "hasn't crashed yet." Kept
+enabled on that basis. Base uses the same isolation/queue/crash-handling as
+every other model, so if it ever does crash, it surfaces as a clean error
+toast rather than a freeze.
 
 This investigation and its fix (`whisper-process.ts` isolation + FIFO queue,
 Base/Small/Medium disabled in `src/lib/Constants.ts`/`AIModel.tsx`, the

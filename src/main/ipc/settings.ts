@@ -88,12 +88,22 @@ export function registerSettingsHandlers() {
         );
 
         if (!result.success) {
+          // Without this, the model-load toast the renderer showed from the
+          // transcriber:progress broadcasts above never resolves — it was
+          // only ever cleared by a transcriber:ready or transcriber:error
+          // broadcast, neither of which this handler used to send. The IPC
+          // response alone isn't enough since it's not what drives that toast.
+          getMainWindow()?.webContents.send(
+            CHANNELS.TRANSCRIBER.ERROR,
+            result.message,
+          );
           return result;
         }
 
         // Persist only after a successful load — a failed swap should never
         // leave the store pointing at a model that isn't actually loaded.
         updateModelPreferences(preferences);
+        getMainWindow()?.webContents.send(CHANNELS.TRANSCRIBER.READY);
         return { success: true };
       } catch (error) {
         logError('[IPC] Error updating model preferences:', error);

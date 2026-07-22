@@ -90,6 +90,14 @@ Contains helper functions specific to testing the dictation workflow. These help
 
 - `performDictationFlow(page, text, chunks)` - Execute full recording → transcription → verification flow
 
+### `notification.helpers.ts`
+
+Helpers for the notification window (`src/renderer/Notification.tsx`) — the waveform/state pill shown during recording, processing, and meeting-detected states.
+
+- `triggerRecordingToggle(electronApp)` - Send the `recording:toggle` IPC event to the main window, simulating the global recording shortcut without depending on real OS-level shortcuts. Call `await page.waitForLoadState('domcontentloaded')` first, or the event can be sent before `useRecordingFlow`'s listener is registered and gets silently dropped.
+- `waitForNotificationWindow(electronApp, timeoutMs?)` - Poll until the notification window (`notification.html`) appears and finish loading it; returns `null` (not a throw) if it never appears, so callers can assert directly on the result.
+- `waitForNotificationText(notificationWindow, text, timeoutMs?)` - Wait for specific text (e.g. `'recording'`) to become visible inside the notification container. Uses Playwright's own locator waiting rather than a fixed delay, since `Notification.tsx` only renders state/app-name text once `activeWindow` resolves asynchronously (see `getActiveWindow()` in `src/main/active-window.ts`).
+
 ### `shortcuts.helpers.ts`
 
 Contains helper functions specific to testing the customizable dictation shortcut feature. These are built on top of common helpers.
@@ -183,30 +191,30 @@ When adding new feature-specific helpers:
 // tests/e2e/utils/authentication.helpers.ts
 import { Page } from '@playwright/test';
 import {
-	clickByTestId,
-	getTextByTestId,
-	waitForElement,
-	typeText,
-	focusByTestId,
+  clickByTestId,
+  getTextByTestId,
+  waitForElement,
+  typeText,
+  focusByTestId,
 } from './common.helpers';
 
 /**
  * Login with username and password
  */
 export async function login(
-	page: Page,
-	username: string,
-	password: string,
+  page: Page,
+  username: string,
+  password: string,
 ): Promise<void> {
-	// Use common helpers to interact with login form
-	await focusByTestId(page, 'username-input');
-	await typeText(page, username);
+  // Use common helpers to interact with login form
+  await focusByTestId(page, 'username-input');
+  await typeText(page, username);
 
-	await focusByTestId(page, 'password-input');
-	await typeText(page, password);
+  await focusByTestId(page, 'password-input');
+  await typeText(page, password);
 
-	await clickByTestId(page, 'login-button');
-	await waitForElement(page, '[data-testid="dashboard"]');
+  await clickByTestId(page, 'login-button');
+  await waitForElement(page, '[data-testid="dashboard"]');
 }
 ```
 

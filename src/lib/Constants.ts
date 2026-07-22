@@ -172,10 +172,7 @@ export const MODEL_META_DATA = [
     speed: 3,
     accuracy: 3,
     details:
-      'Balanced model optimized for English, good balance between speed and accuracy',
-    disabled: true,
-    disabledReason:
-      'Currently unavailable — causes a native crash on this platform (see docs/whisper-onnxruntime-crash.md)',
+      'Balanced model optimized for English, good balance between speed and accuracy. A known native crash affects larger Whisper models on this platform (see docs/whisper-onnxruntime-crash.md); Base has held up well in testing, but if it ever stops responding, restart the app — it will fall back to Tiny.',
   },
   {
     name: 'Small',

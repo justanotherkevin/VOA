@@ -301,18 +301,26 @@ export function getModelPreferences(): ModelPreferences {
     store.get('modelPreferences') ?? DEFAULT_MODEL_PREFERENCES;
 
   if (preferences.selectedModel?.startsWith('distil-whisper/')) {
+    log.info(
+      `[Store] getModelPreferences: resetting distil-whisper selectedModel=${preferences.selectedModel} to default`,
+    );
     preferences.selectedModel = DEFAULT_MODEL_PREFERENCES.selectedModel;
     store.set('modelPreferences', preferences);
   }
 
-  // Xenova/whisper-base|small|medium reliably SIGTRAP-crash the whisper
-  // process (onnxruntime-node BFCArena bug — see
-  // docs/whisper-onnxruntime-crash.md). A model picked before this was known
-  // shouldn't keep trying and failing on every launch.
+  // Xenova/whisper-small|medium reliably SIGTRAP-crash the whisper process
+  // (onnxruntime-node BFCArena bug — see docs/whisper-onnxruntime-crash.md).
+  // A model picked before this was known shouldn't keep trying and failing
+  // on every launch. Base is intentionally excluded here — it's re-enabled
+  // (experimentally) in Settings, so a previously-selected Base preference
+  // should be left alone rather than silently reset.
   if (
     preferences.selectedModel &&
-    /\/whisper-(base|small|medium)(\.en)?$/.test(preferences.selectedModel)
+    /\/whisper-(small|medium)(\.en)?$/.test(preferences.selectedModel)
   ) {
+    log.info(
+      `[Store] getModelPreferences: resetting disabled selectedModel=${preferences.selectedModel} to default`,
+    );
     preferences.selectedModel = DEFAULT_MODEL_PREFERENCES.selectedModel;
     store.set('modelPreferences', preferences);
   }
@@ -333,6 +341,9 @@ export function updateModelPreferences(
   preferences: Partial<ModelPreferences>,
 ): void {
   const current = store?.get('modelPreferences') ?? DEFAULT_MODEL_PREFERENCES;
+  log.info(
+    `[Store] updateModelPreferences: ${JSON.stringify(preferences)} (previous selectedModel=${current.selectedModel})`,
+  );
   store?.set('modelPreferences', { ...current, ...preferences });
 }
 
