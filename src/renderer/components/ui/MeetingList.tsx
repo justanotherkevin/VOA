@@ -1,6 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Mic, Circle, Users } from 'lucide-react';
 import type { Meeting } from '@/renderer/hooks/useMeetings';
+import {
+  formatMeetingDate,
+  formatMeetingShortDate,
+  formatDurationShort,
+} from '@/renderer/utils/formatters';
 
 interface MeetingListProps {
   meetings: Meeting[];
@@ -9,38 +14,12 @@ interface MeetingListProps {
   onNewRecording: () => void;
 }
 
-function formatDate(ts: number): string {
-  const d = new Date(ts);
-  const now = new Date();
-  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'long' });
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function formatShortDate(ts: number): string {
-  const d = new Date(ts);
-  const now = new Date();
-  const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  }
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function formatDuration(ms: number): string {
-  if (!ms) return '';
-  const totalSec = Math.floor(ms / 1000);
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  if (m === 0) return `${s}s`;
-  return `${m}m`;
-}
-
-export function MeetingList({ meetings, selectedId, onSelect, onNewRecording }: MeetingListProps) {
+export function MeetingList({
+  meetings,
+  selectedId,
+  onSelect,
+  onNewRecording,
+}: MeetingListProps) {
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -58,7 +37,7 @@ export function MeetingList({ meetings, selectedId, onSelect, onNewRecording }: 
   const grouped = useMemo(() => {
     const map = new Map<string, Meeting[]>();
     for (const m of filtered) {
-      const label = formatDate(m.startedAt);
+      const label = formatMeetingDate(m.startedAt);
       if (!map.has(label)) map.set(label, []);
       map.get(label)!.push(m);
     }
@@ -106,7 +85,9 @@ export function MeetingList({ meetings, selectedId, onSelect, onNewRecording }: 
           Array.from(grouped.entries()).map(([label, items]) => (
             <div key={label}>
               <div className="px-3 py-1.5">
-                <span className="text-xs text-gray-600 font-medium">{label}</span>
+                <span className="text-xs text-gray-600 font-medium">
+                  {label}
+                </span>
               </div>
               {items.map((meeting) => (
                 <MeetingRow
@@ -114,8 +95,8 @@ export function MeetingList({ meetings, selectedId, onSelect, onNewRecording }: 
                   meeting={meeting}
                   isSelected={meeting.id === selectedId}
                   onSelect={() => onSelect(meeting.id)}
-                  shortDate={formatShortDate(meeting.startedAt)}
-                  duration={formatDuration(meeting.durationMs)}
+                  shortDate={formatMeetingShortDate(meeting.startedAt)}
+                  duration={formatDurationShort(meeting.durationMs)}
                 />
               ))}
             </div>
@@ -173,7 +154,8 @@ function MeetingRow({
             <Circle
               size={8}
               className={`shrink-0 fill-current ${
-                meeting.summaryStatus === 'pending' || meeting.summaryStatus === 'not-started'
+                meeting.summaryStatus === 'pending' ||
+                meeting.summaryStatus === 'not-started'
                   ? 'text-yellow-400'
                   : 'text-green-500'
               }`}
@@ -181,8 +163,8 @@ function MeetingRow({
                 meeting.summaryStatus === 'pending'
                   ? 'Generating summary…'
                   : meeting.summaryStatus === 'not-started'
-                  ? 'Meeting insights available'
-                  : 'Summary ready'
+                    ? 'Meeting insights available'
+                    : 'Summary ready'
               }
             />
           </div>
