@@ -18,6 +18,10 @@ export type OnRecordingCompleteCallback = (
 ) => Promise<void>;
 
 export interface UseAudioRecorderReturn extends AudioRecorderState {
+  // True while the mic's trailing VAD segment is still being sent/transcribed
+  // after stopRecording() was called. Callers must wait for this to go false
+  // before ending the transcriber session.
+  hasPendingVadSegment: boolean;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   resetRecordingState: () => void;
@@ -37,10 +41,13 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const chunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const onRecordingCompleteRef = useRef<OnRecordingCompleteCallback | null>(null);
+  const onRecordingCompleteRef = useRef<OnRecordingCompleteCallback | null>(
+    null,
+  );
 
   const {
     isInitialized: vadInitialized,
+    hasPendingSegment: hasPendingVadSegment,
     startListening,
     stopListeningAndFlush,
     cleanup: vadCleanup,
@@ -119,7 +126,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
         const recordingMimeType = mediaRecorderRef.current?.mimeType;
         const recordingStartTime = startTimeRef.current;
-        await handleRecordingComplete(chunks, recordingMimeType, recordingStartTime);
+        await handleRecordingComplete(
+          chunks,
+          recordingMimeType,
+          recordingStartTime,
+        );
       }
     };
 
@@ -147,7 +158,14 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     } catch {
       // silently handle microphone access errors
     }
-  }, [resetRecordingState, requestAudioPermission, initWebRecorder, handleRecordingComplete, vadInitialized, startListening]);
+  }, [
+    resetRecordingState,
+    requestAudioPermission,
+    initWebRecorder,
+    handleRecordingComplete,
+    vadInitialized,
+    startListening,
+  ]);
 
   const stopRecording = useCallback(() => {
     if (!isRecording) return;
@@ -189,6 +207,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     isRecording,
     duration,
     mimeType,
+    hasPendingVadSegment,
     startRecording,
     stopRecording,
     resetRecordingState,

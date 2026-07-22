@@ -8,7 +8,13 @@
  * loading when endSession flushes an empty buffer.
  */
 import transcriberService from '../services/transcriber';
+import type { TranscriberCallbacks } from '../services/transcriber';
 import { CHANNELS } from '@/lib/ipc-channels';
+import {
+  createTranscriberCallbacks,
+  resetTranscriberSessionState,
+  createSilentAudio,
+} from './helpers/transcriberTestHelpers';
 
 const mockSend = vi.fn();
 
@@ -59,7 +65,11 @@ vi.mock('@/main/pipeline/asr-factory', () => ({
 }));
 
 vi.mock('@/main/pipeline/structured-summarizer', () => ({
-  default: { summarize: vi.fn(async () => null), resetSession: vi.fn(), submitChunk: vi.fn(async () => null) },
+  default: {
+    summarize: vi.fn(async () => null),
+    resetSession: vi.fn(),
+    submitChunk: vi.fn(async () => null),
+  },
 }));
 
 vi.mock('@/main/pipeline/text-cleaner', () => ({
@@ -78,29 +88,50 @@ vi.mock('electron-log', () => ({
 }));
 
 // Silent 1-second audio buffer in the format transcribe() expects (plain array)
-const SILENT_AUDIO = Array.from(new Float32Array(16000));
+const SILENT_AUDIO = createSilentAudio();
+
+// Meeting shape returned by the mocked getMeetingById() when a late segment
+// arrives after a meeting was already saved earlier in the session.
+function mockExistingMeeting() {
+  return {
+    id: 'test-meeting',
+    transcript: 'first part',
+    audioSource: 'mic',
+  };
+}
+
+type SessionSegment = {
+  text: string;
+  startedAt: number;
+  source: 'mic' | 'system';
+};
+
+// Seeds TranscriberService's in-progress session with the given segments and
+// ends it — the "begin session, push segments, endSession" sequence shared by
+// every test in this file that starts from an already-saved meeting.
+async function seedAndEndSession(
+  segments: SessionSegment[],
+  callbacks: TranscriberCallbacks,
+  {
+    startedAt = 1000,
+    endedAt = 2000,
+  }: { startedAt?: number; endedAt?: number } = {},
+) {
+  transcriberService.beginSession(startedAt);
+  const svc = transcriberService as any;
+  for (const seg of segments) {
+    svc.sessionSegments.push(seg);
+    svc.sessionSources.add(seg.source);
+  }
+  await transcriberService.endSession(endedAt, callbacks);
+}
 
 describe('TranscriberService — late segment recovery (integration)', () => {
-  const callbacks = {
-    onUpdate: vi.fn(),
-    onProgress: vi.fn(),
-    onComplete: vi.fn(),
-    onError: vi.fn(),
-    onMeetingSaved: vi.fn(),
-  };
+  const callbacks = createTranscriberCallbacks();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset singleton state between tests
-    const svc = transcriberService as any;
-    svc.sessionActive = false;
-    svc.sessionIsMeeting = false;
-    svc.lastSavedMeetingId = null;
-    svc.lastSessionMeta = null;
-    svc.sessionSegments = [];
-    svc.sessionChunks = [];
-    svc.sessionSources = new Set();
-    svc.sessionStartedAt = null;
+    resetTranscriberSessionState();
   });
 
   it('creates a meeting from a late segment when the session buffer was empty', async () => {
@@ -113,7 +144,10 @@ describe('TranscriberService — late segment recovery (integration)', () => {
     expect(saveMeeting).not.toHaveBeenCalled();
 
     // Whisper finishes — segment arrives after session closed
-    await transcriberService.transcribe({ audio: SILENT_AUDIO, source: 'mic' }, callbacks);
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
 
     expect(saveMeeting).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -135,28 +169,59 @@ describe('TranscriberService — late segment recovery (integration)', () => {
     const { getMeetingById, updateMeeting } = await import('@/main/store');
 
     // Session with one segment that saves a meeting
-    transcriberService.beginSession(1000);
-    const svc = transcriberService as any;
-    svc.sessionSegments.push({ text: 'first part', startedAt: 1000, source: 'mic' });
-    svc.sessionSources.add('mic');
-    await transcriberService.endSession(2000, callbacks);
+    await seedAndEndSession(
+      [{ text: 'first part', startedAt: 1000, source: 'mic' }],
+      callbacks,
+    );
 
     // Second transcription arrives after session closed
-    (getMeetingById as any).mockReturnValue({
-      id: 'test-meeting',
-      transcript: 'first part',
-    });
+    (getMeetingById as any).mockReturnValue(mockExistingMeeting());
     vi.clearAllMocks();
 
-    await transcriberService.transcribe({ audio: SILENT_AUDIO, source: 'mic' }, callbacks);
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
 
     expect(updateMeeting).toHaveBeenCalledWith(
       'test-meeting',
       expect.objectContaining({ transcript: 'first part transcribed text' }),
     );
+    // Same source as the rest of the session — no [Mic]/[Meeting] tag, no audioSource change
+    expect(updateMeeting).not.toHaveBeenCalledWith(
+      'test-meeting',
+      expect.objectContaining({ audioSource: expect.anything() }),
+    );
     expect(mockSend).toHaveBeenCalledWith(
       CHANNELS.MEETINGS.SAVED,
       expect.any(Object),
+    );
+  });
+
+  it('tags a late segment and upgrades audioSource to "both" when its source differs from the saved meeting', async () => {
+    const { getMeetingById, updateMeeting } = await import('@/main/store');
+
+    // Session saved with only mic segments
+    await seedAndEndSession(
+      [{ text: 'first part', startedAt: 1000, source: 'mic' }],
+      callbacks,
+    );
+
+    // A late SYSTEM segment arrives after the mic-only meeting was already saved
+    (getMeetingById as any).mockReturnValue(mockExistingMeeting());
+    vi.clearAllMocks();
+
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'system' },
+      callbacks,
+    );
+
+    expect(updateMeeting).toHaveBeenCalledWith(
+      'test-meeting',
+      expect.objectContaining({
+        transcript: 'first part [Meeting] transcribed text',
+        audioSource: 'both',
+      }),
     );
   });
 
@@ -169,11 +234,64 @@ describe('TranscriberService — late segment recovery (integration)', () => {
 
     vi.advanceTimersByTime(70_000);
 
-    await transcriberService.transcribe({ audio: SILENT_AUDIO, source: 'mic' }, callbacks);
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
 
     expect(saveMeeting).not.toHaveBeenCalled();
     expect(updateMeeting).not.toHaveBeenCalled();
 
     vi.useRealTimers();
+  });
+});
+
+describe('TranscriberService — dual-source merge (mic + system)', () => {
+  const callbacks = createTranscriberCallbacks();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetTranscriberSessionState();
+  });
+
+  it('merges mic and system segments into a single tagged transcript when both sources are present', async () => {
+    const { saveMeeting } = await import('@/main/store');
+
+    await seedAndEndSession(
+      [
+        { text: "Alright, let's begin.", startedAt: 1000, source: 'system' },
+        { text: 'Sounds good to me.', startedAt: 2000, source: 'mic' },
+      ],
+      callbacks,
+      { endedAt: 3000 },
+    );
+
+    expect(saveMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transcript: "[Meeting] Alright, let's begin. [Mic] Sounds good to me.",
+        audioSource: 'both',
+      }),
+    );
+  });
+
+  it('orders merged segments by timestamp regardless of push order', async () => {
+    const { saveMeeting } = await import('@/main/store');
+
+    // Pushed out of chronological order — mic segment (later startedAt) first
+    await seedAndEndSession(
+      [
+        { text: 'second spoken', startedAt: 2000, source: 'mic' },
+        { text: 'first spoken', startedAt: 1000, source: 'system' },
+      ],
+      callbacks,
+      { startedAt: 1000, endedAt: 3000 },
+    );
+
+    expect(saveMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transcript: '[Meeting] first spoken [Mic] second spoken',
+        audioSource: 'both',
+      }),
+    );
   });
 });
