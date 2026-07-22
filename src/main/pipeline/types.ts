@@ -31,4 +31,10 @@ export interface AsrTranscriber {
     quantized: boolean | null;
     isInitialized: boolean;
   };
+
+  // Number of jobs currently queued or in flight, if this transcriber
+  // implementation serializes work through a queue. Optional since not
+  // every AsrTranscriber implementation (e.g. a future Parakeet backend)
+  // needs to support it.
+  getQueueDepth?(): number;
 }

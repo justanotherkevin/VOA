@@ -5,6 +5,7 @@ import {
   getMeetingById,
   getModelPreferences,
   generateTitle,
+  type ModelPreferences,
 } from '@/main/store';
 import { cleanText } from '@/main/pipeline/text-cleaner';
 import { pasteTextToActiveWindow, shouldPasteText } from '@/main/util';
@@ -39,6 +40,7 @@ export interface TranscriberCallbacks {
   onComplete: (result: CompletePayload) => void;
   onError: (message: string) => void;
   onMeetingSaved: (meeting: Meeting) => void;
+  onQueued?: (data: { position: number }) => void;
 }
 
 export interface TranscribeArgs {
@@ -82,7 +84,9 @@ class TranscriberService {
     this.sessionSegments = [];
     this.sessionChunks = [];
     this.sessionSources = new Set();
-    log('[TranscriberService] Session started at', startedAt, '| meeting:', isMeeting);
+    log(
+      `[TranscriberService] Session started at startedAt=${startedAt} isMeeting=${isMeeting}`,
+    );
   }
 
   async endSession(
@@ -149,7 +153,7 @@ class TranscriberService {
     }
 
     this.sessionStartedAt = null;
-    log('[TranscriberService] Session ended at', endedAt);
+    log(`[TranscriberService] Session ended at endedAt=${endedAt}`);
   }
 
   setTranscriber(transcriber: AsrTranscriber): void {
@@ -157,16 +161,98 @@ class TranscriberService {
   }
 
   async swapTranscriber(config: AsrModelConfig): Promise<void> {
-    log('[TranscriberService] Swapping ASR to:', config.type);
+    log(`[TranscriberService] Swapping ASR to type=${config.type}`);
     await this.transcriber?.dispose?.();
     const newTranscriber = AsrFactory.createTranscriber(config);
     this.transcriber = newTranscriber;
     this.currentAsrType = config.type;
-    log('[TranscriberService] ASR swapped successfully to:', config.type);
+    log(`[TranscriberService] ASR swapped successfully to type=${config.type}`);
   }
 
   getCurrentAsrType(): AsrType {
     return this.currentAsrType;
+  }
+
+  isSessionActive(): boolean {
+    return this.sessionActive;
+  }
+
+  private resolveModelConfig(preferences: ModelPreferences): {
+    modelName: string;
+    quantized: boolean;
+    asrType: AsrType;
+  } {
+    let modelName = preferences.selectedModel;
+    if (!preferences.multilingual && !modelName.endsWith('.en')) {
+      modelName += '.en';
+    }
+    return {
+      modelName,
+      quantized: preferences.quantized,
+      asrType: (preferences.asrType || 'whisper') as AsrType,
+    };
+  }
+
+  // Eagerly disposes the old model (if the ASR type or model identity is
+  // changing) and loads the new one, instead of waiting for the next
+  // transcribe() call to do it lazily. Used by app startup preload and by
+  // the Settings "save model" handler. Refuses to run while a recording
+  // session is active, since swapping the underlying transcriber mid-session
+  // could dispose a model that a queued/in-flight segment is depending on.
+  //
+  // Takes the full ModelPreferences to resolve from (not just what's
+  // currently persisted in the store) so a settings-save handler can pass
+  // the not-yet-persisted merged preferences and get the correct .en-suffix
+  // resolution for a `multilingual` toggle that's changing in this same
+  // save, rather than resolving against the stale stored value.
+  async applyModelPreferences(
+    preferences: ModelPreferences,
+    onProgress?: (data: any) => void,
+  ): Promise<{ success: boolean; message?: string }> {
+    if (this.sessionActive) {
+      return {
+        success: false,
+        message: 'Stop recording before changing the transcription model.',
+      };
+    }
+
+    try {
+      const { modelName, quantized, asrType } =
+        this.resolveModelConfig(preferences);
+
+      if (asrType !== this.currentAsrType) {
+        log(
+          `[TranscriberService] ASR type changed, swapping from currentAsrType=${this.currentAsrType} to asrType=${asrType}`,
+        );
+        await this.swapTranscriber({
+          type: asrType,
+          modelId: preferences.selectedModel,
+          quantized,
+        });
+      }
+
+      log(
+        `[TranscriberService] Eagerly loading transcriber... model=${modelName} quantized=${quantized}`,
+      );
+      await this.transcriber.initialize(modelName, quantized, onProgress);
+      return { success: true };
+    } catch (error) {
+      log('[TranscriberService] Eager model load failed:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  // Preloads whichever model is currently selected in preferences. Intended
+  // to be called once at app startup as a fire-and-forget call, so the
+  // model is already warm by the time the first recording starts instead of
+  // loading lazily on the first transcribe() call.
+  async preloadCurrentModel(
+    onProgress?: (data: any) => void,
+  ): Promise<{ success: boolean; message?: string }> {
+    return this.applyModelPreferences(getModelPreferences(), onProgress);
   }
 
   private createOnUpdateCallback(callbacks: TranscriberCallbacks) {
@@ -268,7 +354,9 @@ class TranscriberService {
         savedMeeting: meeting,
       });
 
-      log('[TranscriberService] Meeting persisted:', meeting.id, '| isMeeting:', isMeeting);
+      log(
+        `[TranscriberService] Meeting persisted meetingId=${meeting.id} isMeeting=${isMeeting}`,
+      );
     } catch (error) {
       log('[TranscriberService] Error persisting meeting:', error);
       await this.onError(callbacks, error);
@@ -350,14 +438,15 @@ class TranscriberService {
 
     try {
       const preferences = getModelPreferences();
-      const preferredAsrType = (preferences.asrType || 'whisper') as AsrType;
+      const {
+        modelName,
+        quantized,
+        asrType: preferredAsrType,
+      } = this.resolveModelConfig(preferences);
 
       if (preferredAsrType !== this.currentAsrType) {
         log(
-          '[TranscriberService] ASR type changed, swapping from',
-          this.currentAsrType,
-          'to',
-          preferredAsrType,
+          `[TranscriberService] ASR type changed, swapping from currentAsrType=${this.currentAsrType} to preferredAsrType=${preferredAsrType}`,
         );
         await this.swapTranscriber({
           type: preferredAsrType,
@@ -366,27 +455,30 @@ class TranscriberService {
         });
       }
 
-      let modelName = preferences.selectedModel;
-      if (!preferences.multilingual && !modelName.endsWith('.en')) {
-        modelName += '.en';
-      }
       const language =
         preferences.language !== 'auto' ? preferences.language : undefined;
       const subtask = 'transcribe';
       log(
-        '[TranscriberService] Loading transcriber...',
-        modelName,
-        preferences.quantized,
+        `[TranscriberService] Loading transcriber... model=${modelName} quantized=${quantized}`,
       );
-      await this.transcriber.initialize(
-        modelName,
-        preferences.quantized,
-        (data: any) => {
-          callbacks.onProgress(data);
-        },
+      const initStart = Date.now();
+      await this.transcriber.initialize(modelName, quantized, (data: any) => {
+        callbacks.onProgress(data);
+      });
+      log(
+        `[TranscriberService] initialize() resolved after ${Date.now() - initStart}ms`,
       );
 
+      const queueDepth = this.transcriber.getQueueDepth?.();
+      if (queueDepth !== undefined && queueDepth > 1) {
+        callbacks.onQueued?.({ position: queueDepth });
+      }
+
+      const transcribeStart = Date.now();
       const result = await this.transcribeAudio(audioData, subtask, callbacks);
+      log(
+        `[TranscriberService] transcribeAudio() resolved after ${Date.now() - transcribeStart}ms`,
+      );
 
       if (!result) {
         return 'Failed to transcribe audio';

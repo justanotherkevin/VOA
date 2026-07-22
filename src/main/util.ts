@@ -27,12 +27,9 @@ export const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 export function shouldPasteText(): boolean {
-  // Skip pasting in test environments
-  console.log('check shouldPasteText');
-  if (process.env.NODE_ENV === 'test') return false;
-  if (process.env.PLAYWRIGHT_TEST === 'true') return false;
-  if (process.env.CI === 'true') return false;
-  return true;
+  // Auto-paste-on-transcribe is paused for now (caused issues in practice).
+  // Keeping the plumbing intact since specific flows may want to opt back in.
+  return false;
 }
 
 // copy and paste text

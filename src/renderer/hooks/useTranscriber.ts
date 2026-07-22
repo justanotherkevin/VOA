@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import Constants from '@/lib/Constants';
 import { getRecordingActiveForTests } from '@/renderer/testing/TestHooks';
 import {
@@ -6,145 +7,175 @@ import {
   cleanupTranscriberListeners,
 } from '@/renderer/utils/TranscriberListeners';
 
+const MODEL_LOAD_TOAST_ID = 'model-load';
+
 interface ProgressItem {
-	file: string;
-	loaded: number;
-	progress: number;
-	total: number;
-	name: string;
-	status: string;
+  file: string;
+  loaded: number;
+  progress: number;
+  total: number;
+  name: string;
+  status: string;
 }
 
 type Timetype = [number, number | null];
 type BlobChunks = Array<{ text: string; timestamp: Timetype }>;
 
 interface TranscriberUpdateData {
-	data: [string, { chunks: BlobChunks }];
-	text: string;
+  data: [string, { chunks: BlobChunks }];
+  text: string;
 }
 
 interface StoredTranscript {
-	id: string;
-	date: number;
-	text: string;
-	chunks: BlobChunks;
+  id: string;
+  date: number;
+  text: string;
+  chunks: BlobChunks;
 }
 
 interface TranscriberCompleteData {
-	data: {
-		text: string;
-		chunks: BlobChunks;
-	};
-	savedTranscript?: StoredTranscript | null;
+  data: {
+    text: string;
+    chunks: BlobChunks;
+  };
+  savedTranscript?: StoredTranscript | null;
 }
 
 export interface TranscriberData {
-	isBusy: boolean;
-	text: string;
-	chunks: BlobChunks;
+  isBusy: boolean;
+  text: string;
+  chunks: BlobChunks;
 }
 
 export interface Transcriber {
-	restTranscript: () => void;
-	isBusy: boolean;
-	isModelLoading: boolean;
-	progressItems: ProgressItem[];
-	start: (audioBlob: Blob, startedAt?: number, endedAt?: number) => void;
-	output?: TranscriberData;
+  restTranscript: () => void;
+  isBusy: boolean;
+  isModelLoading: boolean;
+  progressItems: ProgressItem[];
+  start: (audioBlob: Blob, startedAt?: number, endedAt?: number) => void;
+  output?: TranscriberData;
 }
 
 export function useTranscriber(): Transcriber {
-	const [transcript, setTranscript] = useState<TranscriberData | undefined>(
-		undefined,
-	);
-	const [isBusy, setIsBusy] = useState(false);
-	const [isModelLoading, setIsModelLoading] = useState(false);
+  const [transcript, setTranscript] = useState<TranscriberData | undefined>(
+    undefined,
+  );
+  const [isBusy, setIsBusy] = useState(false);
+  const [isModelLoading, setIsModelLoading] = useState(false);
 
-	const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
+  const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
 
-	useEffect(() => {
-		const unsubscribers = setupTranscriberListeners({
-			onProgress: (message: any) => {
-				setProgressItems((prev) =>
-					prev.map((item) => {
-						if (item.file === (message as any).file) {
-							return { ...item, progress: (message as any).progress };
-						}
-						return item;
-					}),
-				);
-			},
-			onUpdate: (data: TranscriberData) => {
-				setTranscript(data);
-			},
-			onComplete: (data: TranscriberData) => {
-				setTranscript(data);
-				setIsBusy(false);
-			},
-			onInitiate: (message: any) => {
-				setIsModelLoading(true);
-				setProgressItems((prev) => [...prev, message as ProgressItem]);
-			},
-			onReady: () => {
-				setIsModelLoading(false);
-			},
-			onError: (message: any) => {
-				setIsBusy(false);
-				alert(
-					`${(message as any)?.data?.message ?? (message as any) ?? 'An unknown error occurred.'} This is most likely because you are using Safari on an M1/M2 Mac. Please try again from Chrome, Firefox, or Edge.\n\nIf this is not the case, please file a bug report.`,
-				);
-			},
-			onDone: (message: any) => {
-				setProgressItems((prev) =>
-					prev.filter((item) => item.file !== (message as any).file),
-				);
-			},
-		});
+  useEffect(() => {
+    // progress_callback fires very frequently during model load — only
+    // update the toast on a meaningful percentage change so it doesn't
+    // re-render on every tick.
+    let lastToastProgress = -1;
 
-		return () => {
-			cleanupTranscriberListeners(unsubscribers);
-		};
-	}, []);
+    const unsubscribers = setupTranscriberListeners({
+      onProgress: (message: any) => {
+        setProgressItems((prev) =>
+          prev.map((item) => {
+            if (item.file === (message as any).file) {
+              return { ...item, progress: (message as any).progress };
+            }
+            return item;
+          }),
+        );
 
-	const restTranscript = () => {
-		setTranscript(undefined);
-	};
+        const progress = Math.floor((message as any)?.progress ?? 0);
+        if (progress >= lastToastProgress + 10) {
+          lastToastProgress = progress;
+          toast.loading(`Loading model… ${progress}%`, {
+            id: MODEL_LOAD_TOAST_ID,
+          });
+        }
+      },
+      onUpdate: (data: TranscriberData) => {
+        setTranscript(data);
+      },
+      onComplete: (data: TranscriberData) => {
+        setTranscript(data);
+        setIsBusy(false);
+      },
+      onInitiate: (message: any) => {
+        setIsModelLoading(true);
+        setProgressItems((prev) => [...prev, message as ProgressItem]);
+        lastToastProgress = -1;
+        toast.loading('Loading model…', { id: MODEL_LOAD_TOAST_ID });
+      },
+      onReady: () => {
+        setIsModelLoading(false);
+        toast.success('Model ready', { id: MODEL_LOAD_TOAST_ID });
+      },
+      onError: (message: any) => {
+        setIsBusy(false);
+        toast.error(
+          (message as any)?.data?.message ??
+            (message as any) ??
+            'An unknown error occurred.',
+          { id: MODEL_LOAD_TOAST_ID },
+        );
+      },
+      onDone: (message: any) => {
+        setProgressItems((prev) =>
+          prev.filter((item) => item.file !== (message as any).file),
+        );
+      },
+      onQueued: ({ position }) => {
+        if (position > 1) {
+          toast.info(`Processing… (${position - 1} segment(s) ahead)`);
+        }
+      },
+    });
 
-	const postRequest = async (audioBuffer: AudioBuffer, startedAt?: number, endedAt?: number) => {
-		if (audioBuffer) {
-			setTranscript(undefined);
-			setIsBusy(true);
+    return () => {
+      cleanupTranscriberListeners(unsubscribers);
+    };
+  }, []);
 
-			let audio: Float32Array;
-			if (audioBuffer.numberOfChannels === 2) {
-				const SCALING_FACTOR = Math.sqrt(2);
-				const left = audioBuffer.getChannelData(0);
-				const right = audioBuffer.getChannelData(1);
+  const restTranscript = () => {
+    setTranscript(undefined);
+  };
 
-				audio = new Float32Array(left.length);
-				for (let i = 0; i < audioBuffer.length; ++i) {
-					audio[i] = (SCALING_FACTOR * (left[i] + right[i])) / 2;
-				}
-			} else {
-				audio = audioBuffer.getChannelData(0);
-			}
+  const postRequest = async (
+    audioBuffer: AudioBuffer,
+    startedAt?: number,
+    endedAt?: number,
+  ) => {
+    if (audioBuffer) {
+      setTranscript(undefined);
+      setIsBusy(true);
 
-			await window.electronAPI.transcriber.start({
-				audio: Array.from(audio),
-				startedAt: startedAt ?? Date.now() - (audioBuffer.duration * 1000),
-				endedAt: endedAt ?? Date.now(),
-			});
-		}
-	};
+      let audio: Float32Array;
+      if (audioBuffer.numberOfChannels === 2) {
+        const SCALING_FACTOR = Math.sqrt(2);
+        const left = audioBuffer.getChannelData(0);
+        const right = audioBuffer.getChannelData(1);
 
-	const transcriber = {
-		restTranscript,
-		isBusy,
-		isModelLoading,
-		progressItems,
-		start: postRequest,
-		output: transcript,
-	};
+        audio = new Float32Array(left.length);
+        for (let i = 0; i < audioBuffer.length; ++i) {
+          audio[i] = (SCALING_FACTOR * (left[i] + right[i])) / 2;
+        }
+      } else {
+        audio = audioBuffer.getChannelData(0);
+      }
 
-	return transcriber;
+      await window.electronAPI.transcriber.start({
+        audio: Array.from(audio),
+        startedAt: startedAt ?? Date.now() - audioBuffer.duration * 1000,
+        endedAt: endedAt ?? Date.now(),
+      });
+    }
+  };
+
+  const transcriber = {
+    restTranscript,
+    isBusy,
+    isModelLoading,
+    progressItems,
+    start: postRequest,
+    output: transcript,
+  };
+
+  return transcriber;
 }

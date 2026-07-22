@@ -356,6 +356,20 @@ export async function wait(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// page.waitForFunction hangs in this Electron+Playwright setup, so poll from
+// the test process instead.
+export async function pollUntil(
+  fn: () => Promise<boolean>,
+  timeoutMs = 8000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await fn()) return;
+    await wait(150);
+  }
+  throw new Error(`pollUntil timed out after ${timeoutMs}ms`);
+}
+
 /**
  * Get an element's attribute value
  */
@@ -464,7 +478,10 @@ export async function simulateGlobalShortcut(
  * Navigate to the Settings page via the sidebar link.
  * Pass an optional pane label (e.g. 'Audio', 'Shortcuts') to also click that pane.
  */
-export async function navigateToSettings(page: any, pane?: string): Promise<void> {
+export async function navigateToSettings(
+  page: any,
+  pane?: string,
+): Promise<void> {
   await page.click('button[title="Settings"]');
   // Wait for the Settings page root to appear (pane-based layout, no single "Settings" h1)
   await page.waitForSelector('.settings-root', { timeout: 5000 });

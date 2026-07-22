@@ -27,6 +27,7 @@ function makeCallbacks(
     onComplete:    (result)  => send(CHANNELS.TRANSCRIBER.COMPLETE, result),
     onError:       (msg)     => send(CHANNELS.TRANSCRIBER.ERROR, msg),
     onMeetingSaved:(meeting) => send(CHANNELS.MEETINGS.SAVED, meeting),
+    onQueued:      (data)    => send(CHANNELS.TRANSCRIBER.PROCESSING, data),
   };
 }
 
@@ -81,7 +82,10 @@ export function registerTranscriberHandlers() {
       const now = Date.now();
       const callbacks = makeCallbacks(event, 'e2e-transcribe-file');
       transcriberService.beginSession(now, true);
-      await transcriberService.transcribe({ audio: mono, startedAt: now }, callbacks);
+      await transcriberService.transcribe(
+        { audio: mono, startedAt: now },
+        callbacks,
+      );
       await transcriberService.endSession(Date.now(), callbacks);
     });
 
@@ -104,9 +108,15 @@ export function registerTranscriberHandlers() {
         ],
         topics: ['Public works funding', 'Street lighting', 'Community safety'],
         actionItems: [
-          { text: 'Review street lighting proposals before next meeting', done: false },
+          {
+            text: 'Review street lighting proposals before next meeting',
+            done: false,
+          },
           { text: 'Prepare Q3 budget report', done: false },
-          { text: 'Follow up on community safety task force recommendations', done: false },
+          {
+            text: 'Follow up on community safety task force recommendations',
+            done: false,
+          },
         ],
         summaryStatus: 'ready',
       });

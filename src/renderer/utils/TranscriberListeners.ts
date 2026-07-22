@@ -13,6 +13,7 @@ interface TranscriberCallbacks {
   onReady?: () => void;
   onError?: (message: any) => void;
   onDone?: (message: any) => void;
+  onQueued?: (data: { position: number }) => void;
 }
 
 /**
@@ -68,17 +69,32 @@ export function setupTranscriberListeners(
 
   // Ready listener - model ready
   if (callbacks.onReady) {
-    unsubscribers.push(window.electronAPI.transcriber.on.ready(callbacks.onReady));
+    unsubscribers.push(
+      window.electronAPI.transcriber.on.ready(callbacks.onReady),
+    );
   }
 
   // Error listener
   if (callbacks.onError) {
-    unsubscribers.push(window.electronAPI.transcriber.on.error(callbacks.onError));
+    unsubscribers.push(
+      window.electronAPI.transcriber.on.error(callbacks.onError),
+    );
   }
 
   // Done listener - file loaded
   if (callbacks.onDone) {
-    unsubscribers.push(window.electronAPI.transcriber.on.done(callbacks.onDone));
+    unsubscribers.push(
+      window.electronAPI.transcriber.on.done(callbacks.onDone),
+    );
+  }
+
+  // Queued listener - segment waiting behind others in the transcriber queue
+  if (callbacks.onQueued) {
+    unsubscribers.push(
+      window.electronAPI.transcriber.on.processing((data: any) =>
+        callbacks.onQueued?.(data),
+      ),
+    );
   }
 
   return unsubscribers;

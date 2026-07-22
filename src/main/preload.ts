@@ -54,6 +54,8 @@ const electronAPI = {
         subscribe(CHANNELS.TRANSCRIBER.UPDATE, cb),
       progress: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.TRANSCRIBER.PROGRESS, cb),
+      processing: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.PROCESSING, cb),
       initiate: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.TRANSCRIBER.INITIATE, cb),
       ready: (cb: (...args: unknown[]) => void) =>

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from '@e2e/fixtures';
 import {
   initializeShortcutHelpers,
   navigateToSettings,
@@ -12,7 +12,7 @@ import {
   assertCustomizeButtonIsVisible,
   assertInputAreaHasPlaceholder,
   assertInputAreaHasKeys,
-} from './utils/shortcuts-change.helpers';
+} from '@e2e/utils/shortcuts-change.helpers';
 
 test.describe('Customizable Dictation Shortcut', () => {
   test.beforeEach(async ({ page }) => {

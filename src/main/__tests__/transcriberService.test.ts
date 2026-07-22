@@ -3,7 +3,23 @@ import transcriberService from '../services/transcriber';
 
 // Mock dependencies
 vi.mock('@/main/store', () => ({
-  saveMeeting: vi.fn(() => ({ id: 'test-meeting', title: 'Test', startedAt: 0, endedAt: 0, durationMs: 0, transcript: 'test text', chunks: [], summary: '', summaryStatus: 'pending', decisions: [], topics: [], actionItems: [], audioSource: 'mic', participants: [], tags: [] })),
+  saveMeeting: vi.fn(() => ({
+    id: 'test-meeting',
+    title: 'Test',
+    startedAt: 0,
+    endedAt: 0,
+    durationMs: 0,
+    transcript: 'test text',
+    chunks: [],
+    summary: '',
+    summaryStatus: 'pending',
+    decisions: [],
+    topics: [],
+    actionItems: [],
+    audioSource: 'mic',
+    participants: [],
+    tags: [],
+  })),
   updateMeeting: vi.fn((id: string, patch: any) => ({ id, ...patch })),
   getModelPreferences: vi.fn(() => ({ asrType: 'whisper' })),
   generateTitle: vi.fn((text: string) => text.split(' ').slice(0, 8).join(' ')),
@@ -84,7 +100,7 @@ describe('TranscriberService - Helper Methods', () => {
       const failingCallbacks = {
         onError: vi.fn(() => {
           throw new Error('Callback failed');
-        })
+        }),
       };
       const service = transcriberService as any;
 
@@ -134,9 +150,7 @@ describe('TranscriberService - Helper Methods', () => {
       );
 
       expect(result).toBeNull();
-      expect(mockCallbacks.onError).toHaveBeenCalledWith(
-        'Transcription error',
-      );
+      expect(mockCallbacks.onError).toHaveBeenCalledWith('Transcription error');
     });
 
     it('should handle null transcription result', async () => {
@@ -190,7 +204,8 @@ describe('TranscriberService - Helper Methods', () => {
 
     it('skips structured summarizer and saves with summaryStatus ready when isMeeting=false', async () => {
       const { saveMeeting } = await import('@/main/store');
-      const { default: summarizer } = await import('@/main/pipeline/structured-summarizer');
+      const { default: summarizer } =
+        await import('@/main/pipeline/structured-summarizer');
 
       const service = transcriberService as any;
       await service.persistMeeting(
@@ -210,7 +225,8 @@ describe('TranscriberService - Helper Methods', () => {
     });
 
     it('does not auto-call summarizer on persist when isMeeting=true (enrichment is on-demand)', async () => {
-      const { default: summarizer } = await import('@/main/pipeline/structured-summarizer');
+      const { default: summarizer } =
+        await import('@/main/pipeline/structured-summarizer');
 
       const service = transcriberService as any;
       await service.persistMeeting(
@@ -238,6 +254,93 @@ describe('TranscriberService - Helper Methods', () => {
       await service.persistMeeting('test text', [], 0, 0, mockCallbacks);
 
       expect(mockCallbacks.onError).toHaveBeenCalledWith('Persistence failed');
+    });
+  });
+
+  describe('applyModelPreferences', () => {
+    afterEach(() => {
+      // Reset session state directly — beginSession()/endSession() would
+      // pull in the full persist/meeting-detector flow, which is out of
+      // scope for this guard test.
+      (transcriberService as any).sessionActive = false;
+    });
+
+    it('rejects without touching the transcriber when a session is active', async () => {
+      const { whisperTranscriber } = await import('@/main/pipeline');
+      const { AsrFactory } = await import('@/main/pipeline/asr-factory');
+      const service = transcriberService as any;
+      service.sessionActive = true;
+
+      const result = await service.applyModelPreferences({
+        selectedModel: 'Xenova/whisper-tiny',
+        quantized: true,
+        multilingual: false,
+        language: 'auto',
+        asrType: 'whisper',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        message: 'Stop recording before changing the transcription model.',
+      });
+      expect(whisperTranscriber.initialize).not.toHaveBeenCalled();
+      expect(AsrFactory.createTranscriber).not.toHaveBeenCalled();
+    });
+
+    it('loads the model when no session is active', async () => {
+      const { whisperTranscriber } = await import('@/main/pipeline');
+      const service = transcriberService as any;
+      service.sessionActive = false;
+
+      const result = await service.applyModelPreferences({
+        selectedModel: 'Xenova/whisper-tiny',
+        quantized: true,
+        multilingual: true,
+        language: 'auto',
+        asrType: 'whisper',
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(whisperTranscriber.initialize).toHaveBeenCalledWith(
+        'Xenova/whisper-tiny',
+        true,
+        undefined,
+      );
+    });
+  });
+
+  describe('preloadCurrentModel', () => {
+    afterEach(() => {
+      (transcriberService as any).sessionActive = false;
+    });
+
+    it('reads the current model preferences and eagerly initializes that model at startup', async () => {
+      const { whisperTranscriber } = await import('@/main/pipeline');
+      const { getModelPreferences } = await import('@/main/store');
+
+      (getModelPreferences as any).mockReturnValueOnce({
+        selectedModel: 'Xenova/whisper-tiny',
+        quantized: true,
+        multilingual: false,
+        language: 'auto',
+        asrType: 'whisper',
+      });
+
+      const service = transcriberService as any;
+      service.sessionActive = false;
+
+      const result = await service.preloadCurrentModel();
+
+      expect(result).toEqual({ success: true });
+      // multilingual: false means the .en suffix should be applied — this
+      // is the exact model the first real transcribe() call in the session
+      // would also resolve to, so a matching initialize() call there is a
+      // no-op (see whisper-transcriber.test.ts's dedupe test).
+      expect(whisperTranscriber.initialize).toHaveBeenCalledWith(
+        'Xenova/whisper-tiny.en',
+        true,
+        undefined,
+      );
     });
   });
 });

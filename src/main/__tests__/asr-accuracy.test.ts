@@ -3,6 +3,8 @@ import { pipeline } from '@xenova/transformers';
 import { AudioContext } from 'node-web-audio-api';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
+import { gzipSync } from 'node:zlib';
+import { VAD_CONFIG } from '@/renderer/utils/VadConfig';
 
 // Add model IDs here to compare accuracy side-by-side.
 // Any HuggingFace model compatible with @xenova/transformers works.
@@ -12,11 +14,29 @@ import { resolve, join, basename } from 'node:path';
 //   'onnx-community/moonshine-base-ONNX'
 const MODELS = ['Xenova/whisper-tiny', 'Xenova/whisper-base'];
 
-// fixture → mode → model → { wer, hyp }
+// fixture → mode → model → { wer, hyp, repetitive }
 const results = new Map<
   string,
-  Map<string, Map<string, { wer: number; hyp: string }>>
+  Map<string, Map<string, { wer: number; hyp: string; repetitive: boolean }>>
 >();
+
+// Detects Whisper's classic decoding-loop hallucination (e.g. a phrase repeating
+// verbatim dozens of times) using the same compression-ratio heuristic OpenAI's
+// own Whisper CLI uses to flag failed segments (compression_ratio_threshold,
+// default 2.4): degenerate/repetitive text gzips down far more than normal
+// speech does, since gzip already exploits repeated substrings.
+const COMPRESSION_RATIO_THRESHOLD = 2.4;
+
+function compressionRatio(text: string): number {
+  if (text.length === 0) return 0;
+  const raw = Buffer.byteLength(text, 'utf8');
+  const compressed = gzipSync(text).length;
+  return raw / compressed;
+}
+
+function isRepetitive(text: string): boolean {
+  return compressionRatio(text) > COMPRESSION_RATIO_THRESHOLD;
+}
 
 const FIXTURES_DIR = resolve(process.cwd(), 'tests/e2e/mocks');
 const TARGET_SAMPLE_RATE = 16000;
@@ -87,9 +107,9 @@ async function loadAudio(filePath: string): Promise<Float32Array> {
 //
 // Here we can't use MicVAD because it's browser/WASM-only and requires MediaStream.
 // Instead we use an energy threshold (RMS per 10ms frame) to approximate the same
-// segmentation. The boundary parameters mirror VAD_CONFIG in VadConfig.ts:
-//   - minSilenceMs=300 matches VAD_CONFIG.PAUSE_TIMEOUT_MS
-//   - maxSegmentS=28 keeps each segment within Whisper's safe single-clip window
+// segmentation. minSilenceMs defaults to VAD_CONFIG.PAUSE_TIMEOUT_MS so this
+// stays in sync with the real app's pause-before-flush timeout instead of
+// silently drifting from it.
 //
 // Limitation: RMS threshold is tunable but not adaptive. Quiet recordings may need
 // a lower silenceThreshold (0.005); loud/noisy ones may need a higher value (0.02).
@@ -99,7 +119,7 @@ function segmentBySilence(
   {
     frameSizeMs = 10,
     silenceThreshold = 0.01,
-    minSilenceMs = 300,
+    minSilenceMs = VAD_CONFIG.PAUSE_TIMEOUT_MS,
     maxSegmentS = 28,
     minSegmentS = 0.5,
   } = {},
@@ -230,14 +250,19 @@ describe.each(MODELS)('ASR accuracy — %s', (model) => {
       );
 
       const score = wer(ref, hypothesis);
-      console.log(`  WER: ${(score * 100).toFixed(1)}%`);
+      const repetitive = isRepetitive(hypothesis);
+      console.log(
+        `  WER: ${(score * 100).toFixed(1)}%${repetitive ? ' ⚠ HALLUCINATION LOOP' : ''}`,
+      );
       console.log(`  ref: ${ref}`);
       console.log(`  hyp: ${hypothesis}`);
 
       if (!results.has(name)) results.set(name, new Map());
       const byMode = results.get(name)!;
       if (!byMode.has('single clip')) byMode.set('single clip', new Map());
-      byMode.get('single clip')!.set(model, { wer: score, hyp: hypothesis });
+      byMode
+        .get('single clip')!
+        .set(model, { wer: score, hyp: hypothesis, repetitive });
 
       // expect(score).toBeLessThan(0.25);
     });
@@ -285,14 +310,19 @@ describe.each(MODELS)('ASR accuracy — %s', (model) => {
 
       const hypothesis = normalize(texts.join(' '));
       const score = wer(ref, hypothesis);
-      console.log(`  WER: ${(score * 100).toFixed(1)}%`);
+      const repetitive = isRepetitive(hypothesis);
+      console.log(
+        `  WER: ${(score * 100).toFixed(1)}%${repetitive ? ' ⚠ HALLUCINATION LOOP' : ''}`,
+      );
       console.log(`  ref: ${ref}`);
       console.log(`  hyp: ${hypothesis}`);
 
       if (!results.has(name)) results.set(name, new Map());
       const byMode = results.get(name)!;
       if (!byMode.has('VAD-segmented')) byMode.set('VAD-segmented', new Map());
-      byMode.get('VAD-segmented')!.set(model, { wer: score, hyp: hypothesis });
+      byMode
+        .get('VAD-segmented')!
+        .set(model, { wer: score, hyp: hypothesis, repetitive });
 
       // expect(score).toBeLessThan(0.25);
     });
@@ -309,11 +339,12 @@ afterAll(() => {
       console.log(`\nFixture: ${fixture}  [${mode}]`);
       console.log(`  ${'Model'.padEnd(40)} ${'WER'.padStart(7)}  Output`);
       console.log(`  ${'-'.repeat(78)}`);
-      for (const [mdl, { wer: score, hyp }] of byModel) {
+      for (const [mdl, { wer: score, hyp, repetitive }] of byModel) {
         const label = mdl.padEnd(40);
         const werStr = `${(score * 100).toFixed(1)}%`.padStart(7);
-        const preview = hyp.length > 60 ? hyp.slice(0, 57) + '...' : hyp;
-        console.log(`  ${label} ${werStr}  ${preview}`);
+        const flag = repetitive ? ' ⚠ HALLUCINATION LOOP' : '';
+        const preview = hyp;
+        console.log(`  ${label} ${werStr}${flag}  ${preview}`);
       }
     }
   }

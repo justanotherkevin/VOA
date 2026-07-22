@@ -20,6 +20,16 @@ export default defineConfig({
         external: ['node-web-audio-api'],
         input: {
           main: path.resolve(__dirname, 'src/main/main.ts'),
+          // Whisper model load/inference runs in a utilityProcess child —
+          // session init on base/small/medium models can hang or
+          // SIGTRAP-crash (known onnxruntime-node issue, see
+          // docs/whisper-onnxruntime-crash.md); a worker_thread can't
+          // contain that since it shares the main process's address space,
+          // a utilityProcess can — see whisper-transcriber.ts.
+          'whisper-process': path.resolve(
+            __dirname,
+            'src/main/pipeline/whisper-process.ts',
+          ),
         },
       },
     },
@@ -56,7 +66,10 @@ export default defineConfig({
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'src/renderer/index.html'),
-          notification: path.resolve(__dirname, 'src/renderer/notification.html'),
+          notification: path.resolve(
+            __dirname,
+            'src/renderer/notification.html',
+          ),
         },
       },
     },
