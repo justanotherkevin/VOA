@@ -6,7 +6,13 @@ All notable changes to VOA are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Isolated Whisper/onnxruntime inference into a dedicated `utilityProcess`** (`src/main/pipeline/whisper-process.ts` + `whisper-transcriber.ts`) — model load and inference now run in a separate OS process behind a thin FIFO-queued proxy, so a native `onnxruntime-node` crash can no longer take down the whole app. A fresh child process is spawned per model switch to work around a BFCArena allocator crash reproduced when reusing one process across distinct models. See `docs/whisper-onnxruntime-crash.md` for the investigation.
+
 ### Changed
+
+- **Paused auto-paste-on-transcription** — transcribed text is no longer automatically copied to the clipboard and pasted into the active window after each transcription (`shouldPasteText()` in `src/main/util.ts` now returns `false`). The mechanism is left in place, disabled at a single gate, for possible future opt-in use.
 
 - **Refactored `MeetingDetail.tsx` into focused sub-components** — split the 459-line meeting detail view into `components/meeting-detail/` (`MeetingDetailHeader`, `MeetingOverview`, `MeetingTranscript`, `MeetingSidebar`, plus generic `Section`/`SideSection` primitives), extracted `useCopyText` into `hooks/`, and consolidated date/duration formatting (previously duplicated between `MeetingDetail.tsx` and `MeetingList.tsx`) into `utils/formatters.ts`. No behavior or visual changes.
 
