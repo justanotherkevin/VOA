@@ -7,6 +7,7 @@ vi.mock('@/renderer/components/ui/TranscriptTagRenderer', () => ({
   TranscriptTagRenderer: ({ text }: { text: string }) => <span>{text}</span>,
   loadTagStyle: () => 'pill',
   saveTagStyle: vi.fn(),
+  HAS_TAGS_RE: /\[(Meeting|Mic)\]/i,
 }));
 
 Object.defineProperty(navigator, 'clipboard', {
@@ -32,9 +33,17 @@ const BASE_MEETING: Meeting = {
     'Establish bi-weekly royalty payment schedule',
     'Maintain current royalties on the same bi-weekly cadence required of all stores',
   ],
-  topics: ['payment schedule', 'license agreement', 'back royalties', 'business performance'],
+  topics: [
+    'payment schedule',
+    'license agreement',
+    'back royalties',
+    'business performance',
+  ],
   actionItems: [
-    { text: 'Pay balance of the license agreement as soon as possible', done: false },
+    {
+      text: 'Pay balance of the license agreement as soon as possible',
+      done: false,
+    },
     { text: 'Propose a payment amount for back royalties', done: false },
     { text: 'Confirm bi-weekly payment schedule works', done: true },
   ],
@@ -44,7 +53,13 @@ const BASE_MEETING: Meeting = {
 };
 
 function emptyStructured(overrides?: Partial<Meeting>): Meeting {
-  return { ...BASE_MEETING, decisions: [], topics: [], actionItems: [], ...overrides };
+  return {
+    ...BASE_MEETING,
+    decisions: [],
+    topics: [],
+    actionItems: [],
+    ...overrides,
+  };
 }
 
 // ── Sidebar visibility ────────────────────────────────────────────────────────
@@ -67,7 +82,9 @@ describe('sidebar column visibility', () => {
   });
 
   it('shows sidebar with spinner when summaryStatus is pending', () => {
-    render(<MeetingDetail meeting={emptyStructured({ summaryStatus: 'pending' })} />);
+    render(
+      <MeetingDetail meeting={emptyStructured({ summaryStatus: 'pending' })} />,
+    );
 
     expect(screen.getByText('Generating…')).toBeInTheDocument();
   });
@@ -145,7 +162,9 @@ describe('Action Items section', () => {
     render(<MeetingDetail meeting={BASE_MEETING} />);
 
     expect(
-      screen.getByText('Pay balance of the license agreement as soon as possible'),
+      screen.getByText(
+        'Pay balance of the license agreement as soon as possible',
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Propose a payment amount for back royalties'),
@@ -158,7 +177,9 @@ describe('Action Items section', () => {
   it('applies line-through styling to completed action items', () => {
     render(<MeetingDetail meeting={BASE_MEETING} />);
 
-    const doneItem = screen.getByText('Confirm bi-weekly payment schedule works');
+    const doneItem = screen.getByText(
+      'Confirm bi-weekly payment schedule works',
+    );
     expect(doneItem).toHaveClass('line-through');
   });
 
@@ -179,18 +200,24 @@ describe('Overview section', () => {
     render(<MeetingDetail meeting={BASE_MEETING} />);
 
     expect(
-      screen.getByText(/business update call covering strong recent performance/),
+      screen.getByText(
+        /business update call covering strong recent performance/,
+      ),
     ).toBeInTheDocument();
   });
 
   it('shows spinner text when pending', () => {
-    render(<MeetingDetail meeting={{ ...BASE_MEETING, summaryStatus: 'pending' }} />);
+    render(
+      <MeetingDetail meeting={{ ...BASE_MEETING, summaryStatus: 'pending' }} />,
+    );
 
     expect(screen.getByText('Generating summary…')).toBeInTheDocument();
   });
 
   it('shows fallback text when failed', () => {
-    render(<MeetingDetail meeting={{ ...BASE_MEETING, summaryStatus: 'failed' }} />);
+    render(
+      <MeetingDetail meeting={{ ...BASE_MEETING, summaryStatus: 'failed' }} />,
+    );
 
     expect(screen.getByText('Summary unavailable.')).toBeInTheDocument();
   });
@@ -202,6 +229,8 @@ describe('null meeting', () => {
   it('renders the empty-state placeholder', () => {
     render(<MeetingDetail meeting={null} />);
 
-    expect(screen.getByText('Select a meeting to view details')).toBeInTheDocument();
+    expect(
+      screen.getByText('Select a meeting to view details'),
+    ).toBeInTheDocument();
   });
 });

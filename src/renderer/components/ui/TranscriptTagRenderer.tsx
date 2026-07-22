@@ -2,6 +2,8 @@ import React from 'react';
 
 export type TranscriptTagStyle = 'pill' | 'gutter';
 
+export const HAS_TAGS_RE = /\[(Meeting|Mic)\]/i;
+
 const MEETING_COLOR = '#7c6ff7';
 const MIC_COLOR = '#f7914f';
 
@@ -130,7 +132,10 @@ interface TranscriptTagRendererProps {
   style: TranscriptTagStyle;
 }
 
-export function TranscriptTagRenderer({ text, style }: TranscriptTagRendererProps) {
+export function TranscriptTagRenderer({
+  text,
+  style,
+}: TranscriptTagRendererProps) {
   const segments = parseTranscript(text);
 
   if (style === 'gutter') {

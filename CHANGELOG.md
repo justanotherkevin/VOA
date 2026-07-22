@@ -4,6 +4,14 @@ All notable changes to VOA are documented here.
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **Refactored `MeetingDetail.tsx` into focused sub-components** — split the 459-line meeting detail view into `components/meeting-detail/` (`MeetingDetailHeader`, `MeetingOverview`, `MeetingTranscript`, `MeetingSidebar`, plus generic `Section`/`SideSection` primitives), extracted `useCopyText` into `hooks/`, and consolidated date/duration formatting (previously duplicated between `MeetingDetail.tsx` and `MeetingList.tsx`) into `utils/formatters.ts`. No behavior or visual changes.
+
+---
+
 ## [1.0.0] — 2025
 
 Initial public release.

@@ -104,11 +104,18 @@ audio-transformer/
 │   │   │   │   ├── MainLayout.tsx       ← App shell with sidebar
 │   │   │   │   ├── Sidebar.tsx          ← Navigation + status indicator
 │   │   │   │   ├── MeetingList.tsx      ← Scrollable past meetings list
-│   │   │   │   ├── MeetingDetail.tsx    ← Single meeting view/edit
+│   │   │   │   ├── MeetingDetail.tsx    ← Single meeting view/edit (composition root)
 │   │   │   │   ├── Transcript.tsx       ← Transcript + timestamp chips
 │   │   │   │   ├── AIModel.tsx          ← Model selector UI
 │   │   │   │   ├── ShortcutConfigDialog.tsx  ← Hotkey recorder dialog
 │   │   │   │   └── ...
+│   │   │   ├── meeting-detail/          ← Sub-components for MeetingDetail.tsx
+│   │   │   │   ├── MeetingDetailHeader.tsx  ← Title edit, meta line, copy/delete
+│   │   │   │   ├── MeetingOverview.tsx  ← Summary states + enrich button
+│   │   │   │   ├── MeetingTranscript.tsx← Transcript + tag-style toggle
+│   │   │   │   ├── MeetingSidebar.tsx   ← Decisions/topics/action items
+│   │   │   │   ├── Section.tsx          ← Generic labeled section w/ icon
+│   │   │   │   └── SideSection.tsx      ← Generic sidebar section w/ icon
 │   │   │   ├── button.tsx               ← shadcn/ui Button
 │   │   │   ├── card.tsx                 ← shadcn/ui Card
 │   │   │   ├── GlassSurface.tsx         ← Frosted glass container
@@ -317,11 +324,11 @@ idle → recording → recording-stopped → processing → done → idle
 
 The project uses **electron-vite**, which bundles all three processes independently.
 
-| Process | Entry | Output |
-|---------|-------|--------|
-| Main | `src/main/main.ts` | `dist/main/` |
-| Preload | `src/main/preload.ts` | `dist/preload/` (CJS) |
-| Renderer | `src/renderer/index.html` | `dist/renderer/` |
+| Process  | Entry                     | Output                |
+| -------- | ------------------------- | --------------------- |
+| Main     | `src/main/main.ts`        | `dist/main/`          |
+| Preload  | `src/main/preload.ts`     | `dist/preload/` (CJS) |
+| Renderer | `src/renderer/index.html` | `dist/renderer/`      |
 
 The renderer builds two HTML entry points: `index.html` (main window) and `notification.html` (overlay).
 
@@ -331,12 +338,12 @@ Path alias `@/` maps to `src/` in all three bundles via `vite-tsconfig-paths`.
 
 ## Testing Strategy
 
-| Layer | Framework | Location |
-|-------|-----------|----------|
-| Unit / Component | Vitest + jsdom + Testing Library | `src/__tests__/`, `src/renderer/hooks/__tests__/` |
-| Main process unit | Vitest | `src/main/__tests__/` |
-| E2E (dev mode) | Playwright + Electron | `tests/e2e/` + `playwright.config.ts` |
-| E2E (production) | Playwright + Electron | `tests/e2e/` + `playwright.build.config.ts` |
+| Layer             | Framework                        | Location                                          |
+| ----------------- | -------------------------------- | ------------------------------------------------- |
+| Unit / Component  | Vitest + jsdom + Testing Library | `src/__tests__/`, `src/renderer/hooks/__tests__/` |
+| Main process unit | Vitest                           | `src/main/__tests__/`                             |
+| E2E (dev mode)    | Playwright + Electron            | `tests/e2e/` + `playwright.config.ts`             |
+| E2E (production)  | Playwright + Electron            | `tests/e2e/` + `playwright.build.config.ts`       |
 
 E2E tests use Playwright's Electron integration. Test seams are exposed through `src/renderer/testing/TestHooks.ts`, which attaches helpers to `window` so Playwright can trigger recording flows without physical hardware.
 
@@ -346,16 +353,16 @@ E2E tests use Playwright's Electron integration. Test seams are exposed through 
 
 ### What This App Does Well
 
-| Practice | Status |
-|----------|--------|
-| Preload contextBridge (no `nodeIntegration: true`) | ✅ Correctly sandboxed |
-| Typed IPC channels (`Channels` union) | ✅ TypeScript catches channel typos |
-| IPC organized by domain (`ipc/transcriber.ts`, `ipc/meetings.ts`) | ✅ Clear separation |
-| Business logic in hooks, not components | ✅ `useRecordingFlow`, `useTranscriber`, etc. |
-| Singleton services (TranscriberService, ShortcutManager) | ✅ Single source of truth |
-| electron-store for persistence | ✅ Standard pattern |
-| Separate notification window (frameless, always-on-top) | ✅ Good UX pattern |
-| E2E tests with Playwright | ✅ Above average for Electron apps |
+| Practice                                                          | Status                                        |
+| ----------------------------------------------------------------- | --------------------------------------------- |
+| Preload contextBridge (no `nodeIntegration: true`)                | ✅ Correctly sandboxed                        |
+| Typed IPC channels (`Channels` union)                             | ✅ TypeScript catches channel typos           |
+| IPC organized by domain (`ipc/transcriber.ts`, `ipc/meetings.ts`) | ✅ Clear separation                           |
+| Business logic in hooks, not components                           | ✅ `useRecordingFlow`, `useTranscriber`, etc. |
+| Singleton services (TranscriberService, ShortcutManager)          | ✅ Single source of truth                     |
+| electron-store for persistence                                    | ✅ Standard pattern                           |
+| Separate notification window (frameless, always-on-top)           | ✅ Good UX pattern                            |
+| E2E tests with Playwright                                         | ✅ Above average for Electron apps            |
 
 ### Areas for Improvement
 
@@ -370,6 +377,7 @@ E2E tests use Playwright's Electron integration. Test seams are exposed through 
 **3. `transcriberService.ts` is both an orchestrator and a pipeline step**
 
 `TranscriberService` handles: session management, model switching, post-processing (style transfer, summarization, text cleaning), meeting persistence, and IPC communication. This is a lot for one class. As the pipeline grows, splitting into:
+
 - `SessionManager` — session start/end, segment buffering
 - `TranscriptionPipeline` — model init, inference, post-processing
 - Keeping `TranscriberService` as a thin coordinator
@@ -387,11 +395,13 @@ Types like `Meeting` are defined in `src/main/store.ts` and re-imported by the r
 **6. `src/lib/` vs `src/renderer/utils/` distinction is clear**
 
 `src/lib/` is strictly for code safe on BOTH main and renderer (no DOM, no Electron APIs):
+
 - `Constants.ts` — app-wide configuration (models, languages, audio settings)
 - `shortcuts.ts` — keyboard shortcut definitions
 - `ipc-channels.ts` — IPC channel name constants
 
 `src/renderer/utils/` is for renderer-only utilities:
+
 - `cn()` — Tailwind class merging (requires `clsx` + `tailwind-merge`, DOM-specific)
 - `AudioUtils.ts`, `RecordingUtils.ts` — audio/browser-specific helpers
 - Anything that imports React or browser APIs
@@ -402,14 +412,14 @@ Types like `Meeting` are defined in `src/main/store.ts` and re-imported by the r
 
 ## Key Files Reference
 
-| File | What to read when... |
-|------|----------------------|
-| `src/main/main.ts` | Understanding startup order, window creation |
-| `src/main/preload.ts` | Understanding the full IPC API surface |
-| `src/main/ipc/index.ts` | Adding a new IPC handler domain |
-| `src/main/transcriberService.ts` | Debugging transcription or session behavior |
-| `src/main/store.ts` | Understanding data persistence, Meeting shape |
-| `src/renderer/hooks/useRecordingFlow.ts` | Tracing the end-to-end recording flow |
-| `src/renderer/hooks/useTranscriber.ts` | Understanding how the renderer tracks transcription state |
-| `src/renderer/App.tsx` | Understanding routing, top-level hook wiring |
-| `electron.vite.config.ts` | Understanding the build pipeline |
+| File                                     | What to read when...                                      |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `src/main/main.ts`                       | Understanding startup order, window creation              |
+| `src/main/preload.ts`                    | Understanding the full IPC API surface                    |
+| `src/main/ipc/index.ts`                  | Adding a new IPC handler domain                           |
+| `src/main/transcriberService.ts`         | Debugging transcription or session behavior               |
+| `src/main/store.ts`                      | Understanding data persistence, Meeting shape             |
+| `src/renderer/hooks/useRecordingFlow.ts` | Tracing the end-to-end recording flow                     |
+| `src/renderer/hooks/useTranscriber.ts`   | Understanding how the renderer tracks transcription state |
+| `src/renderer/App.tsx`                   | Understanding routing, top-level hook wiring              |
+| `electron.vite.config.ts`                | Understanding the build pipeline                          |
