@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/roadmap-planning/SKILL.md",
       "computedHash": "9c2a7f436a9a5adb28fd4d2852f5b3a83bd8e1b83c06b71cf6f986a3f407075b"
+    },
+    "shadcn": {
+      "source": "shadcn/ui",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "d81caa0f86aabab65b25e302d454f23a3328760386ed9078345584c0d5c8058e"
     }
   }
 }

@@ -16,8 +16,8 @@ export default function MainLayout({
   return (
     <SidebarProvider defaultOpen className="h-screen bg-[#111] overflow-hidden">
       <Sidebar status={status} onNewRecording={onNewRecording} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center h-10 px-2 shrink-0 border-b border-sidebar-border">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="absolute top-0 left-0 m-4 shrink-0">
           <SidebarTrigger />
         </div>
         <div className="flex-1 overflow-hidden">{children}</div>
