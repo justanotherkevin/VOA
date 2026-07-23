@@ -1,0 +1,107 @@
+{
+  "id": "dfb3e15f-9563-45b3-8965-f28abafd90e0",
+  "title": "[Meeting] [Meeting] [Meeting] [Meeting] Take care then, how's",
+  "startedAt": 1784037600000,
+  "endedAt": 1784042520000,
+  "durationMs": 4920000,
+  "audioSource": "both",
+  "isMeeting": true,
+  "summaryStatus": "ready",
+  "summary": "The team reviewed progress on the Q3 migration, discussed blockers around the new ASR pipeline, and aligned on rollout timing. Design surfaced concerns about the meeting detail view feeling cluttered with long transcripts, and the group agreed to prioritize a redesign before the next release.",
+  "decisions": [
+    "Ship the Base Whisper model as default; keep Small/Medium disabled until whisper.cpp migration lands",
+    "Redesign the single Meeting view before the 0.9 release",
+    "Move structured summarization fully behind the LM Studio HTTP integration"
+  ],
+  "topics": [
+    "ASR pipeline stability",
+    "Meeting detail view redesign",
+    "LM Studio migration",
+    "Q3 release scope",
+    "Onboarding flow feedback"
+  ],
+  "actionItems": [
+    { "text": "Draft new Meeting detail view mockups", "done": false },
+    {
+      "text": "File follow-up ticket for whisper.cpp migration",
+      "done": false
+    },
+    {
+      "text": "Share ASR accuracy harness results with the team",
+      "done": true
+    },
+    {
+      "text": "Update CHANGELOG with dual-source race fix summary",
+      "done": true
+    },
+    {
+      "text": "Schedule design review for sidebar merge follow-up",
+      "done": false
+    }
+  ],
+  "participants": ["Kevin Hu", "Priya Natarajan", "Sam Okafor", "Jordan Lee"],
+  "tags": ["product", "design", "engineering", "q3-planning"],
+  "transcript": "Kevin: Alright, let's get started. Today we want to cover three things: the ASR pipeline status, the meeting detail view redesign, and where we're at with the LM Studio migration. Priya, can you kick us off on ASR? Priya: Sure. Base model has been holding up well under repeated switching in the real app, no repro of the allocator crash we saw on Small and Medium. We're still blocked on whisper.cpp for those two, but Base feels solid enough to ship. Sam: Agreed, I've been stress testing it for the last few days and haven't seen anything concerning. Kevin: Good, let's lock that in as a decision. Moving on to the meeting detail view. Jordan, you had some notes from the design review? Jordan: Yeah, the current layout works but it feels dense once transcripts get long. Titles wrap awkwardly, the sidebar metadata competes with the summary for attention, and action items get buried below the fold. I think we should take a pass at restructuring the hierarchy. Kevin: Makes sense, let's prioritize that before the 0.9 release. Sam, what's the status on LM Studio? Sam: Migration is basically done, structured summarization now goes entirely through the HTTP integration, no more on-device Qwen child process. Kevin: Great, let's close this out. Action items: Jordan drafts new mockups, Sam files the whisper.cpp ticket, Priya shares the accuracy harness results, and someone updates the changelog. Thanks everyone.",
+  "chunks": [
+    { "text": "Alright, let's get started.", "timestamp": [0, 2.4] },
+    {
+      "text": "Today we want to cover three things: the ASR pipeline status, the meeting detail view redesign, and where we're at with the LM Studio migration.",
+      "timestamp": [2.4, 11.8]
+    },
+    { "text": "Priya, can you kick us off on ASR?", "timestamp": [11.8, 14.2] },
+    {
+      "text": "Sure. Base model has been holding up well under repeated switching in the real app, no repro of the allocator crash we saw on Small and Medium.",
+      "timestamp": [14.2, 24.6]
+    },
+    {
+      "text": "We're still blocked on whisper.cpp for those two, but Base feels solid enough to ship.",
+      "timestamp": [24.6, 31.0]
+    },
+    {
+      "text": "Agreed, I've been stress testing it for the last few days and haven't seen anything concerning.",
+      "timestamp": [31.0, 38.5]
+    },
+    {
+      "text": "Good, let's lock that in as a decision.",
+      "timestamp": [38.5, 41.2]
+    },
+    {
+      "text": "Moving on to the meeting detail view.",
+      "timestamp": [41.2, 44.0]
+    },
+    {
+      "text": "Jordan, you had some notes from the design review?",
+      "timestamp": [44.0, 47.1]
+    },
+    {
+      "text": "Yeah, the current layout works but it feels dense once transcripts get long.",
+      "timestamp": [47.1, 54.3]
+    },
+    {
+      "text": "Titles wrap awkwardly, the sidebar metadata competes with the summary for attention, and action items get buried below the fold.",
+      "timestamp": [54.3, 65.9]
+    },
+    {
+      "text": "I think we should take a pass at restructuring the hierarchy.",
+      "timestamp": [65.9, 70.4]
+    },
+    {
+      "text": "Makes sense, let's prioritize that before the 0.9 release.",
+      "timestamp": [70.4, 74.8]
+    },
+    {
+      "text": "Sam, what's the status on LM Studio?",
+      "timestamp": [74.8, 77.5]
+    },
+    {
+      "text": "Migration is basically done, structured summarization now goes entirely through the HTTP integration, no more on-device Qwen child process.",
+      "timestamp": [77.5, 88.2]
+    },
+    { "text": "Great, let's close this out.", "timestamp": [88.2, 90.6] },
+    {
+      "text": "Action items: Jordan drafts new mockups, Sam files the whisper.cpp ticket, Priya shares the accuracy harness results, and someone updates the changelog.",
+      "timestamp": [90.6, 101.3]
+    },
+    { "text": "Thanks everyone.", "timestamp": [101.3, null] }
+  ]
+}
