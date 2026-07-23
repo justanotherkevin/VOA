@@ -1,4 +1,13 @@
 import React from 'react';
+import { Mic, Volume2 } from 'lucide-react';
+import { Avatar, AvatarFallback } from '../avatar';
+import { Bubble, BubbleContent } from '../bubble';
+import {
+  Message,
+  MessageAvatar,
+  MessageContent,
+  MessageGroup,
+} from '../message';
 
 export type TranscriptTagStyle = 'pill' | 'gutter';
 
@@ -40,6 +49,14 @@ function srcColor(src: Source) {
 
 function srcLabel(src: Source) {
   return src === 'meeting' ? 'M' : '★';
+}
+
+function srcIcon(src: Source) {
+  return src === 'meeting' ? Volume2 : Mic;
+}
+
+function srcAriaLabel(src: Source) {
+  return src === 'meeting' ? 'System audio' : 'Mic audio';
 }
 
 function PillView({ segments }: { segments: Segment[] }) {
@@ -95,35 +112,45 @@ function groupSegments(segments: Segment[]): SegmentGroup[] {
 }
 
 function GutterView({ segments }: { segments: Segment[] }) {
-  const groups = groupSegments(segments);
+  const groups = groupSegments(segments).filter(
+    (group) => group.src || group.text.trim(),
+  );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-      {groups.map((group, i) => (
-        <div
-          key={i}
-          style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}
-        >
-          <div
-            style={{
-              flexShrink: 0,
-              width: '18px',
-              textAlign: 'right',
-              paddingTop: '2px',
-              fontSize: '10px',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              color: group.src ? srcColor(group.src) : 'transparent',
-              opacity: group.src ? 0.75 : 0,
-              userSelect: 'none',
-            }}
-          >
-            {group.src ? srcLabel(group.src) : '·'}
-          </div>
-          <div style={{ flex: 1 }}>{group.text}</div>
-        </div>
-      ))}
-    </div>
+    <MessageGroup>
+      {groups.map((group, i) => {
+        if (!group.src) {
+          return (
+            <p key={i} className="text-sm">
+              {group.text}
+            </p>
+          );
+        }
+
+        const align = group.src === 'mic' ? 'end' : 'start';
+        const color = srcColor(group.src);
+        const Icon = srcIcon(group.src);
+
+        return (
+          <Message key={i} align={align}>
+            <MessageAvatar>
+              <Avatar aria-label={srcAriaLabel(group.src)}>
+                <AvatarFallback
+                  style={{ backgroundColor: `${color}26`, color }}
+                >
+                  <Icon size={14} />
+                </AvatarFallback>
+              </Avatar>
+            </MessageAvatar>
+            <MessageContent>
+              <Bubble variant="muted">
+                <BubbleContent>{group.text}</BubbleContent>
+              </Bubble>
+            </MessageContent>
+          </Message>
+        );
+      })}
+    </MessageGroup>
   );
 }
 
