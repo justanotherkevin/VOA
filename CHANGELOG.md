@@ -8,6 +8,10 @@ All notable changes to VOA are documented here.
 
 ### Added
 
+- **Rebuilt the transcript's "Gutter" tag style on shadcn's Message component.** `TranscriptTagRenderer.tsx`'s `GutterView` now composes `Message`/`MessageAvatar`/`MessageContent` (`src/renderer/components/message.tsx`) with `Bubble`/`BubbleContent` (`bubble.tsx`) and `Avatar`/`AvatarFallback` (`avatar.tsx`), matching ui.shadcn.com/docs/components/base/message, instead of a hand-rolled flex/inline-style gutter column.
+  - Each contiguous `[Meeting]`/`[Mic]` speaker turn gets its own avatar (`Volume2`/`Mic` icon tinted with the existing brand colors) and an accessible `aria-label` ("System audio" / "Mic audio").
+  - Mic turns align to the end (right) and meeting/system-audio turns align to the start (left), so the transcript reads like a two-party conversation. The "Pill" tag style is unchanged.
+  - Added `src/__tests__/components/TranscriptTagRenderer.test.tsx` covering message-row count, alignment, avatar labels, and pill-style rendering.
 - **Redesigned the single Meeting view as a document-like "Ledger" layout with tabs.** `MeetingDetail.tsx` now opens with a thin accent bar and a navy key-facts block (recorded date, duration, audio source, participant count, open action items, summary status) above the title, then splits the rest into three shadcn `Tabs` (`src/renderer/components/tabs.tsx`, `line` variant): **Overview** (summary, key decisions, action items), **Transcript**, and **Participants** (participants + topics).
   - New `meeting-detail/` components: `MeetingKeyFacts`, `MeetingDecisions`, `MeetingActionItems` (checkmark/circle-indicator table instead of inline checkboxes), `MeetingParticipantsTopics`. `Section.tsx` is now a collapsible card shell (open by default, `aria-expanded`/`aria-controls`) shared by every section instead of a plain heading wrapper.
   - Removed the old two-column layout and its `MeetingSidebar`/`SideSection` components — decisions/topics/action items moved from a fixed right rail into the tabbed main column.
