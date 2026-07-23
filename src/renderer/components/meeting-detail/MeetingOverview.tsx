@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlignLeft, Loader2, Sparkles } from 'lucide-react';
-import type { Meeting } from '@/renderer/hooks/useMeetings';
+import type { Recording } from '@/renderer/hooks/useMeetings';
 import {
   HAS_TAGS_RE,
   TranscriptTagRenderer,
@@ -9,7 +9,7 @@ import {
 import { Section } from './Section';
 
 interface MeetingOverviewProps {
-  meeting: Meeting;
+  meeting: Recording;
   summaryReady: boolean;
   summaryPending: boolean;
   summaryNotStarted: boolean;
@@ -28,15 +28,17 @@ export function MeetingOverview({
   return (
     <Section icon={<AlignLeft size={15} />} title="Overview">
       {summaryPending && (
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 size={13} className="animate-spin" />
           <span>Generating summary…</span>
         </div>
       )}
       {meeting.summaryStatus === 'failed' && (
-        <p className="text-sm text-gray-600 italic">Summary unavailable.</p>
+        <p className="text-sm text-muted-foreground italic">
+          Summary unavailable.
+        </p>
       )}
-      {meeting.isMeeting && summaryNotStarted && (
+      {meeting.type === 'meeting' && summaryNotStarted && (
         <button
           onClick={onEnrich}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -51,7 +53,7 @@ export function MeetingOverview({
         </button>
       )}
       {summaryReady && meeting.summary && (
-        <div className="text-gray-300 text-sm leading-relaxed">
+        <div className="text-foreground/80 text-sm leading-relaxed">
           {HAS_TAGS_RE.test(meeting.summary) ? (
             <TranscriptTagRenderer text={meeting.summary} style={tagStyle} />
           ) : (
@@ -60,7 +62,9 @@ export function MeetingOverview({
         </div>
       )}
       {summaryReady && !meeting.summary && (
-        <p className="text-sm text-gray-600 italic">No summary available.</p>
+        <p className="text-sm text-muted-foreground italic">
+          No summary available.
+        </p>
       )}
     </Section>
   );

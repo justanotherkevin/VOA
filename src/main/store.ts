@@ -10,7 +10,7 @@ export interface MeetingActionItem {
   done: boolean;
 }
 
-export interface Meeting {
+export interface Recording {
   id: string;
   title: string;
   startedAt: number;
@@ -21,7 +21,7 @@ export interface Meeting {
     text: string;
     timestamp: [number, number | null];
   }>;
-  isMeeting: boolean;
+  type: 'meeting' | 'dictation';
   summary: string;
   summaryStatus: 'pending' | 'ready' | 'failed' | 'not-started';
   decisions: string[];
@@ -88,8 +88,9 @@ export interface LMStudioPreferences {
 }
 
 interface StoreSchema {
-  meetings: Meeting[];
+  meetings: Recording[];
   meetingsMigrated: boolean;
+  recordingTypeMigrated: boolean;
   shortcuts?: ShortcutPreferences;
   modelPreferences?: ModelPreferences;
   meetingPreferences?: MeetingPreferences;
@@ -155,6 +156,7 @@ export async function initializeStore() {
     defaults: {
       meetings: [],
       meetingsMigrated: false,
+      recordingTypeMigrated: false,
       shortcuts: DEFAULT_SHORTCUTS,
       modelPreferences: DEFAULT_MODEL_PREFERENCES,
       meetingPreferences: DEFAULT_MEETING_PREFERENCES,
@@ -175,12 +177,12 @@ export async function initializeStore() {
 
 // ─── Migration ────────────────────────────────────────────────────────────────
 
-function migrateOldMeeting(m: any): Meeting {
+function normalizeRecording(m: any): Recording {
   const summary = m.summary ?? '';
   const summaryStatus = m.summaryStatus ?? 'ready';
   return {
     ...m,
-    isMeeting: m.isMeeting ?? false,
+    type: m.type ?? (m.isMeeting ? 'meeting' : 'dictation'),
     summary,
     summaryStatus,
     decisions: m.decisions ?? [],
@@ -189,39 +191,52 @@ function migrateOldMeeting(m: any): Meeting {
 }
 
 function runMigrations() {
-  if (store.get('meetingsMigrated')) return;
+  if (!store.get('meetingsMigrated')) {
+    const oldHistory: StoredTranscript[] = store.get('transcriptHistory') ?? [];
+    if (oldHistory.length > 0) {
+      const meetings: Recording[] = oldHistory.map((t) => ({
+        id: t.id,
+        title: generateTitle(t.text),
+        startedAt: t.date,
+        endedAt: t.date,
+        durationMs: 0,
+        transcript: t.text,
+        chunks: t.chunks,
+        type: 'dictation' as const,
+        summary: '',
+        summaryStatus: 'ready' as const,
+        decisions: [],
+        topics: [],
+        actionItems: [],
+        audioSource: 'mic' as const,
+        participants: [],
+        tags: [],
+      }));
+      store.set('meetings', meetings);
+      log.info(`[Store] Migrated ${meetings.length} transcripts → meetings`);
+    }
 
-  const oldHistory: StoredTranscript[] = store.get('transcriptHistory') ?? [];
-  if (oldHistory.length > 0) {
-    const meetings: Meeting[] = oldHistory.map((t) => ({
-      id: t.id,
-      title: generateTitle(t.text),
-      startedAt: t.date,
-      endedAt: t.date,
-      durationMs: 0,
-      transcript: t.text,
-      chunks: t.chunks,
-      summary: '',
-      summaryStatus: 'ready' as const,
-      decisions: [],
-      topics: [],
-      actionItems: [],
-      audioSource: 'mic' as const,
-      participants: [],
-      tags: [],
-    }));
-    store.set('meetings', meetings);
-    log.info(`[Store] Migrated ${meetings.length} transcripts → meetings`);
+    store.set('meetingsMigrated', true);
   }
 
-  store.set('meetingsMigrated', true);
+  if (!store.get('recordingTypeMigrated')) {
+    const meetings: any[] = store.get('meetings') ?? [];
+    if (meetings.length > 0) {
+      const migrated = meetings.map(normalizeRecording);
+      store.set('meetings', migrated);
+      log.info(
+        `[Store] Migrated ${migrated.length} recordings: isMeeting → type`,
+      );
+    }
+    store.set('recordingTypeMigrated', true);
+  }
 }
 
 // ─── Meeting CRUD ─────────────────────────────────────────────────────────────
 
-export function saveMeeting(data: Omit<Meeting, 'id'>): Meeting {
-  const meetings: Meeting[] = store.get('meetings') ?? [];
-  const newMeeting: Meeting = {
+export function saveMeeting(data: Omit<Recording, 'id'>): Recording {
+  const meetings: Recording[] = store.get('meetings') ?? [];
+  const newMeeting: Recording = {
     id: crypto.randomUUID(),
     ...data,
   };
@@ -236,22 +251,22 @@ export function saveMeeting(data: Omit<Meeting, 'id'>): Meeting {
   return newMeeting;
 }
 
-export function getMeetings(): Meeting[] {
+export function getMeetings(): Recording[] {
   const meetings: any[] = store.get('meetings') ?? [];
-  return meetings.map(migrateOldMeeting);
+  return meetings.map(normalizeRecording);
 }
 
-export function getMeetingById(id: string): Meeting | null {
+export function getMeetingById(id: string): Recording | null {
   const meetings: any[] = store.get('meetings') ?? [];
   const found = meetings.find((m) => m.id === id);
-  return found ? migrateOldMeeting(found) : null;
+  return found ? normalizeRecording(found) : null;
 }
 
 export function updateMeeting(
   id: string,
-  patch: Partial<Meeting>,
-): Meeting | null {
-  const meetings: Meeting[] = store.get('meetings') ?? [];
+  patch: Partial<Recording>,
+): Recording | null {
+  const meetings: Recording[] = store.get('meetings') ?? [];
   const idx = meetings.findIndex((m) => m.id === id);
   if (idx === -1) return null;
 
@@ -261,7 +276,7 @@ export function updateMeeting(
 }
 
 export function deleteMeeting(id: string): boolean {
-  const meetings: Meeting[] = store.get('meetings') ?? [];
+  const meetings: Recording[] = store.get('meetings') ?? [];
   const filtered = meetings.filter((m) => m.id !== id);
   if (filtered.length === meetings.length) return false;
   store.set('meetings', filtered);
@@ -404,6 +419,7 @@ export function saveTranscript(data: {
     durationMs: 0,
     transcript: data.text,
     chunks: data.chunks,
+    type: 'dictation',
     summary: '',
     summaryStatus: 'pending',
     decisions: [],

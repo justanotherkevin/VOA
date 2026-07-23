@@ -19,7 +19,7 @@ import {
   type AsrModelConfig,
   type AsrType,
 } from '@/main/pipeline/asr-factory';
-import type { Meeting } from '@/main/store';
+import type { Recording } from '@/main/store';
 
 export interface CompletePayload {
   status: 'complete';
@@ -31,7 +31,7 @@ export interface CompletePayload {
     cleaned_text?: string;
   };
   savedTranscript?: unknown;
-  savedMeeting?: Meeting;
+  savedMeeting?: Recording;
 }
 
 export interface TranscriberCallbacks {
@@ -39,7 +39,7 @@ export interface TranscriberCallbacks {
   onProgress: (data: unknown) => void;
   onComplete: (result: CompletePayload) => void;
   onError: (message: string) => void;
-  onMeetingSaved: (meeting: Meeting) => void;
+  onMeetingSaved: (meeting: Recording) => void;
   onQueued?: (data: { position: number }) => void;
 }
 
@@ -55,12 +55,12 @@ class TranscriberService {
   private currentAsrType: AsrType;
 
   private sessionActive = false;
-  private sessionIsMeeting = false;
+  private sessionType: 'meeting' | 'dictation' = 'dictation';
   private lastSavedMeetingId: string | null = null;
   private lastSessionMeta: {
     startedAt: number;
     endedAt: number;
-    isMeeting: boolean;
+    type: 'meeting' | 'dictation';
     endedAtMs: number;
   } | null = null;
   private sessionSegments: Array<{
@@ -77,15 +77,18 @@ class TranscriberService {
     this.currentAsrType = 'whisper';
   }
 
-  beginSession(startedAt: number, isMeeting = false): void {
+  beginSession(
+    startedAt: number,
+    type: 'meeting' | 'dictation' = 'dictation',
+  ): void {
     this.sessionActive = true;
-    this.sessionIsMeeting = isMeeting;
+    this.sessionType = type;
     this.sessionStartedAt = startedAt;
     this.sessionSegments = [];
     this.sessionChunks = [];
     this.sessionSources = new Set();
     log(
-      `[TranscriberService] Session started at startedAt=${startedAt} isMeeting=${isMeeting}`,
+      `[TranscriberService] Session started at startedAt=${startedAt} type=${type}`,
     );
   }
 
@@ -98,14 +101,14 @@ class TranscriberService {
       return;
     }
     this.sessionActive = false;
-    const isMeeting = this.sessionIsMeeting;
-    this.sessionIsMeeting = false;
+    const type = this.sessionType;
+    this.sessionType = 'dictation';
 
     // Snapshot meta for late-segment recovery before clearing state
     this.lastSessionMeta = {
       startedAt: this.sessionStartedAt!,
       endedAt,
-      isMeeting,
+      type,
       endedAtMs: Date.now(),
     };
     this.lastSavedMeetingId = null;
@@ -144,7 +147,7 @@ class TranscriberService {
         endedAt,
         callbacks,
         audioSource,
-        isMeeting,
+        type,
       );
     } else {
       log(
@@ -304,7 +307,7 @@ class TranscriberService {
     endedAt: number,
     callbacks: TranscriberCallbacks,
     audioSource: 'mic' | 'system' | 'both' = 'mic',
-    isMeeting = false,
+    type: 'meeting' | 'dictation' = 'dictation',
   ): Promise<void> {
     try {
       const durationMs = endedAt - startedAt;
@@ -320,11 +323,11 @@ class TranscriberService {
         startedAt,
         endedAt,
         durationMs,
-        isMeeting,
+        type,
         transcript: outputText,
         chunks: outputChunks,
         summary: '',
-        summaryStatus: isMeeting ? 'not-started' : 'ready',
+        summaryStatus: type === 'meeting' ? 'not-started' : 'ready',
         decisions: [],
         topics: [],
         actionItems: [],
@@ -355,7 +358,7 @@ class TranscriberService {
       });
 
       log(
-        `[TranscriberService] Meeting persisted meetingId=${meeting.id} isMeeting=${isMeeting}`,
+        `[TranscriberService] Meeting persisted meetingId=${meeting.id} type=${type}`,
       );
     } catch (error) {
       log('[TranscriberService] Error persisting meeting:', error);
@@ -394,7 +397,7 @@ class TranscriberService {
         const appendedTranscript = existing.transcript
           ? `${existing.transcript} ${taggedText}`
           : taggedText;
-        const patch: Partial<Meeting> = { transcript: appendedTranscript };
+        const patch: Partial<Recording> = { transcript: appendedTranscript };
         if (
           existing.audioSource !== 'both' &&
           existing.audioSource !== source
@@ -418,11 +421,11 @@ class TranscriberService {
       startedAt: meta.startedAt,
       endedAt: meta.endedAt,
       durationMs: meta.endedAt - meta.startedAt,
-      isMeeting: meta.isMeeting,
+      type: meta.type,
       transcript: outputText,
       chunks: outputChunks,
       summary: '',
-      summaryStatus: meta.isMeeting ? 'not-started' : 'ready',
+      summaryStatus: meta.type === 'meeting' ? 'not-started' : 'ready',
       decisions: [],
       topics: [],
       actionItems: [],

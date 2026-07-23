@@ -1,9 +1,9 @@
 import { Lightbulb } from 'lucide-react';
-import type { Meeting } from '@/renderer/hooks/useMeetings';
+import type { Recording } from '@/renderer/hooks/useMeetings';
 import { Section } from './Section';
 
 interface MeetingDecisionsProps {
-  meeting: Meeting;
+  meeting: Recording;
   summaryReady: boolean;
 }
 
@@ -19,7 +19,7 @@ export function MeetingDecisions({
         {meeting.decisions.map((d, i) => (
           <li
             key={i}
-            className="flex items-start gap-2.5 text-sm text-gray-300 leading-relaxed"
+            className="flex items-start gap-2.5 text-sm text-foreground/80 leading-relaxed"
           >
             <span
               className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"

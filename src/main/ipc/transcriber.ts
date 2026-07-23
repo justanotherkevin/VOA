@@ -39,13 +39,14 @@ export function setE2eForceMeeting(value: boolean) {
 export function registerTranscriberHandlers() {
   ipcMain.handle(CHANNELS.TRANSCRIBER.SESSION_START, async (_event, args) => {
     const { startedAt } = args || {};
-    let isMeeting = await meetingDetector.checkCurrentWindow();
+    const isMeetingApp = await meetingDetector.checkCurrentWindow();
+    let type: 'meeting' | 'dictation' = isMeetingApp ? 'meeting' : 'dictation';
     if (_e2eNextSessionForceMeeting) {
-      isMeeting = true;
+      type = 'meeting';
       _e2eNextSessionForceMeeting = false;
     }
-    log('[transcriber:session-start] isMeeting:', isMeeting);
-    transcriberService.beginSession(startedAt ?? Date.now(), isMeeting);
+    log('[transcriber:session-start] type:', type);
+    transcriberService.beginSession(startedAt ?? Date.now(), type);
     startTrayAnimation();
   });
 

@@ -14,15 +14,18 @@
  *   await seedMeeting(page, meetingFactory({ title: 'Budget Review' }));
  */
 
-import { Meeting } from '@/main/store';
+import { Recording } from '@/main/store';
 
-export function meetingFactory(overrides: Partial<Omit<Meeting, 'id'>> = {}): Omit<Meeting, 'id'> {
+export function meetingFactory(
+  overrides: Partial<Omit<Recording, 'id'>> = {},
+): Omit<Recording, 'id'> {
   const now = Date.now();
   return {
     title: 'Test Meeting',
     startedAt: now - 30 * 60 * 1000,
     endedAt: now,
     durationMs: 30 * 60 * 1000,
+    type: 'meeting',
     transcript: 'This is a sample meeting transcript for testing purposes.',
     chunks: [
       { text: 'This is a sample meeting transcript', timestamp: [0, 2.0] },
@@ -43,7 +46,9 @@ export function meetingFactory(overrides: Partial<Omit<Meeting, 'id'>> = {}): Om
 /**
  * Create a Meeting that already has enrichment data (summaryStatus: 'ready').
  */
-export function enrichedMeetingFactory(overrides: Partial<Omit<Meeting, 'id'>> = {}): Omit<Meeting, 'id'> {
+export function enrichedMeetingFactory(
+  overrides: Partial<Omit<Recording, 'id'>> = {},
+): Omit<Recording, 'id'> {
   return meetingFactory({
     summary: 'The team reviewed quarterly targets and agreed on next steps.',
     summaryStatus: 'ready',

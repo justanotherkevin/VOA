@@ -1,20 +1,20 @@
-import type { Meeting } from '@/renderer/hooks/useMeetings';
+import type { Recording } from '@/renderer/hooks/useMeetings';
 import { formatDateTime, formatDuration } from '@/renderer/utils/formatters';
 
-const AUDIO_SOURCE_LABEL: Record<Meeting['audioSource'], string> = {
+const AUDIO_SOURCE_LABEL: Record<Recording['audioSource'], string> = {
   mic: 'Mic',
   system: 'System Audio',
   both: 'Mic + System',
 };
 
-const SUMMARY_STATUS_LABEL: Record<Meeting['summaryStatus'], string> = {
+const SUMMARY_STATUS_LABEL: Record<Recording['summaryStatus'], string> = {
   ready: 'Summary Ready',
   pending: 'Generating…',
   failed: 'Summary Failed',
   'not-started': 'Not Started',
 };
 
-export function MeetingKeyFacts({ meeting }: { meeting: Meeting }) {
+export function MeetingKeyFacts({ meeting }: { meeting: Recording }) {
   const openItems = meeting.actionItems.filter((a) => !a.done).length;
 
   const facts: Array<{ label: string; value: string }> = [
@@ -36,13 +36,13 @@ export function MeetingKeyFacts({ meeting }: { meeting: Meeting }) {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-x-6 gap-y-3 rounded-xl border border-[#1f2f45] bg-[#12203380] px-5 py-4">
+    <div className="grid grid-cols-3 gap-x-6 gap-y-3 rounded-xl border border-border bg-muted/50 px-5 py-4">
       {facts.map((f) => (
         <div key={f.label}>
-          <div className="text-[10px] uppercase tracking-wide text-[#6f93c2] mb-1">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
             {f.label}
           </div>
-          <div className="text-sm font-medium text-gray-100">{f.value}</div>
+          <div className="text-sm font-medium text-foreground">{f.value}</div>
         </div>
       ))}
     </div>

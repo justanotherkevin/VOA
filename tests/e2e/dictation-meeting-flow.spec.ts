@@ -111,10 +111,11 @@ test.describe('Meeting Dictation Flow', () => {
       'meeting should have appeared in the list',
     ).not.toBeVisible({ timeout: 5_000 });
 
-    await expect(
-      mainPage.locator('[data-testid="meeting-type-badge"]').first(),
-      'meeting type badge should be visible in the history list',
-    ).toBeVisible({ timeout: 5_000 });
+    const [seededMeeting] = await getMeetings(mainPage);
+    expect(
+      seededMeeting.type === 'meeting',
+      'recording should be classified as a meeting',
+    ).toBe(true);
 
     // STEP 6: Inject mock enrichment results via test-only IPC handler.
     // The real Qwen model (onnx-community/Qwen2.5-1.5B-Instruct) is not downloaded
@@ -186,7 +187,7 @@ test.describe('Meeting Dictation Flow', () => {
       startedAt: now - durationMs,
       endedAt: now,
       durationMs,
-      isMeeting: true,
+      type: 'meeting',
       summaryStatus: 'not-started',
       transcript,
       chunks: [],
@@ -220,7 +221,7 @@ test.describe('Meeting Dictation Flow', () => {
       'seeded meeting should appear in the list',
     ).toBeVisible({ timeout: 10_000 });
 
-    // Button visible only when isMeeting && summaryStatus=not-started && summarizerReady
+    // Button visible only when type='meeting' && summaryStatus=not-started && summarizerReady
     // summarizerReady is set by Meetings.tsx checking the HF model cache on mount
     await expect(
       mainPage.getByRole('button', { name: 'Meeting details' }),

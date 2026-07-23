@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Mic } from 'lucide-react';
-import type { Meeting } from '@/renderer/hooks/useMeetings';
+import type { Recording } from '@/renderer/hooks/useMeetings';
 import { useCopyText } from '@/renderer/hooks/useCopyText';
 import {
   HAS_TAGS_RE,
@@ -17,7 +17,7 @@ import { MeetingTranscript } from '../meeting-detail/MeetingTranscript';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../tabs';
 
 interface MeetingDetailProps {
-  meeting: Meeting | null;
+  meeting: Recording | null;
   onDelete?: (id: string) => void;
   onTitleChange?: (id: string, title: string) => void;
 }
@@ -53,7 +53,7 @@ export function MeetingDetail({
 
   if (!meeting) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#111] text-gray-600">
+      <div className="flex-1 flex items-center justify-center bg-background text-muted-foreground">
         <div className="text-center">
           <Mic size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">Select a meeting to view details</p>
@@ -84,7 +84,7 @@ export function MeetingDetail({
     meeting.summaryStatus === 'not-started' && !enriching;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#111]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
       <MeetingDetailHeader
         meeting={meeting}
         copied={copied}
@@ -94,7 +94,7 @@ export function MeetingDetail({
       />
 
       <Tabs defaultValue="overview" className="flex-1 overflow-hidden gap-0">
-        <div className="px-8 pt-4 border-b border-[#222] shrink-0">
+        <div className="px-8 pt-4 border-b border-border shrink-0">
           <TabsList variant="line">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="transcript">Transcript</TabsTrigger>

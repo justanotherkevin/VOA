@@ -5,7 +5,7 @@
   "endedAt": 1784042520000,
   "durationMs": 4920000,
   "audioSource": "both",
-  "isMeeting": true,
+  "type": "meeting",
   "summaryStatus": "ready",
   "summary": "The team reviewed progress on the Q3 migration, discussed blockers around the new ASR pipeline, and aligned on rollout timing. Design surfaced concerns about the meeting detail view feeling cluttered with long transcripts, and the group agreed to prioritize a redesign before the next release.",
   "decisions": [

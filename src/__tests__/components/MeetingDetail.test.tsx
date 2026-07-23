@@ -1,7 +1,7 @@
 /// <reference types="vitest/globals" />
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MeetingDetail } from '@/renderer/components/ui/MeetingDetail';
-import type { Meeting } from '@/renderer/hooks/useMeetings';
+import type { Recording } from '@/renderer/hooks/useMeetings';
 
 function openParticipantsTab() {
   // Radix Tabs activates on mousedown, not click.
@@ -22,12 +22,13 @@ Object.defineProperty(navigator, 'clipboard', {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const BASE_MEETING: Meeting = {
+const BASE_MEETING: Recording = {
   id: 'test-1',
   title: 'Payment Schedule Discussion',
   startedAt: Date.now(),
   endedAt: Date.now() + 120_000,
   durationMs: 120_000,
+  type: 'meeting',
   transcript:
     'Glad to see things are going well and business is starting to pick up. Andrea told me about your outstanding numbers on Tuesday.',
   chunks: [],
@@ -57,7 +58,7 @@ const BASE_MEETING: Meeting = {
   tags: [],
 };
 
-function emptyStructured(overrides?: Partial<Meeting>): Meeting {
+function emptyStructured(overrides?: Partial<Recording>): Recording {
   return {
     ...BASE_MEETING,
     decisions: [],

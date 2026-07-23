@@ -73,7 +73,7 @@ describe('Transcriber IPC Handlers', () => {
       { sender: {} },
       { startedAt: 123 },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(123, true);
+    expect(mockBeginSession).toHaveBeenCalledWith(123, 'meeting');
     expect(mockStartTray).toHaveBeenCalled();
   });
 
@@ -82,7 +82,7 @@ describe('Transcriber IPC Handlers', () => {
     const now = 555;
     vi.spyOn(Date, 'now').mockReturnValue(now);
     await h[CHANNELS.TRANSCRIBER.SESSION_START]({ sender: {} }, {});
-    expect(mockBeginSession).toHaveBeenCalledWith(now, false);
+    expect(mockBeginSession).toHaveBeenCalledWith(now, 'dictation');
     vi.spyOn(Date, 'now').mockRestore();
   });
 
@@ -145,7 +145,7 @@ describe('Transcriber IPC Handlers', () => {
     expect(() => callbacks.onUpdate({ text: 'hi' })).not.toThrow();
   });
 
-  it('setE2eForceMeeting forces isMeeting on the next SESSION_START and resets after one use', async () => {
+  it('setE2eForceMeeting forces type=meeting on the next SESSION_START and resets after one use', async () => {
     const { registerTranscriberHandlers, setE2eForceMeeting } =
       await import('../transcriber');
     registerTranscriberHandlers();
@@ -156,13 +156,13 @@ describe('Transcriber IPC Handlers', () => {
       { sender: {} },
       { startedAt: 1 },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(1, true);
+    expect(mockBeginSession).toHaveBeenCalledWith(1, 'meeting');
 
     mockBeginSession.mockClear();
     await handlers[CHANNELS.TRANSCRIBER.SESSION_START](
       { sender: {} },
       { startedAt: 2 },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(2, false);
+    expect(mockBeginSession).toHaveBeenCalledWith(2, 'dictation');
   });
 });

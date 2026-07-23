@@ -18,7 +18,7 @@ export function Section({
   const contentId = useId();
 
   return (
-    <div className="rounded-xl border border-[#242424] bg-[#161616] overflow-hidden">
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div
         role="button"
         tabIndex={0}
@@ -28,10 +28,10 @@ export function Section({
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') setOpen((o) => !o);
         }}
-        className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none hover:bg-[#1a1a1a] transition-colors"
+        className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none hover:bg-accent transition-colors"
       >
         <span className="text-[#a59ef5] shrink-0">{icon}</span>
-        <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">
+        <h3 className="text-xs font-semibold text-foreground/80 uppercase tracking-wide">
           {title}
         </h3>
         {action && (
@@ -44,7 +44,7 @@ export function Section({
         )}
         <ChevronDown
           size={14}
-          className={`text-gray-600 transition-transform shrink-0 ${action ? 'ml-2' : 'ml-auto'} ${open ? 'rotate-180' : ''}`}
+          className={`text-muted-foreground transition-transform shrink-0 ${action ? 'ml-2' : 'ml-auto'} ${open ? 'rotate-180' : ''}`}
         />
       </div>
       {open && (
