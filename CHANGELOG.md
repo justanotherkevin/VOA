@@ -8,6 +8,10 @@ All notable changes to VOA are documented here.
 
 ### Added
 
+- **Redesigned the single Meeting view as a document-like "Ledger" layout with tabs.** `MeetingDetail.tsx` now opens with a thin accent bar and a navy key-facts block (recorded date, duration, audio source, participant count, open action items, summary status) above the title, then splits the rest into three shadcn `Tabs` (`src/renderer/components/tabs.tsx`, `line` variant): **Overview** (summary, key decisions, action items), **Transcript**, and **Participants** (participants + topics).
+  - New `meeting-detail/` components: `MeetingKeyFacts`, `MeetingDecisions`, `MeetingActionItems` (checkmark/circle-indicator table instead of inline checkboxes), `MeetingParticipantsTopics`. `Section.tsx` is now a collapsible card shell (open by default, `aria-expanded`/`aria-controls`) shared by every section instead of a plain heading wrapper.
+  - Removed the old two-column layout and its `MeetingSidebar`/`SideSection` components — decisions/topics/action items moved from a fixed right rail into the tabbed main column.
+  - Added a rich mock meeting fixture (`src/renderer/__fixtures__/mockMeeting.json`) for iterating on the design against realistic data.
 - **Adopted shadcn/ui and rebuilt the app around a single sidebar.** The previous hand-rolled icon-rail `Sidebar.tsx` and Settings' own standalone 232px nav panel are gone; there is now exactly one sidebar (`src/renderer/components/ui/Sidebar.tsx`), built on shadcn's Sidebar primitive, matching the structure documented at ui.shadcn.com/docs/components/sidebar:
   - `SidebarHeader` — app logo + status indicator.
   - `SidebarContent` — a collapsible **Meetings** `SidebarGroup` (search, grouped-by-date list, New Recording button — previously the Meetings page's own left panel).
