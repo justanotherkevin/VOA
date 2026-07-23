@@ -64,6 +64,9 @@ test.describe('Dictation Workflow', () => {
       'meeting should have appeared in the list',
     ).not.toBeVisible({ timeout: 15_000 });
 
+    // Transcript lives under its own tab now — not visible on the default Overview tab.
+    await mainPage.getByRole('tab', { name: 'Transcript' }).click();
+
     const transcript = mainPage.locator('.font-mono');
     await expect(transcript).toContainText('In the ancient land of Aldoria', {
       timeout: 15_000,
