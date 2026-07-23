@@ -45,9 +45,9 @@ export function MeetingList({
   }, [filtered]);
 
   return (
-    <div className="flex flex-col h-full bg-[#1a1a1a] border-r border-[#2a2a2a]">
+    <div className="flex flex-col">
       {/* Search */}
-      <div className="px-3 pt-4 pb-2">
+      <div className="px-1 pb-2">
         <div className="flex items-center gap-2 bg-[#2a2a2a] rounded-lg px-3 py-2">
           <Search size={14} className="text-gray-500 shrink-0" />
           <input
@@ -60,16 +60,8 @@ export function MeetingList({
         </div>
       </div>
 
-      {/* Meeting count */}
-      <div className="px-3 py-1 flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          Meetings
-        </span>
-        <span className="text-xs text-gray-600">{meetings.length}</span>
-      </div>
-
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div>
         {filtered.length === 0 ? (
           <div className="px-4 py-8 text-center">
             <p className="text-sm text-gray-500">
@@ -105,7 +97,7 @@ export function MeetingList({
       </div>
 
       {/* New Recording button */}
-      <div className="p-3 border-t border-[#2a2a2a]">
+      <div className="px-1 pt-3 mt-2 border-t border-[#2a2a2a]">
         <button
           onClick={onNewRecording}
           className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"

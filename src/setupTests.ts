@@ -3,7 +3,10 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 
 // Extend Vitest's expect with @testing-library/jest-dom matchers
 expect.extend(matchers);
-import { attachGlobalElectronMock, resetElectronMockCallbacks } from '@/testing/electronMocks';
+import {
+  attachGlobalElectronMock,
+  resetElectronMockCallbacks,
+} from '@/testing/electronMocks';
 import { MockMediaRecorder, createMockAudioBuffer } from '@/testing/mediaMocks';
 
 // Attach shared electronAPI mock (provides trigger helpers too)
@@ -60,6 +63,20 @@ if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'ResizeObserver', {
     writable: true,
     value: MockResizeObserver,
+  });
+
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
   });
 
   // Prevent JSDOM "Not implemented: HTMLCanvasElement.getContext()" noise.

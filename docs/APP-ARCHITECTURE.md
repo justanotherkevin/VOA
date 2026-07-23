@@ -93,17 +93,19 @@ audio-transformer/
 │   │   └── preload.d.ts                 ← TS types for window.electronAPI
 │   │
 │   │   ├── pages/                       ← Full-page route components
-│   │   │   ├── Meetings.tsx             ← Primary view: meeting list + detail
-│   │   │   ├── Settings.tsx             ← Model, shortcut, recording config
+│   │   │   ├── Meetings.tsx             ← Detail-only view (list lives in the sidebar, see below)
+│   │   │   ├── Settings.tsx             ← Model, shortcut, recording config panes (nav lives in the sidebar)
 │   │   │   ├── Permissions.tsx          ← Permission grant/status UI
 │   │   │   ├── Dictionary.tsx           ← Custom vocabulary
 │   │   │   └── StyleMatching.tsx        ← Writing style preference
 │   │   │
 │   │   ├── components/
 │   │   │   ├── ui/                      ← Feature-level composed components
-│   │   │   │   ├── MainLayout.tsx       ← App shell with sidebar
-│   │   │   │   ├── Sidebar.tsx          ← Navigation + status indicator
-│   │   │   │   ├── MeetingList.tsx      ← Scrollable past meetings list
+│   │   │   │   ├── MainLayout.tsx       ← App shell: owns SidebarProvider + the one fixed-position SidebarTrigger
+│   │   │   │   ├── Sidebar.tsx          ← The single app sidebar (shadcn primitive): status header, Meetings
+│   │   │   │   │                          SidebarGroup (list + search + New Recording), Settings SidebarFooter
+│   │   │   │   │                          (General/Transcription/.../Shortcuts nav) — see "Sidebar architecture" below
+│   │   │   │   ├── MeetingList.tsx      ← Meeting list content, rendered inside Sidebar's Meetings group
 │   │   │   │   ├── MeetingDetail.tsx    ← Single meeting view/edit (composition root)
 │   │   │   │   ├── Transcript.tsx       ← Transcript + timestamp chips
 │   │   │   │   ├── AIModel.tsx          ← Model selector UI
@@ -116,8 +118,12 @@ audio-transformer/
 │   │   │   │   ├── MeetingSidebar.tsx   ← Decisions/topics/action items
 │   │   │   │   ├── Section.tsx          ← Generic labeled section w/ icon
 │   │   │   │   └── SideSection.tsx      ← Generic sidebar section w/ icon
-│   │   │   ├── button.tsx               ← shadcn/ui Button
-│   │   │   ├── card.tsx                 ← shadcn/ui Card
+│   │   │   ├── settings/                ← Settings-page-only control wrappers
+│   │   │   │   ├── SettingSwitch.tsx    ← Wraps shadcn Switch (same external API)
+│   │   │   │   └── SegmentedControl.tsx ← Wraps shadcn ToggleGroup (same external API)
+│   │   │   ├── button.tsx, card.tsx, sidebar.tsx, switch.tsx, toggle-group.tsx,
+│   │   │   │   collapsible.tsx, tooltip.tsx, sheet.tsx, ...  ← shadcn/ui primitives (generated via the CLI —
+│   │   │   │                                                    see components.json for path aliases)
 │   │   │   ├── GlassSurface.tsx         ← Frosted glass container
 │   │   │   ├── live-waveform.tsx        ← Real-time audio waveform
 │   │   │   └── icons/                   ← Custom SVG icon components
@@ -130,16 +136,26 @@ audio-transformer/
 │   │   │   ├── useTranscriber.ts        ← Transcription state + IPC listeners
 │   │   │   ├── useNotificationFlow.ts   ← Notification state transitions
 │   │   │   ├── useNotifications.ts      ← Notification overlay state machine
-│   │   │   ├── useMeetings.ts           ← Meeting list CRUD state
+│   │   │   ├── useMeetings.ts           ← Meeting list CRUD state (the real implementation hook;
+│   │   │   │                               wrapped by MeetingsProvider, consumed via useMeetingsContext)
+│   │   │   ├── useMeetingsContext.ts    ← useContext(MeetingsContext) — throws outside MeetingsProvider
+│   │   │   ├── useSettingsNavContext.ts ← useContext(SettingsNavContext) — throws outside SettingsNavProvider
 │   │   │   ├── useMeetingDetector.ts    ← IPC listeners for meeting detection
 │   │   │   ├── useModelPreferences.ts   ← Model config get/set
 │   │   │   ├── useShortcuts.ts          ← Shortcut preferences
 │   │   │   ├── usePermissions.ts        ← Permission check/refresh
 │   │   │   └── useTranscriptHistory.ts  ← Legacy transcript history
 │   │   │
-│   │   ├── contexts/
+│   │   ├── contexts/                    ← One Context.ts (createContext + types) + one Provider.tsx
+│   │   │   │                               (owns the state) per domain; consumed via a useXContext() hook
+│   │   │   │                               in hooks/. Follow this pattern for new shared renderer state.
 │   │   │   ├── PermissionsContext.ts    ← Permission state context definition
-│   │   │   └── PermissionsProvider.tsx  ← Context provider wrapper
+│   │   │   ├── PermissionsProvider.tsx  ← Context provider wrapper
+│   │   │   ├── MeetingsContext.ts       ← Meeting list/selection context definition
+│   │   │   ├── MeetingsProvider.tsx     ← Wraps useMeetings(); shared by Sidebar + Meetings page
+│   │   │   ├── SettingsNavContext.ts    ← Settings active-pane context definition
+│   │   │   └── SettingsNavProvider.tsx  ← Wraps pane state (persisted to localStorage); shared by
+│   │   │                                   Sidebar (renders the nav) + Settings page (renders the pane)
 │   │   │
 │   │   ├── utils/
 │   │   │   ├── RecordingUtils.ts        ← Blob → Float32Array + IPC transcribe call
@@ -180,6 +196,66 @@ audio-transformer/
 ├── postcss.config.cjs                   ← PostCSS + Tailwind v4 plugin
 └── components.json                      ← shadcn/ui component generator config
 ```
+
+---
+
+## Sidebar Architecture
+
+There is exactly **one** app sidebar (`components/ui/Sidebar.tsx`), built on the
+shadcn Sidebar primitive (`components/sidebar.tsx`, generated via the CLI).
+It follows the shadcn docs' structure exactly:
+
+- `SidebarHeader` — app logo + status indicator only.
+- `SidebarContent` — a single `SidebarGroup` for **Meetings**: a collapsible
+  toggle (label + count + chevron) whose content is `MeetingList.tsx`
+  (search, grouped-by-date list, New Recording button). This is the region
+  that scrolls — see the overflow note below.
+- `SidebarFooter` — a collapsible **Settings** menu: a collapsible toggle
+  whose content is the General/Transcription/Recording/Audio/Privacy/
+  Permissions/Shortcuts nav (previously `Settings.tsx`'s own standalone
+  232px nav panel — that panel no longer exists; `Settings.tsx` now renders
+  only the active pane's content).
+
+Both the Meetings list and the Settings pane selection are state shared
+between the sidebar and their respective pages via context
+(`MeetingsProvider`/`SettingsNavProvider` — see `contexts/` above), not
+route params or local page state.
+
+**Two non-obvious constraints, both learned from real regressions — don't
+reintroduce them:**
+
+1. **Nav click and collapse-toggle are separate controls.** Each
+   Meetings/Settings row is *not* a single button that both navigates and
+   toggles open/closed. Clicking the row's icon/label always navigates
+   *and* forces the section open; only the separate chevron button
+   (`SidebarGroupAction` / `SidebarMenuAction`) toggles collapse. A combined
+   nav+toggle button flips closed on every repeat visit (the Electron app
+   and its Sidebar instance persist across e2e tests in the same file/worker,
+   so any flow that revisits a section — e.g. `navigateToSettings()` called
+   once per test — would land on a coin-flip closed state and time out
+   waiting for a hidden sub-item).
+2. **`SidebarProvider` and the single `SidebarTrigger` live in
+   `MainLayout.tsx`, not inside `Sidebar.tsx`.** The trigger sits in a slim
+   header bar in the main content pane, outside the collapsing sidebar
+   entirely, so it stays in a fixed screen location whether the sidebar is
+   expanded or collapsed to its icon rail — matching the shadcn docs
+   pattern. Putting the trigger inside the sidebar itself means it has to
+   live in two different places depending on collapse state (header when
+   expanded, footer icon-rail when collapsed), which visibly jumps around.
+
+**Overflow:** `SidebarContent` is the sidebar's only `flex-1 min-h-0
+overflow-auto` region. A long meeting list scrolls *inside* it; `SidebarHeader`
+and `SidebarFooter` are fixed/auto-height siblings, so Settings stays pinned
+and visible in the footer no matter how many meetings are loaded. If you
+add another big list to the sidebar, put it inside `SidebarContent` (not
+`SidebarHeader`/`SidebarFooter`) or it will either get clipped or push
+other sidebar sections off-screen.
+
+Also note: `index.html` sets `class="dark"` on `<html>`. The app has always
+been dark-themed via hardcoded hex colors scattered through components, but
+never applied Tailwind's `.dark` class — the shadcn primitives are
+CSS-variable-driven (`--sidebar`, `--sidebar-accent`, etc., defined in
+`App.css`) and render with the *light* palette without it.
 
 ---
 
