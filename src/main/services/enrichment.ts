@@ -1,5 +1,11 @@
-import structuredSummarizerService, { checkConnection } from '@/main/pipeline/structured-summarizer';
-import { updateMeeting, getMeetingById, getLMStudioPreferences } from '@/main/store';
+import structuredSummarizerService, {
+  checkConnection,
+} from '@/main/pipeline/structured-summarizer';
+import {
+  updateMeeting,
+  getMeetingById,
+  getLMStudioPreferences,
+} from '@/main/store';
 import { getMainWindow } from '@/main/state/volatile';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { log } from 'electron-log';
@@ -8,7 +14,9 @@ import { showNotification } from '@/main/notification-window';
 const LM_STUDIO_DEFAULT_PORT = '1234';
 const OLLAMA_DEFAULT_PORT = '11434';
 
-function getProviderName(baseUrl: string): 'LM Studio' | 'Ollama' | 'inference server' {
+function getProviderName(
+  baseUrl: string,
+): 'LM Studio' | 'Ollama' | 'inference server' {
   try {
     const port = new URL(baseUrl).port;
     if (port === LM_STUDIO_DEFAULT_PORT) return 'LM Studio';
@@ -17,7 +25,10 @@ function getProviderName(baseUrl: string): 'LM Studio' | 'Ollama' | 'inference s
   return 'inference server';
 }
 
-function getConnectivityNotification(baseUrl: string): { title: string; message: string } {
+function getConnectivityNotification(baseUrl: string): {
+  title: string;
+  message: string;
+} {
   const provider = getProviderName(baseUrl);
   if (provider === 'LM Studio') {
     return {
@@ -38,11 +49,15 @@ function getConnectivityNotification(baseUrl: string): { title: string; message:
 }
 
 class EnrichmentService {
-  private async getStructuredSummary(text: string, isMeeting: boolean) {
+  private async getStructuredSummary(
+    text: string,
+    type: 'meeting' | 'dictation',
+  ) {
     try {
-      const result = isMeeting
-        ? await structuredSummarizerService.summarizeChunked(text)
-        : await structuredSummarizerService.summarize(text);
+      const result =
+        type === 'meeting'
+          ? await structuredSummarizerService.summarizeChunked(text)
+          : await structuredSummarizerService.summarize(text);
       log('[EnrichmentService] Structured summarization complete');
       return result;
     } catch (error) {
@@ -51,8 +66,13 @@ class EnrichmentService {
     }
   }
 
-  private async enrichMeeting(meetingId: string, text: string, isMeeting: boolean, baseUrl: string): Promise<void> {
-    const result = await this.getStructuredSummary(text, isMeeting);
+  private async enrichMeeting(
+    meetingId: string,
+    text: string,
+    type: 'meeting' | 'dictation',
+    baseUrl: string,
+  ): Promise<void> {
+    const result = await this.getStructuredSummary(text, type);
     log('[EnrichmentService] Result:', JSON.stringify(result));
     const updated = updateMeeting(
       meetingId,
@@ -78,7 +98,8 @@ class EnrichmentService {
         const provider = getProviderName(baseUrl);
         showNotification({
           title: `Invalid response from ${provider}`,
-          message: 'The model returned an unexpected format. Check that your model supports JSON output.',
+          message:
+            'The model returned an unexpected format. Check that your model supports JSON output.',
           duration: 6000,
         });
       }
@@ -102,7 +123,12 @@ class EnrichmentService {
       return;
     }
 
-    return this.enrichMeeting(meetingId, meeting.transcript, meeting.isMeeting, baseUrl);
+    return this.enrichMeeting(
+      meetingId,
+      meeting.transcript,
+      meeting.type,
+      baseUrl,
+    );
   }
 }
 

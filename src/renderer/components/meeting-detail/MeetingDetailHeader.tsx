@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Check, Copy, Trash2 } from 'lucide-react';
-import type { Meeting } from '@/renderer/hooks/useMeetings';
+import type { Recording } from '@/renderer/hooks/useMeetings';
 import { MeetingKeyFacts } from './MeetingKeyFacts';
 
 interface MeetingDetailHeaderProps {
-  meeting: Meeting;
+  meeting: Recording;
   copied: boolean;
   onCopy: () => void;
   onDelete?: (id: string) => void;
@@ -39,7 +39,7 @@ export function MeetingDetailHeader({
   };
 
   return (
-    <div className="shrink-0 border-b border-[#222]">
+    <div className="shrink-0 border-b border-border">
       <div className="h-[3px] bg-gradient-to-r from-[#7c6ff7] to-[#a59ef5]" />
 
       <div className="px-8 pt-6 pb-6 space-y-5">
@@ -54,11 +54,11 @@ export function MeetingDetailHeader({
                 onChange={(e) => setTitleDraft(e.target.value)}
                 onBlur={handleTitleSave}
                 onKeyDown={handleTitleKeyDown}
-                className="text-2xl font-bold text-white bg-transparent border-b border-blue-500 outline-none w-full"
+                className="text-2xl font-bold text-foreground bg-transparent border-b border-primary outline-none w-full"
               />
             ) : (
               <h1
-                className="text-2xl font-bold text-white cursor-pointer hover:text-gray-200 transition-colors"
+                className="text-2xl font-bold text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
                 onClick={handleTitleClick}
                 title="Click to edit title"
               >
@@ -70,11 +70,11 @@ export function MeetingDetailHeader({
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onCopy}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 bg-[#2a2a2a] hover:bg-[#333] px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-muted hover:bg-accent px-3 py-1.5 rounded-lg transition-colors"
               title="Copy all"
             >
               {copied ? (
-                <Check size={13} className="text-green-400" />
+                <Check size={13} className="text-green-500" />
               ) : (
                 <Copy size={13} />
               )}
@@ -83,7 +83,7 @@ export function MeetingDetailHeader({
             {onDelete && (
               <button
                 onClick={() => onDelete(meeting.id)}
-                className="text-gray-600 hover:text-red-400 p-1.5 rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                className="text-muted-foreground hover:text-destructive p-1.5 rounded-lg hover:bg-muted transition-colors"
                 title="Delete meeting"
               >
                 <Trash2 size={14} />

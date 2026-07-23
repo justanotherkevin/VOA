@@ -32,7 +32,7 @@ export function MeetingTranscript({
               className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
                 tagStyle === 'pill'
                   ? 'bg-[#7c6ff7]/20 text-[#7c6ff7] border border-[#7c6ff7]/30'
-                  : 'text-gray-600 hover:text-gray-400'
+                  : 'text-muted-foreground hover:text-foreground/80'
               }`}
             >
               Pill
@@ -43,7 +43,7 @@ export function MeetingTranscript({
               className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
                 tagStyle === 'gutter'
                   ? 'bg-[#7c6ff7]/20 text-[#7c6ff7] border border-[#7c6ff7]/30'
-                  : 'text-gray-600 hover:text-gray-400'
+                  : 'text-muted-foreground hover:text-foreground/80'
               }`}
             >
               Gutter
@@ -53,7 +53,7 @@ export function MeetingTranscript({
       }
     >
       {transcript ? (
-        <div className="text-gray-400 text-sm font-mono leading-relaxed whitespace-pre-wrap">
+        <div className="text-muted-foreground text-sm font-mono leading-relaxed whitespace-pre-wrap">
           {hasTags ? (
             <TranscriptTagRenderer text={transcript} style={tagStyle} />
           ) : (
@@ -61,7 +61,9 @@ export function MeetingTranscript({
           )}
         </div>
       ) : (
-        <p className="text-gray-600 text-sm italic">No transcript available</p>
+        <p className="text-muted-foreground text-sm italic">
+          No transcript available
+        </p>
       )}
     </Section>
   );

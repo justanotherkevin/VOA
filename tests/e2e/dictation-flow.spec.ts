@@ -40,10 +40,10 @@ test.describe('Dictation Workflow', () => {
   }) => {
     test.setTimeout(20_000);
 
-    // STEP 1: Confirm the app starts with no meetings (store is seeded clean by fixtures)
+    // STEP 1: Confirm the app starts with no dictations (store is seeded clean by fixtures)
     await expect(
-      mainPage.locator('text=No meetings yet'),
-      'should start with empty meetings list',
+      mainPage.locator('text=No dictations yet'),
+      'should start with empty dictations list',
     ).toBeVisible({ timeout: 5000 });
     // STEP 2: Start recording
     await startRecording(mainPage, electronApp);
@@ -58,10 +58,10 @@ test.describe('Dictation Workflow', () => {
     // STEP 3: Stop recording → process audio to transcript
     await stopRecording(mainPage, electronApp);
 
-    // STEP 4: Wait for the meeting to appear in the UI and verify transcript content
+    // STEP 4: Wait for the dictation to appear in the UI and verify transcript content
     await expect(
-      mainPage.locator('text=No meetings yet'),
-      'meeting should have appeared in the list',
+      mainPage.locator('text=No dictations yet'),
+      'dictation should have appeared in the list',
     ).not.toBeVisible({ timeout: 15_000 });
 
     // Transcript lives under its own tab now — not visible on the default Overview tab.

@@ -25,6 +25,10 @@ All notable changes to VOA are documented here.
   - `SettingSwitch`/`SegmentedControl` now wrap shadcn's `Switch`/`ToggleGroup` internally (same external API, no call-site changes) — every toggle and segmented control across all Settings panes is now a real shadcn component.
   - See `docs/APP-ARCHITECTURE.md`'s new "Sidebar Architecture" section for the two non-obvious constraints this design relies on (nav-click vs. collapse-toggle must stay separate; `SidebarContent` is the only scrolling region).
 - **Isolated Whisper/onnxruntime inference into a dedicated `utilityProcess`** (`src/main/pipeline/whisper-process.ts` + `whisper-transcriber.ts`) — model load and inference now run in a separate OS process behind a thin FIFO-queued proxy, so a native `onnxruntime-node` crash can no longer take down the whole app. A fresh child process is spawned per model switch to work around a BFCArena allocator crash reproduced when reusing one process across distinct models. See `docs/whisper-onnxruntime-crash.md` for the investigation.
+- **Sidebar now groups recordings into separate "Meetings" and "Dictations" sections** (`MeetingList.tsx`), each still date-bucketed (Today/Yesterday/etc) as before, with an empty-state line under whichever section has none yet.
+  - The persisted entity's misleading `isMeeting: boolean` field is now `type: 'meeting' | 'dictation'` (`Meeting` interface renamed to `Recording` in `src/main/store.ts` and `src/renderer/hooks/useMeetings.ts`). Existing on-disk records are migrated once on store load (`runMigrations()` in `store.ts`).
+  - Search placeholder/empty-state copy updated to be type-neutral now that the list holds two kinds of recording.
+  - See `docs/APP-ARCHITECTURE.md`'s new "Recording type field" note for what the field drives. The `electronAPI.meetings` IPC namespace and `Meeting*` component/hook names are intentionally unchanged in this pass — a further "recording"→"capture" vocabulary rename (to free up "Recording" as an unambiguous entity name) is a separate, larger follow-up.
 
 ### Fixed
 

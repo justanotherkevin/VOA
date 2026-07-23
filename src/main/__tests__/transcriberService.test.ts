@@ -167,7 +167,7 @@ describe('TranscriberService - Helper Methods', () => {
   });
 
   describe('persistMeeting', () => {
-    it('saves meeting and sends completion callbacks when isMeeting=true', async () => {
+    it('saves meeting and sends completion callbacks when type=meeting', async () => {
       const { saveMeeting } = await import('@/main/store');
 
       const service = transcriberService as any;
@@ -178,7 +178,7 @@ describe('TranscriberService - Helper Methods', () => {
         2000,
         mockCallbacks,
         'mic',
-        true,
+        'meeting',
       );
 
       expect(saveMeeting).toHaveBeenCalledWith(
@@ -197,7 +197,7 @@ describe('TranscriberService - Helper Methods', () => {
       );
     });
 
-    it('skips structured summarizer and saves with summaryStatus ready when isMeeting=false', async () => {
+    it('skips structured summarizer and saves with summaryStatus ready when type=dictation', async () => {
       const { saveMeeting } = await import('@/main/store');
       const { default: summarizer } =
         await import('@/main/pipeline/structured-summarizer');
@@ -210,7 +210,7 @@ describe('TranscriberService - Helper Methods', () => {
         2000,
         mockCallbacks,
         'mic',
-        false,
+        'dictation',
       );
 
       expect(saveMeeting).toHaveBeenCalledWith(
@@ -219,7 +219,7 @@ describe('TranscriberService - Helper Methods', () => {
       expect(summarizer.summarize).not.toHaveBeenCalled();
     });
 
-    it('does not auto-call summarizer on persist when isMeeting=true (enrichment is on-demand)', async () => {
+    it('does not auto-call summarizer on persist when type=meeting (enrichment is on-demand)', async () => {
       const { default: summarizer } =
         await import('@/main/pipeline/structured-summarizer');
 
@@ -231,7 +231,7 @@ describe('TranscriberService - Helper Methods', () => {
         2000,
         mockCallbacks,
         'mic',
-        true,
+        'meeting',
       );
 
       await new Promise((r) => setTimeout(r, 0));

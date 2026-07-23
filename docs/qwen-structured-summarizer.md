@@ -8,14 +8,14 @@
 
 ## Model
 
-| Property | Value |
-|---|---|
-| Model ID | `onnx-community/Qwen2.5-1.5B-Instruct` |
-| Library | `@huggingface/transformers` v3 (Node.js build) |
-| Task | `text-generation` |
-| Quantization | `q8` → `model_quantized.onnx` (~900 MB) |
-| Format | ChatML (`<|im_start|>user … <|im_start|>assistant`) |
-| Cache path | `~/.cache/huggingface/hub/onnx-community/Qwen2.5-1.5B-Instruct/` |
+| Property     | Value                                                            |
+| ------------ | ---------------------------------------------------------------- |
+| Model ID     | `onnx-community/Qwen2.5-1.5B-Instruct`                           |
+| Library      | `@huggingface/transformers` v3 (Node.js build)                   |
+| Task         | `text-generation`                                                |
+| Quantization | `q8` → `model_quantized.onnx` (~900 MB)                          |
+| Format       | ChatML (`<                                                       | im_start | >user … < | im_start | >assistant`) |
+| Cache path   | `~/.cache/huggingface/hub/onnx-community/Qwen2.5-1.5B-Instruct/` |
 
 `q4` (`model_q4.onnx`, 1.7 GB) was tried first but caused `SIGTRAP` in the utility process. `q8` is the stable choice.
 
@@ -39,6 +39,7 @@ Main process (structured-summarizer.ts)
 ## Files Changed
 
 ### `src/main/pipeline/structured-summarizer-process.ts`
+
 Child process entry point. Runs inside `utilityProcess.fork()`.
 
 - Listens on `process.parentPort` for `config`, `initialize`, and `summarize` messages
@@ -46,6 +47,7 @@ Child process entry point. Runs inside `utilityProcess.fork()`.
 - Formats prompts using ChatML and extracts the assistant reply by slicing from the last `<|im_start|>assistant\n` marker
 
 ### `src/main/pipeline/structured-summarizer.ts`
+
 Parent service (singleton). Spawns and manages the child process.
 
 - `_processFactory` defaults to `utilityProcess.fork(scriptPath)`; overridable in tests via a fake object
@@ -53,23 +55,33 @@ Parent service (singleton). Spawns and manages the child process.
 - Handles child exit with a non-zero code as an unexpected crash (`_handleChildDeath`)
 
 ### `src/main/model-cache.ts`
+
 Detects whether the model is already downloaded so Settings can show "Delete" vs "Download".
 
 **Critical fix:** the `@huggingface/transformers` JS library writes to:
+
 ```
 {cacheDir}/{org}/{model}/          ← JS library format
 ```
+
 Not the Python hub format:
+
 ```
 {cacheDir}/models--{org}--{model}/  ← Python hub format (wrong)
 ```
 
 `QWEN_CACHE_PATH` was updated to use the JS format:
+
 ```ts
-const QWEN_CACHE_PATH = path.join(HF_CACHE_BASE, 'onnx-community', 'Qwen2.5-1.5B-Instruct');
+const QWEN_CACHE_PATH = path.join(
+  HF_CACHE_BASE,
+  'onnx-community',
+  'Qwen2.5-1.5B-Instruct',
+);
 ```
 
 ### `package.json`
+
 Added npm `overrides` to force `@huggingface/transformers` to use `onnxruntime-node@1.14.0`:
 
 ```json
@@ -93,6 +105,7 @@ Added npm `overrides` to force `@huggingface/transformers` to use `onnxruntime-n
 **Root cause:** `onnxruntime-node@1.21.0` (pinned by `@huggingface/transformers` v3.8.1) crashes in Electron's utility process. The same code runs fine in plain Node.js (e.g., Vitest).
 
 **Fix:** npm `overrides` → force `onnxruntime-node@1.14.0` inside `@huggingface/transformers`. After `npm install`, confirm with:
+
 ```
 npm ls onnxruntime-node
 # should show @huggingface/transformers → onnxruntime-node@1.14.0 overridden
@@ -117,6 +130,7 @@ npm ls onnxruntime-node
 ## Where Data Is Stored
 
 **Model files:**
+
 ```
 ~/.cache/huggingface/hub/onnx-community/Qwen2.5-1.5B-Instruct/
   onnx/model_quantized.onnx   (~900 MB)
@@ -126,10 +140,13 @@ npm ls onnxruntime-node
 ```
 
 **Meeting data (electron-store):**
+
 ```
 ~/Library/Application Support/voa/audio-to-text.json
 ```
+
 Each meeting object contains:
+
 ```json
 {
   "summaryStatus": "ready",
@@ -141,6 +158,7 @@ Each meeting object contains:
 ```
 
 To inspect directly:
+
 ```bash
 cat ~/Library/Application\ Support/voa/audio-to-text.json | python3 -m json.tool | less
 ```
@@ -149,6 +167,6 @@ cat ~/Library/Application\ Support/voa/audio-to-text.json | python3 -m json.tool
 
 ## Enrichment Gate
 
-Structured summarization only runs for recordings where `isMeeting === true`. This is set by `MeetingDetector` based on recording length and audio source. Short test recordings or dictations are skipped.
+Structured summarization only runs for recordings where `type === 'meeting'`. This is set by `MeetingDetector` based on recording length and audio source. Short test recordings or dictations (`type === 'dictation'`) are skipped.
 
 The transcript must also be at least 200 characters — shorter texts are skipped with a warning in the console.

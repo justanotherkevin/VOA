@@ -1,9 +1,9 @@
 import { Users } from 'lucide-react';
-import type { Meeting } from '@/renderer/hooks/useMeetings';
+import type { Recording } from '@/renderer/hooks/useMeetings';
 import { Section } from './Section';
 
 interface MeetingParticipantsTopicsProps {
-  meeting: Meeting;
+  meeting: Recording;
   summaryReady: boolean;
 }
 
@@ -21,14 +21,14 @@ export function MeetingParticipantsTopics({
       <div className="space-y-4">
         {showParticipants && (
           <div>
-            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Participants
             </div>
             <div className="flex flex-wrap gap-1.5">
               {meeting.participants.map((p, i) => (
                 <span
                   key={i}
-                  className="text-xs px-2.5 py-1 rounded-full border border-[#2a2a2a] text-gray-300"
+                  className="text-xs px-2.5 py-1 rounded-full border border-border text-foreground/80"
                 >
                   {p}
                 </span>
@@ -38,7 +38,7 @@ export function MeetingParticipantsTopics({
         )}
         {showTopics && (
           <div>
-            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Topics
             </div>
             <div className="flex flex-wrap gap-1.5">

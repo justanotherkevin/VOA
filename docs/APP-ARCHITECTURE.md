@@ -225,9 +225,9 @@ route params or local page state.
 reintroduce them:**
 
 1. **Nav click and collapse-toggle are separate controls.** Each
-   Meetings/Settings row is *not* a single button that both navigates and
+   Meetings/Settings row is _not_ a single button that both navigates and
    toggles open/closed. Clicking the row's icon/label always navigates
-   *and* forces the section open; only the separate chevron button
+   _and_ forces the section open; only the separate chevron button
    (`SidebarGroupAction` / `SidebarMenuAction`) toggles collapse. A combined
    nav+toggle button flips closed on every repeat visit (the Electron app
    and its Sidebar instance persist across e2e tests in the same file/worker,
@@ -244,7 +244,7 @@ reintroduce them:**
    expanded, footer icon-rail when collapsed), which visibly jumps around.
 
 **Overflow:** `SidebarContent` is the sidebar's only `flex-1 min-h-0
-overflow-auto` region. A long meeting list scrolls *inside* it; `SidebarHeader`
+overflow-auto` region. A long meeting list scrolls _inside_ it; `SidebarHeader`
 and `SidebarFooter` are fixed/auto-height siblings, so Settings stays pinned
 and visible in the footer no matter how many meetings are loaded. If you
 add another big list to the sidebar, put it inside `SidebarContent` (not
@@ -255,7 +255,7 @@ Also note: `index.html` sets `class="dark"` on `<html>`. The app has always
 been dark-themed via hardcoded hex colors scattered through components, but
 never applied Tailwind's `.dark` class — the shadcn primitives are
 CSS-variable-driven (`--sidebar`, `--sidebar-accent`, etc., defined in
-`App.css`) and render with the *light* palette without it.
+`App.css`) and render with the _light_ palette without it.
 
 ---
 
@@ -466,7 +466,11 @@ E2E tests use Playwright's Electron integration. Test seams are exposed through 
 
 **5. No shared types package between main and renderer**
 
-Types like `Meeting` are defined in `src/main/store.ts` and re-imported by the renderer. In a typical larger Electron app, a `src/shared/types/` folder holds interfaces that both processes import, making the contract explicit and avoiding indirect dependency chains across process boundaries.
+Types like `Recording` are defined independently in `src/main/store.ts` and `src/renderer/hooks/useMeetings.ts` (a duplicate, not a re-import). In a typical larger Electron app, a `src/shared/types/` folder holds interfaces that both processes import, making the contract explicit and avoiding indirect dependency chains across process boundaries.
+
+**Recording type field**
+
+The persisted `Recording` entity (`src/main/store.ts`) has a `type: 'meeting' | 'dictation'` field distinguishing a real meeting from a short dictation. It drives two things: whether structured enrichment runs on-demand (`summaryStatus` starts as `'not-started'` for meetings, `'ready'` for dictations — see `docs/qwen-structured-summarizer.md`), and how the sidebar (`MeetingList.tsx`) sections recordings ("Meetings" vs. "Dictations"). Records persisted before this field existed only had a boolean `isMeeting`; `runMigrations()` in `store.ts` rewrites those to `type` once, on store load.
 
 **6. `src/lib/` vs `src/renderer/utils/` distinction is clear**
 

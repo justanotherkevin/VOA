@@ -8,7 +8,7 @@ import {
   saveMeeting,
   getMeetingPreferences,
   saveMeetingPreferences,
-  Meeting,
+  Recording,
 } from '../store';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { getMainWindow } from '../state/volatile';
@@ -23,9 +23,12 @@ export function registerMeetingsHandlers() {
     return getMeetingById(id);
   });
 
-  ipcMain.handle(CHANNELS.MEETINGS.UPDATE, async (_event, id: string, patch: Record<string, unknown>) => {
-    return updateMeeting(id, patch as any);
-  });
+  ipcMain.handle(
+    CHANNELS.MEETINGS.UPDATE,
+    async (_event, id: string, patch: Record<string, unknown>) => {
+      return updateMeeting(id, patch as any);
+    },
+  );
 
   ipcMain.handle(CHANNELS.MEETINGS.DELETE, async (_event, id: string) => {
     return deleteMeeting(id);
@@ -41,24 +44,34 @@ export function registerMeetingsHandlers() {
     return getMeetingPreferences();
   });
 
-  ipcMain.handle(CHANNELS.MEETING_PREFERENCES.UPDATE, async (_event, prefs: Record<string, unknown>) => {
-    saveMeetingPreferences(prefs as any);
-    return { success: true };
-  });
+  ipcMain.handle(
+    CHANNELS.MEETING_PREFERENCES.UPDATE,
+    async (_event, prefs: Record<string, unknown>) => {
+      saveMeetingPreferences(prefs as any);
+      return { success: true };
+    },
+  );
 
-  ipcMain.handle(CHANNELS.MEETINGS.ENRICH, async (_event, meetingId: string) => {
-    updateMeeting(meetingId, { summaryStatus: 'pending' });
-    const updated = getMeetingById(meetingId);
-    if (updated) getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, updated);
-    void enrichmentService.triggerEnrichment(meetingId);
-    return { success: true };
-  });
+  ipcMain.handle(
+    CHANNELS.MEETINGS.ENRICH,
+    async (_event, meetingId: string) => {
+      updateMeeting(meetingId, { summaryStatus: 'pending' });
+      const updated = getMeetingById(meetingId);
+      if (updated)
+        getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, updated);
+      void enrichmentService.triggerEnrichment(meetingId);
+      return { success: true };
+    },
+  );
 
   if (process.env.E2E_TEST === 'true') {
-    ipcMain.handle('meetings:e2e-seed', async (_event, data: Omit<Meeting, 'id'>) => {
-      const saved = saveMeeting(data);
-      getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, saved);
-      return saved;
-    });
+    ipcMain.handle(
+      'meetings:e2e-seed',
+      async (_event, data: Omit<Recording, 'id'>) => {
+        const saved = saveMeeting(data);
+        getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, saved);
+        return saved;
+      },
+    );
   }
 }

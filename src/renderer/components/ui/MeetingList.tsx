@@ -1,17 +1,37 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Mic, Circle, Users } from 'lucide-react';
-import type { Meeting } from '@/renderer/hooks/useMeetings';
+import { Search, Mic } from 'lucide-react';
+import type { Recording } from '@/renderer/hooks/useMeetings';
 import {
   formatMeetingDate,
   formatMeetingShortDate,
   formatDurationShort,
 } from '@/renderer/utils/formatters';
+import { cn } from '@/renderer/utils/utils';
+import {
+  Item,
+  ItemGroup,
+  ItemContent,
+  ItemHeader,
+  ItemFooter,
+  ItemTitle,
+} from '@/renderer/components/item';
 
 interface MeetingListProps {
-  meetings: Meeting[];
+  meetings: Recording[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNewRecording: () => void;
+}
+
+// Group a list of recordings into date-labeled buckets (Today/Yesterday/etc).
+function groupByDate(items: Recording[]): Map<string, Recording[]> {
+  const map = new Map<string, Recording[]>();
+  for (const m of items) {
+    const label = formatMeetingDate(m.startedAt);
+    if (!map.has(label)) map.set(label, []);
+    map.get(label)!.push(m);
+  }
+  return map;
 }
 
 export function MeetingList({
@@ -33,51 +53,105 @@ export function MeetingList({
     );
   }, [meetings, search]);
 
-  // Group by date label
-  const grouped = useMemo(() => {
-    const map = new Map<string, Meeting[]>();
-    for (const m of filtered) {
-      const label = formatMeetingDate(m.startedAt);
-      if (!map.has(label)) map.set(label, []);
-      map.get(label)!.push(m);
-    }
-    return map;
-  }, [filtered]);
+  const meetingItems = useMemo(
+    () => filtered.filter((m) => m.type === 'meeting'),
+    [filtered],
+  );
+  const dictationItems = useMemo(
+    () => filtered.filter((m) => m.type === 'dictation'),
+    [filtered],
+  );
+  const meetingGroups = useMemo(
+    () => groupByDate(meetingItems),
+    [meetingItems],
+  );
+  const dictationGroups = useMemo(
+    () => groupByDate(dictationItems),
+    [dictationItems],
+  );
 
   return (
     <div className="flex flex-col">
       {/* Search */}
       <div className="px-1 pb-2">
-        <div className="flex items-center gap-2 bg-[#2a2a2a] rounded-lg px-3 py-2">
-          <Search size={14} className="text-gray-500 shrink-0" />
+        <div className="flex items-center gap-2 bg-sidebar-accent rounded-lg px-3 py-2">
+          <Search size={14} className="text-muted-foreground shrink-0" />
           <input
             type="text"
-            placeholder="Search meetings..."
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-transparent text-sm text-gray-300 placeholder-gray-500 outline-none w-full"
+            className="bg-transparent text-sm text-sidebar-foreground placeholder:text-muted-foreground outline-none w-full"
           />
         </div>
       </div>
 
       {/* List */}
       <div>
-        {filtered.length === 0 ? (
-          <div className="px-4 py-8 text-center">
-            <p className="text-sm text-gray-500">
-              {search ? 'No meetings match your search' : 'No meetings yet'}
-            </p>
-            {!search && (
-              <p className="text-xs text-gray-600 mt-1">
-                Press the shortcut to start recording
-              </p>
-            )}
-          </div>
-        ) : (
-          Array.from(grouped.entries()).map(([label, items]) => (
+        <RecordingTypeSection
+          heading="Meetings"
+          groups={meetingGroups}
+          emptyLabel={
+            search ? 'No meetings match your search' : 'No meetings yet'
+          }
+          selectedId={selectedId}
+          onSelect={onSelect}
+        />
+        <RecordingTypeSection
+          heading="Dictations"
+          groups={dictationGroups}
+          emptyLabel={
+            search ? 'No dictations match your search' : 'No dictations yet'
+          }
+          selectedId={selectedId}
+          onSelect={onSelect}
+        />
+      </div>
+
+      {/* New Recording button */}
+      <div className="px-1 pt-3 mt-2 border-t border-sidebar-border">
+        <button
+          onClick={onNewRecording}
+          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium py-2 px-3 rounded-lg transition-colors"
+        >
+          <Mic size={14} />
+          New Recording
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RecordingTypeSection({
+  heading,
+  groups,
+  emptyLabel,
+  selectedId,
+  onSelect,
+}: {
+  heading: string;
+  groups: Map<string, Recording[]>;
+  emptyLabel: string;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div>
+      <div className="px-3 pt-2 pb-1">
+        <span className="text-xs uppercase tracking-wide text-sidebar-foreground/40 font-semibold">
+          {heading}
+        </span>
+      </div>
+      {groups.size === 0 ? (
+        <div className="px-4 py-3">
+          <p className="text-sm text-muted-foreground">{emptyLabel}</p>
+        </div>
+      ) : (
+        <ItemGroup>
+          {Array.from(groups.entries()).map(([label, items]) => (
             <div key={label}>
               <div className="px-3 py-1.5">
-                <span className="text-xs text-gray-600 font-medium">
+                <span className="text-xs text-sidebar-foreground/60 font-medium">
                   {label}
                 </span>
               </div>
@@ -92,20 +166,9 @@ export function MeetingList({
                 />
               ))}
             </div>
-          ))
-        )}
-      </div>
-
-      {/* New Recording button */}
-      <div className="px-1 pt-3 mt-2 border-t border-[#2a2a2a]">
-        <button
-          onClick={onNewRecording}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
-        >
-          <Mic size={14} />
-          New Recording
-        </button>
-      </div>
+          ))}
+        </ItemGroup>
+      )}
     </div>
   );
 }
@@ -117,66 +180,73 @@ function MeetingRow({
   shortDate,
   duration,
 }: {
-  meeting: Meeting;
+  meeting: Recording;
   isSelected: boolean;
   onSelect: () => void;
   shortDate: string;
   duration: string;
 }) {
   return (
-    <button
-      onClick={onSelect}
-      className={`w-full text-left px-3 py-2.5 flex items-start gap-2 transition-colors group ${
+    <Item
+      asChild
+      size="sm"
+      className={cn(
+        'w-full cursor-pointer items-start rounded-none border-l-2 border-t-0 border-r-0 border-b-0',
         isSelected
-          ? 'bg-[#2a2a2a] border-l-2 border-blue-500'
-          : 'border-l-2 border-transparent hover:bg-[#222]'
-      }`}
+          ? 'border-l-primary bg-sidebar-accent'
+          : 'border-l-transparent hover:bg-sidebar-accent/50',
+      )}
     >
-      <span
-        className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${
-          isSelected ? 'bg-blue-500' : 'bg-gray-600'
-        }`}
-      />
-      <div className="flex-1 min-w-0" data-meeting-id={meeting.id}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm text-gray-200 truncate font-medium">
-              {meeting.title}
+      <button
+        onClick={onSelect}
+        data-meeting-id={meeting.id}
+        className="w-full text-left"
+      >
+        <ItemContent className="min-w-0 gap-1">
+          <ItemHeader>
+            <ItemTitle className="min-w-0 flex-1 text-sidebar-foreground">
+              <span className="block w-full truncate">{meeting.title}</span>
+            </ItemTitle>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {shortDate}
             </span>
-            <Circle
-              size={8}
-              className={`shrink-0 fill-current ${
-                meeting.summaryStatus === 'pending' ||
-                meeting.summaryStatus === 'not-started'
-                  ? 'text-yellow-400'
-                  : 'text-green-500'
-              }`}
-              title={
-                meeting.summaryStatus === 'pending'
-                  ? 'Generating summary…'
-                  : meeting.summaryStatus === 'not-started'
-                    ? 'Meeting insights available'
-                    : 'Summary ready'
-              }
-            />
-          </div>
-          <span className="text-xs text-gray-500 shrink-0">{shortDate}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {duration && (
-            <span className="text-xs text-gray-600">{duration}</span>
-          )}
-          {(meeting.isMeeting ?? meeting.audioSource !== 'mic') && (
-            <span
-              data-testid="meeting-type-badge"
-              className="flex items-center gap-0.5 text-[10px] text-indigo-400/70 font-medium"
-            >
-              <Users size={9} />
-              Meeting
-            </span>
-          )}
-        </div>
+          </ItemHeader>
+          <ItemFooter className="basis-auto justify-start gap-2">
+            <TagMarquee tags={meeting.topics} />
+            {duration && (
+              <span className="text-xs text-sidebar-foreground/60 shrink-0 tabular-nums">
+                {duration}
+              </span>
+            )}
+          </ItemFooter>
+        </ItemContent>
+      </button>
+    </Item>
+  );
+}
+
+function TagMarquee({ tags }: { tags: string[] }) {
+  if (tags.length === 0) return <span className="flex-1 min-w-0" />;
+
+  // Duplicate the tag list so the loop wraps seamlessly at the 50% mark;
+  // duration scales with tag count so denser rows don't scroll too fast.
+  const durationS = Math.max(26, tags.length * 2.2);
+
+  return (
+    <div className="flex-1 min-w-0 overflow-hidden">
+      <div
+        className="tag-marquee-track flex w-max gap-1.5"
+        style={{ animationDuration: `${durationS}s` }}
+      >
+        {[...tags, ...tags].map((tag, i) => (
+          <span
+            key={`${tag}-${i}`}
+            className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground"
+          >
+            {tag}
+          </span>
+        ))}
       </div>
-    </button>
+    </div>
   );
 }

@@ -17,9 +17,9 @@
  */
 
 import { Page } from '@playwright/test';
-import { Meeting } from '@/main/store';
+import { Recording } from '@/main/store';
 
-export async function getMeetings(page: Page): Promise<Meeting[]> {
+export async function getMeetings(page: Page): Promise<Recording[]> {
   return page.evaluate(async () =>
     (window as any).electronAPI.meetings.getAll(),
   );
@@ -56,8 +56,8 @@ export async function clearMeetings(page: Page): Promise<void> {
  */
 export async function seedMeeting(
   page: Page,
-  data: Omit<Meeting, 'id'>,
-): Promise<Meeting> {
+  data: Omit<Recording, 'id'>,
+): Promise<Recording> {
   return page.evaluate(async (meetingData) => {
     return (window as any).__e2eTestAPI.seedMeeting(meetingData);
   }, data as any);
@@ -70,9 +70,9 @@ export async function seedMeeting(
  */
 export async function seedMeetings(
   page: Page,
-  meetings: Omit<Meeting, 'id'>[],
-): Promise<Meeting[]> {
-  const saved: Meeting[] = [];
+  meetings: Omit<Recording, 'id'>[],
+): Promise<Recording[]> {
+  const saved: Recording[] = [];
   for (const data of meetings) {
     saved.push(await seedMeeting(page, data));
   }
