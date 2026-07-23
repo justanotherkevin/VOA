@@ -10,8 +10,11 @@ import {
 } from './TranscriptTagRenderer';
 import { MeetingDetailHeader } from '../meeting-detail/MeetingDetailHeader';
 import { MeetingOverview } from '../meeting-detail/MeetingOverview';
+import { MeetingDecisions } from '../meeting-detail/MeetingDecisions';
+import { MeetingActionItems } from '../meeting-detail/MeetingActionItems';
+import { MeetingParticipantsTopics } from '../meeting-detail/MeetingParticipantsTopics';
 import { MeetingTranscript } from '../meeting-detail/MeetingTranscript';
-import { MeetingSidebar } from '../meeting-detail/MeetingSidebar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../tabs';
 
 interface MeetingDetailProps {
   meeting: Meeting | null;
@@ -90,8 +93,19 @@ export function MeetingDetail({
         onTitleChange={onTitleChange}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+      <Tabs defaultValue="overview" className="flex-1 overflow-hidden gap-0">
+        <div className="px-8 pt-4 border-b border-[#222] shrink-0">
+          <TabsList variant="line">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="transcript">Transcript</TabsTrigger>
+            <TabsTrigger value="participants">Participants</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent
+          value="overview"
+          className="overflow-y-auto px-8 py-6 space-y-4"
+        >
           <MeetingOverview
             meeting={meeting}
             summaryReady={summaryReady}
@@ -101,22 +115,27 @@ export function MeetingDetail({
             tagStyle={tagStyle}
           />
 
+          <MeetingDecisions meeting={meeting} summaryReady={summaryReady} />
+
+          <MeetingActionItems meeting={meeting} />
+        </TabsContent>
+
+        <TabsContent value="transcript" className="overflow-y-auto px-8 py-6">
           <MeetingTranscript
             transcript={meeting.transcript}
             hasTags={hasTags}
             tagStyle={tagStyle}
             onTagStyleChange={handleTagStyleChange}
           />
-        </div>
+        </TabsContent>
 
-        <div className="max-w-56 shrink-0">
-          <MeetingSidebar
+        <TabsContent value="participants" className="overflow-y-auto px-8 py-6">
+          <MeetingParticipantsTopics
             meeting={meeting}
             summaryReady={summaryReady}
-            summaryPending={summaryPending}
           />
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

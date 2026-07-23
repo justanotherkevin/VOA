@@ -1,7 +1,12 @@
 /// <reference types="vitest/globals" />
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MeetingDetail } from '@/renderer/components/ui/MeetingDetail';
 import type { Meeting } from '@/renderer/hooks/useMeetings';
+
+function openParticipantsTab() {
+  // Radix Tabs activates on mousedown, not click.
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Participants' }));
+}
 
 vi.mock('@/renderer/components/ui/TranscriptTagRenderer', () => ({
   TranscriptTagRenderer: ({ text }: { text: string }) => <span>{text}</span>,
@@ -69,16 +74,20 @@ describe('sidebar column visibility', () => {
     render(<MeetingDetail meeting={BASE_MEETING} />);
 
     expect(screen.getByText('Key Decisions')).toBeInTheDocument();
-    expect(screen.getByText('Topics')).toBeInTheDocument();
     expect(screen.getByText('Action Items')).toBeInTheDocument();
+
+    openParticipantsTab();
+    expect(screen.getByText('Topics')).toBeInTheDocument();
   });
 
   it('hides sidebar entirely when all structured fields are empty and summary is ready', () => {
     render(<MeetingDetail meeting={emptyStructured()} />);
 
     expect(screen.queryByText('Key Decisions')).not.toBeInTheDocument();
-    expect(screen.queryByText('Topics')).not.toBeInTheDocument();
     expect(screen.queryByText('Action Items')).not.toBeInTheDocument();
+
+    openParticipantsTab();
+    expect(screen.queryByText('Topics')).not.toBeInTheDocument();
   });
 
   it('shows sidebar with spinner when summaryStatus is pending', () => {
@@ -97,6 +106,8 @@ describe('sidebar column visibility', () => {
 
     expect(screen.getByText('Action Items')).toBeInTheDocument();
     expect(screen.queryByText('Key Decisions')).not.toBeInTheDocument();
+
+    openParticipantsTab();
     expect(screen.queryByText('Topics')).not.toBeInTheDocument();
   });
 });
@@ -141,6 +152,7 @@ describe('Key Decisions section', () => {
 describe('Topics section', () => {
   it('renders each topic chip from the monologue fixture', () => {
     render(<MeetingDetail meeting={BASE_MEETING} />);
+    openParticipantsTab();
 
     expect(screen.getByText('payment schedule')).toBeInTheDocument();
     expect(screen.getByText('license agreement')).toBeInTheDocument();
@@ -150,6 +162,7 @@ describe('Topics section', () => {
 
   it('hides Topics when topics array is empty', () => {
     render(<MeetingDetail meeting={{ ...BASE_MEETING, topics: [] }} />);
+    openParticipantsTab();
 
     expect(screen.queryByText('Topics')).not.toBeInTheDocument();
   });

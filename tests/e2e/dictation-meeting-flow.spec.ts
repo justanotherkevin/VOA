@@ -129,13 +129,16 @@ test.describe('Meeting Dictation Flow', () => {
     ).toBeVisible({ timeout: 10_000 });
 
     await expect(
-      mainPage.locator('text=Topics'),
-      'Topics section should be visible',
-    ).toBeVisible({ timeout: 15_000 });
-
-    await expect(
       mainPage.locator('text=Action Items'),
       'Action Items section should be visible',
+    ).toBeVisible({ timeout: 15_000 });
+
+    // Topics now lives under the Participants tab. Exact match — "text=Topics"
+    // also matches the "Participants & Topics" section heading.
+    await mainPage.getByRole('tab', { name: 'Participants' }).click();
+    await expect(
+      mainPage.getByText('Topics', { exact: true }),
+      'Topics section should be visible',
     ).toBeVisible({ timeout: 15_000 });
 
     // Verify each section has actual content (mock Qwen produced at least one item)
@@ -253,10 +256,14 @@ test.describe('Meeting Dictation Flow', () => {
     pollActive = false;
     await statusPoller;
 
-    await expect(mainPage.locator('text=Topics')).toBeVisible({
+    await expect(mainPage.locator('text=Action Items')).toBeVisible({
       timeout: 30_000,
     });
-    await expect(mainPage.locator('text=Action Items')).toBeVisible({
+
+    // Topics now lives under the Participants tab. Exact match — "text=Topics"
+    // also matches the "Participants & Topics" section heading.
+    await mainPage.getByRole('tab', { name: 'Participants' }).click();
+    await expect(mainPage.getByText('Topics', { exact: true })).toBeVisible({
       timeout: 30_000,
     });
 
