@@ -7,6 +7,8 @@ import {
 } from 'react-router-dom';
 import { useTranscriber } from '@/renderer/hooks/useTranscriber';
 import { PermissionsProvider } from '@/renderer/contexts/PermissionsProvider';
+import { MeetingsProvider } from '@/renderer/contexts/MeetingsProvider';
+import { SettingsNavProvider } from '@/renderer/contexts/SettingsNavProvider';
 import MainLayout from '@/renderer/components/ui/MainLayout';
 import Meetings from '@/renderer/pages/Meetings';
 import Settings from '@/renderer/pages/Settings';
@@ -38,23 +40,27 @@ export default function App() {
     <PermissionsProvider>
       <Toaster />
       <Router initialEntries={['/']}>
-        <Routes>
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route
-            element={
-              <MainLayout status={status}>
-                <Outlet />
-              </MainLayout>
-            }
-          >
-            <Route
-              path="/"
-              element={<Meetings onNewRecording={handleNewRecording} />}
-            />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/permissions" element={<Permissions />} />
-          </Route>
-        </Routes>
+        <MeetingsProvider>
+          <SettingsNavProvider>
+            <Routes>
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route
+                element={
+                  <MainLayout
+                    status={status}
+                    onNewRecording={handleNewRecording}
+                  >
+                    <Outlet />
+                  </MainLayout>
+                }
+              >
+                <Route path="/" element={<Meetings />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/permissions" element={<Permissions />} />
+              </Route>
+            </Routes>
+          </SettingsNavProvider>
+        </MeetingsProvider>
       </Router>
     </PermissionsProvider>
   );

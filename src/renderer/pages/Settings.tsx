@@ -2,13 +2,8 @@ import './settings.css';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
-  Settings2,
-  Sparkles,
   CircleDot,
-  AudioLines,
   ShieldCheck,
-  LockKeyhole,
-  Keyboard,
   Search,
   Plus,
   Bell,
@@ -50,17 +45,9 @@ import { SegmentedControl } from '@/renderer/components/settings/SegmentedContro
 import ShortcutConfigDialog from '@/renderer/components/ui/ShortcutConfigDialog';
 import { useShortcuts } from '@/renderer/hooks/useShortcuts';
 import { usePermissions } from '@/renderer/hooks/usePermissions';
+import { useSettingsNavContext } from '@/renderer/hooks/useSettingsNavContext';
 import { APP_NAME, MODEL_META_DATA, CACHED_MODEL_META } from '@/lib/Constants';
 import { RECORDING_SHORTCUT } from '@/lib/shortcuts';
-
-type PaneId =
-  | 'general'
-  | 'transcription'
-  | 'recording'
-  | 'audio'
-  | 'privacy'
-  | 'permissions'
-  | 'shortcuts';
 
 function MeterDots({
   count,
@@ -165,14 +152,7 @@ function ModelInfoTooltip({
 }
 
 export default function Settings() {
-  const [activePane, setActivePane] = useState<PaneId>(
-    () => (localStorage.getItem('ats-pane') as PaneId) || 'recording',
-  );
-
-  const goPane = (p: PaneId) => {
-    setActivePane(p);
-    localStorage.setItem('ats-pane', p);
-  };
+  const { activePane } = useSettingsNavContext();
 
   const [autoRecordMode, setAutoRecordMode] = useState<
     'manual' | 'ask' | 'auto' | 'auto-stop'
@@ -414,36 +394,6 @@ export default function Settings() {
     { light: '#e0568a', dark: '#ff7aae' },
   ];
 
-  const sidebarItems: Array<{
-    id: PaneId;
-    label: string;
-    icon: any;
-    bg: string;
-  }> = [
-    { id: 'general', label: 'General', icon: Settings2, bg: '#8a8f98' },
-    {
-      id: 'transcription',
-      label: 'Transcription',
-      icon: Sparkles,
-      bg: '#7c5cff',
-    },
-    { id: 'recording', label: 'Recording', icon: CircleDot, bg: '#ef4d4d' },
-    { id: 'audio', label: 'Audio', icon: AudioLines, bg: '#2f6bed' },
-    {
-      id: 'privacy',
-      label: 'Privacy & Storage',
-      icon: ShieldCheck,
-      bg: '#1faa4d',
-    },
-    {
-      id: 'permissions',
-      label: 'Permissions',
-      icon: LockKeyhole,
-      bg: '#14b3c2',
-    },
-    { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard, bg: '#f0902e' },
-  ];
-
   return (
     <div
       className={`settings-root settings-${resolvedTheme}${uiPrefs.density === 'compact' ? ' settings-compact' : ''}`}
@@ -456,263 +406,6 @@ export default function Settings() {
         } as React.CSSProperties
       }
     >
-      <nav
-        style={{
-          width: 232,
-          background: 'var(--s-sidebar)',
-          borderRight: '0.5px solid var(--s-hair)',
-          padding: 12,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          overflowY: 'auto',
-          flexShrink: 0,
-        }}
-      >
-        <div
-          className="s-search"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            background: 'var(--s-field)',
-            border: '0.5px solid var(--s-field-line)',
-            borderRadius: 8,
-            padding: '6px 9px',
-            marginBottom: 8,
-          }}
-        >
-          <Search size={14} color="var(--s-text3)" style={{ flexShrink: 0 }} />
-          <input
-            placeholder="Search settings"
-            style={{
-              border: 0,
-              background: 'transparent',
-              outline: 0,
-              font: 'inherit',
-              fontSize: 13,
-              color: 'var(--s-text)',
-              width: '100%',
-            }}
-          />
-        </div>
-
-        {sidebarItems.slice(0, 2).map((item) => (
-          <button
-            key={item.id}
-            onClick={() => goPane(item.id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '7px 9px',
-              borderRadius: 7,
-              fontSize: 13.5,
-              fontWeight: 450,
-              border: 'none',
-              background:
-                activePane === item.id ? 'var(--s-accent)' : 'transparent',
-              color: activePane === item.id ? '#fff' : 'var(--s-text2)',
-              cursor: 'pointer',
-            }}
-          >
-            <div
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
-                background: item.bg,
-                display: 'grid',
-                placeItems: 'center',
-                color: '#fff',
-                flexShrink: 0,
-                boxShadow:
-                  activePane === item.id
-                    ? '0 0 0 1px rgba(255,255,255,.25) inset'
-                    : 'none',
-              }}
-            >
-              <item.icon size={14} />
-            </div>
-            <span style={{ color: 'inherit' }}>{item.label}</span>
-          </button>
-        ))}
-
-        <div
-          style={{
-            height: 1,
-            background: 'var(--s-hair)',
-            margin: '7px 6px',
-            border: 0,
-          }}
-        />
-        <div
-          style={{
-            fontSize: 10.5,
-            fontWeight: 600,
-            letterSpacing: '.7px',
-            textTransform: 'uppercase',
-            color: 'var(--s-text3)',
-            padding: '6px 9px 3px',
-          }}
-        >
-          CAPTURE
-        </div>
-
-        {sidebarItems.slice(2, 4).map((item) => (
-          <button
-            key={item.id}
-            onClick={() => goPane(item.id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '7px 9px',
-              borderRadius: 7,
-              fontSize: 13.5,
-              fontWeight: 450,
-              border: 'none',
-              background:
-                activePane === item.id ? 'var(--s-accent)' : 'transparent',
-              color: activePane === item.id ? '#fff' : 'var(--s-text2)',
-              cursor: 'pointer',
-            }}
-          >
-            <div
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
-                background: item.bg,
-                display: 'grid',
-                placeItems: 'center',
-                color: '#fff',
-                flexShrink: 0,
-                boxShadow:
-                  activePane === item.id
-                    ? '0 0 0 1px rgba(255,255,255,.25) inset'
-                    : 'none',
-              }}
-            >
-              <item.icon size={14} />
-            </div>
-            <span style={{ color: 'inherit' }}>{item.label}</span>
-          </button>
-        ))}
-
-        <div
-          style={{
-            height: 1,
-            background: 'var(--s-hair)',
-            margin: '7px 6px',
-            border: 0,
-          }}
-        />
-        <div
-          style={{
-            fontSize: 10.5,
-            fontWeight: 600,
-            letterSpacing: '.7px',
-            textTransform: 'uppercase',
-            color: 'var(--s-text3)',
-            padding: '6px 9px 3px',
-          }}
-        >
-          TRUST
-        </div>
-
-        {sidebarItems.slice(4, 6).map((item) => (
-          <button
-            key={item.id}
-            onClick={() => goPane(item.id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '7px 9px',
-              borderRadius: 7,
-              fontSize: 13.5,
-              fontWeight: 450,
-              border: 'none',
-              background:
-                activePane === item.id ? 'var(--s-accent)' : 'transparent',
-              color: activePane === item.id ? '#fff' : 'var(--s-text2)',
-              cursor: 'pointer',
-            }}
-          >
-            <div
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
-                background: item.bg,
-                display: 'grid',
-                placeItems: 'center',
-                color: '#fff',
-                flexShrink: 0,
-                boxShadow:
-                  activePane === item.id
-                    ? '0 0 0 1px rgba(255,255,255,.25) inset'
-                    : 'none',
-              }}
-            >
-              <item.icon size={14} />
-            </div>
-            <span style={{ color: 'inherit' }}>{item.label}</span>
-          </button>
-        ))}
-
-        <div
-          style={{
-            height: 1,
-            background: 'var(--s-hair)',
-            margin: '7px 6px',
-            border: 0,
-          }}
-        />
-
-        {sidebarItems.slice(6).map((item) => (
-          <button
-            key={item.id}
-            onClick={() => goPane(item.id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '7px 9px',
-              borderRadius: 7,
-              fontSize: 13.5,
-              fontWeight: 450,
-              border: 'none',
-              background:
-                activePane === item.id ? 'var(--s-accent)' : 'transparent',
-              color: activePane === item.id ? '#fff' : 'var(--s-text2)',
-              cursor: 'pointer',
-            }}
-          >
-            <div
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 6,
-                background: item.bg,
-                display: 'grid',
-                placeItems: 'center',
-                color: '#fff',
-                flexShrink: 0,
-                boxShadow:
-                  activePane === item.id
-                    ? '0 0 0 1px rgba(255,255,255,.25) inset'
-                    : 'none',
-              }}
-            >
-              <item.icon size={14} />
-            </div>
-            <span style={{ color: 'inherit' }}>{item.label}</span>
-          </button>
-        ))}
-      </nav>
-
       <div
         style={{
           flex: 1,

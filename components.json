@@ -12,11 +12,11 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
-    "lib": "@/lib",
-    "hooks": "@/hooks"
+    "components": "@/renderer/components",
+    "utils": "@/renderer/utils/utils",
+    "ui": "@/renderer/components",
+    "lib": "@/renderer/utils",
+    "hooks": "@/renderer/hooks"
   },
   "registries": {
     "@react-bits": "https://reactbits.dev/r/{name}.json"

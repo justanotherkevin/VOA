@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import Settings from '@/renderer/pages/Settings';
 import { MemoryRouter } from 'react-router-dom';
 import { RECORDING_SHORTCUT } from '@/lib/shortcuts';
+import type { SettingsPaneId } from '@/renderer/contexts/SettingsNavContext';
 
 vi.mock('@/renderer/hooks/useShortcuts', () => ({
   useShortcuts: () => ({
@@ -25,6 +26,17 @@ vi.mock('@/renderer/hooks/usePermissions', () => ({
   }),
 }));
 
+// Nav (pane switching) now lives in the app Sidebar, outside Settings.tsx —
+// mock the shared context directly so each test can render a specific pane
+// without needing a real Sidebar in the tree.
+let mockActivePane: SettingsPaneId = 'recording';
+vi.mock('@/renderer/hooks/useSettingsNavContext', () => ({
+  useSettingsNavContext: () => ({
+    activePane: mockActivePane,
+    goPane: vi.fn(),
+  }),
+}));
+
 describe('Settings Page', () => {
   const mockTranscriber = {
     output: null,
@@ -37,6 +49,7 @@ describe('Settings Page', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockActivePane = 'recording';
   });
 
   it('should render without crashing', async () => {
@@ -47,23 +60,6 @@ describe('Settings Page', () => {
     );
     await waitFor(() => {
       expect(screen.getAllByText('Recording').length).toBeGreaterThan(0);
-    });
-  });
-
-  it('should display sidebar navigation items', async () => {
-    render(
-      <MemoryRouter>
-        <Settings transcriber={mockTranscriber} />
-      </MemoryRouter>,
-    );
-    await waitFor(() => {
-      expect(screen.getAllByText('General').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Transcription').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Recording').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Audio').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Privacy & Storage').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Permissions').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Shortcuts').length).toBeGreaterThan(0);
     });
   });
 
@@ -78,15 +74,13 @@ describe('Settings Page', () => {
     });
   });
 
-  it('should navigate to Transcription pane and show model options', async () => {
+  it('should show Transcription pane and model options when active', async () => {
+    mockActivePane = 'transcription';
     render(
       <MemoryRouter>
         <Settings transcriber={mockTranscriber} />
       </MemoryRouter>,
     );
-
-    const transcriptionBtn = await screen.findAllByText('Transcription');
-    fireEvent.click(transcriptionBtn[0]);
 
     await waitFor(() => {
       expect(screen.getAllByText('Tiny').length).toBeGreaterThan(0);
@@ -96,15 +90,13 @@ describe('Settings Page', () => {
     });
   });
 
-  it('should navigate to Permissions pane and show permission status', async () => {
+  it('should show Permissions pane and permission status when active', async () => {
+    mockActivePane = 'permissions';
     render(
       <MemoryRouter>
         <Settings transcriber={mockTranscriber} />
       </MemoryRouter>,
     );
-
-    const permissionsBtn = await screen.findAllByText('Permissions');
-    fireEvent.click(permissionsBtn[0]);
 
     await waitFor(() => {
       expect(screen.getByText('Microphone')).toBeDefined();
@@ -112,15 +104,13 @@ describe('Settings Page', () => {
     });
   });
 
-  it('should navigate to Shortcuts pane and show recording shortcut', async () => {
+  it('should show Shortcuts pane and recording shortcut when active', async () => {
+    mockActivePane = 'shortcuts';
     render(
       <MemoryRouter>
         <Settings transcriber={mockTranscriber} />
       </MemoryRouter>,
     );
-
-    const shortcutsBtn = await screen.findAllByText('Shortcuts');
-    fireEvent.click(shortcutsBtn[0]);
 
     await waitFor(() => {
       expect(screen.getByText('Start / stop recording')).toBeDefined();
