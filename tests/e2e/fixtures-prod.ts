@@ -9,10 +9,11 @@
  *   // Tests don't import this directly
  */
 
-import { test as base, expect, _electron as electron, Page } from '@playwright/test';
+import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
-import { e2eConfig } from './config';
+import { e2eConfig } from '@e2e/config';
+import { launchElectronApp } from '@e2e/utils/common.helpers';
 
 type ElectronFixtures = {
   electronApp: any;
@@ -50,7 +51,7 @@ async function getMainWindow(electronApp: any): Promise<Page> {
         mainWindow = await new Promise<Page>((resolve, reject) => {
           const timeout = setTimeout(
             () => reject(new Error('Timeout waiting for main window')),
-            15000
+            15000,
           );
 
           electronApp.on('window', (window: Page) => {
@@ -112,14 +113,7 @@ function cleanupElectronStore(): void {
 export const test = base.extend<ElectronFixtures>({
   electronApp: [
     async ({}, use) => {
-      const app = await electron.launch({
-        args: [path.join(__dirname, '../../dist/main/main.js')],
-        env: {
-          ...process.env,
-          NODE_ENV: 'production',
-          E2E_TEST: 'true',
-        },
-      });
+      const app = await launchElectronApp({ NODE_ENV: 'production' });
 
       await use(app);
       await app.close();
@@ -139,7 +133,10 @@ export const test = base.extend<ElectronFixtures>({
       try {
         await mainWindow.waitForLoadState('networkidle', { timeout: 15000 });
       } catch (loadError) {
-        console.warn('[fixtures-prod] Timeout waiting for page load:', loadError);
+        console.warn(
+          '[fixtures-prod] Timeout waiting for page load:',
+          loadError,
+        );
       }
 
       await use(mainWindow);

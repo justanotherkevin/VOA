@@ -74,6 +74,7 @@ vi.mock('@/main/pipeline/structured-summarizer', () => ({
 
 vi.mock('@/main/pipeline/text-cleaner', () => ({
   cleanText: vi.fn((text: string) => text),
+  stripNonSpeechTags: vi.fn((text: string) => text),
 }));
 
 vi.mock('@/main/util', () => ({
@@ -291,6 +292,198 @@ describe('TranscriberService — dual-source merge (mic + system)', () => {
       expect.objectContaining({
         transcript: '[Meeting] first spoken [Mic] second spoken',
         audioSource: 'both',
+      }),
+    );
+  });
+});
+
+describe('TranscriberService — dictation-shortcut paste-on-complete', () => {
+  const callbacks = createTranscriberCallbacks();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetTranscriberSessionState();
+  });
+
+  it('still pastes when the trailing segment arrives late (after endSession already ran)', async () => {
+    // Regression test: a short dictation utterance whose transcription is
+    // still in flight when the stop-shortcut's endSession() fires used to
+    // silently lose the paste entirely — the segment took the late-segment
+    // recovery path, which never checked pasteOnComplete.
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+    const { saveMeeting } = await import('@/main/store');
+
+    transcriberService.beginSession(1000, 'dictation', {
+      pasteOnComplete: true,
+    });
+    // Session ends before the in-flight segment has been pushed — mirrors the
+    // real race where whisper is still transcribing when the shortcut stops.
+    await transcriberService.endSession(2000, callbacks);
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+
+    // The segment finally resolves and arrives "late".
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
+
+    expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
+    expect(pasteTextToActiveWindow).toHaveBeenCalledWith('transcribed text');
+    expect(saveMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({ transcript: 'transcribed text' }),
+    );
+  });
+
+  it('does not double-paste when a late segment is appended to an already-saved dictation meeting', async () => {
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+
+    transcriberService.beginSession(1000, 'dictation', {
+      pasteOnComplete: true,
+    });
+    const svc = transcriberService as any;
+    svc.sessionSegments.push({
+      text: 'first segment',
+      startedAt: 1000,
+      source: 'mic',
+    });
+    svc.sessionSources.add('mic');
+    await transcriberService.endSession(2000, callbacks);
+    expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
+
+    const { getMeetingById } = await import('@/main/store');
+    (getMeetingById as any).mockReturnValueOnce(mockExistingMeeting());
+
+    // A second, late-arriving segment for the same session — should append,
+    // not re-paste (the combined text was already pasted once above).
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
+
+    expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
+  });
+
+  it('pastes the full combined transcript exactly once at endSession when pasteOnComplete is true', async () => {
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+
+    transcriberService.beginSession(1000, 'dictation', {
+      pasteOnComplete: true,
+    });
+    const svc = transcriberService as any;
+    svc.sessionSegments.push(
+      { text: 'first segment', startedAt: 1000, source: 'mic' },
+      { text: 'second segment', startedAt: 2000, source: 'mic' },
+    );
+    svc.sessionSources.add('mic');
+    await transcriberService.endSession(3000, callbacks);
+
+    expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
+    expect(pasteTextToActiveWindow).toHaveBeenCalledWith(
+      'first segment second segment',
+    );
+  });
+
+  it('does not paste when pasteOnComplete is false (regular recording-shortcut sessions)', async () => {
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+
+    await seedAndEndSession(
+      [{ text: 'some transcript', startedAt: 1000, source: 'mic' }],
+      callbacks,
+      { endedAt: 2000 },
+    );
+
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+  });
+
+  it('does not paste an empty transcript even when pasteOnComplete is true', async () => {
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+
+    transcriberService.beginSession(1000, 'dictation', {
+      pasteOnComplete: true,
+    });
+    await transcriberService.endSession(2000, callbacks);
+
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+  });
+
+  it('resets pasteOnComplete after a session ends so it does not leak into the next session', async () => {
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+
+    transcriberService.beginSession(1000, 'dictation', {
+      pasteOnComplete: true,
+    });
+    const svc = transcriberService as any;
+    svc.sessionSegments.push({
+      text: 'dictated text',
+      startedAt: 1000,
+      source: 'mic',
+    });
+    svc.sessionSources.add('mic');
+    await transcriberService.endSession(2000, callbacks);
+    expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
+
+    // A subsequent regular recording-toggle session (no pasteOnComplete) must not paste.
+    await seedAndEndSession(
+      [{ text: 'meeting text', startedAt: 3000, source: 'mic' }],
+      callbacks,
+      { startedAt: 3000, endedAt: 4000 },
+    );
+
+    expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('TranscriberService — non-speech segment filtering', () => {
+  const callbacks = createTranscriberCallbacks();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetTranscriberSessionState();
+  });
+
+  it('discards a segment that is pure non-speech (e.g. "[BLANK_AUDIO]") without saving or pasting', async () => {
+    const { stripNonSpeechTags } = await import('@/main/pipeline/text-cleaner');
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+    const { saveMeeting } = await import('@/main/store');
+    (stripNonSpeechTags as any).mockReturnValueOnce('');
+
+    transcriberService.beginSession(1000, 'dictation', {
+      pasteOnComplete: true,
+    });
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'system' },
+      callbacks,
+    );
+    await transcriberService.endSession(2000, callbacks);
+
+    expect(saveMeeting).not.toHaveBeenCalled();
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+  });
+
+  it('keeps real speech segments while discarding non-speech ones in the same session', async () => {
+    const { stripNonSpeechTags } = await import('@/main/pipeline/text-cleaner');
+    const { saveMeeting } = await import('@/main/store');
+    (stripNonSpeechTags as any)
+      .mockReturnValueOnce('') // system audio: pure noise, e.g. "[BLANK_AUDIO]"
+      .mockReturnValueOnce('transcribed text'); // mic: real speech
+
+    transcriberService.beginSession(1000);
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'system' },
+      callbacks,
+    );
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
+    await transcriberService.endSession(2000, callbacks);
+
+    expect(saveMeeting).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transcript: 'transcribed text',
+        // System contributed nothing real, so it's not counted as a source
+        // and the transcript isn't tagged as dual-source.
+        audioSource: 'mic',
       }),
     );
   });

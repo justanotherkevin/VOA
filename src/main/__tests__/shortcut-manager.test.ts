@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { globalShortcut } from 'electron';
 import { ShortcutManager } from '../shortcut-manager';
-import { getShortcuts, updateRecordingToggleShortcut } from '../store';
+import {
+  getShortcuts,
+  updateRecordingToggleShortcut,
+  updateDictationToggleShortcut,
+} from '../store';
 
 vi.mock('electron', () => ({
   globalShortcut: {
@@ -25,6 +29,7 @@ vi.mock('electron-log', () => ({
 vi.mock('../store', () => ({
   getShortcuts: vi.fn(),
   updateRecordingToggleShortcut: vi.fn(),
+  updateDictationToggleShortcut: vi.fn(),
   getModelPreferences: vi.fn(),
 }));
 
@@ -52,10 +57,17 @@ describe('ShortcutManager', () => {
   describe('register', () => {
     it('should register a global shortcut', () => {
       const handler = vi.fn();
-      const success = shortcutManager.register('Cmd+Shift+X', 'Test shortcut', handler);
+      const success = shortcutManager.register(
+        'Cmd+Shift+X',
+        'Test shortcut',
+        handler,
+      );
 
       expect(success).toBe(true);
-      expect(globalShortcut.register).toHaveBeenCalledWith('Cmd+Shift+X', handler);
+      expect(globalShortcut.register).toHaveBeenCalledWith(
+        'Cmd+Shift+X',
+        handler,
+      );
     });
   });
 
@@ -72,6 +84,43 @@ describe('ShortcutManager', () => {
       expect(updateRecordingToggleShortcut).toHaveBeenCalledWith(newShortcut);
 
       expect(globalShortcut.register).toHaveBeenCalled();
+    });
+  });
+
+  describe('updateDictationShortcut', () => {
+    it('should unregister the old dictation shortcut and register the new one', () => {
+      const oldShortcut = 'F2';
+      const newShortcut = 'F3';
+
+      (getShortcuts as any).mockReturnValue({ dictationToggle: oldShortcut });
+
+      shortcutManager.updateDictationShortcut(newShortcut);
+
+      expect(globalShortcut.unregister).toHaveBeenCalledWith(oldShortcut);
+      expect(updateDictationToggleShortcut).toHaveBeenCalledWith(newShortcut);
+
+      expect(globalShortcut.register).toHaveBeenCalled();
+    });
+  });
+
+  describe('setupDefaultShortcuts', () => {
+    it('registers both the recording and dictation shortcuts independently', () => {
+      (getShortcuts as any).mockReturnValue({
+        recordingToggle: 'Cmd+Shift+Space',
+        dictationToggle: 'F2',
+      });
+
+      shortcutManager.setupDefaultShortcuts();
+
+      expect(globalShortcut.register).toHaveBeenCalledWith(
+        'Cmd+Shift+Space',
+        expect.any(Function),
+      );
+      expect(globalShortcut.register).toHaveBeenCalledWith(
+        'F2',
+        expect.any(Function),
+      );
+      expect(globalShortcut.register).toHaveBeenCalledTimes(2);
     });
   });
 });

@@ -5,6 +5,7 @@ import {
   formatMeetingDate,
   formatMeetingShortDate,
   formatDurationShort,
+  formatRecordingDate,
 } from '@/renderer/utils/formatters';
 import { cn } from '@/renderer/utils/utils';
 import {
@@ -205,7 +206,11 @@ function MeetingRow({
         <ItemContent className="min-w-0 gap-1">
           <ItemHeader>
             <ItemTitle className="min-w-0 flex-1 text-sidebar-foreground">
-              <span className="block w-full truncate">{meeting.title}</span>
+              <span className="block w-full truncate">
+                {meeting.type === 'dictation'
+                  ? formatRecordingDate(meeting.startedAt)
+                  : meeting.title}
+              </span>
             </ItemTitle>
             <span className="text-xs text-muted-foreground shrink-0">
               {shortDate}

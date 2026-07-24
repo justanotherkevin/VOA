@@ -35,10 +35,14 @@ export const CHANNELS = {
   SHORTCUTS: {
     GET: 'shortcuts:get',
     UPDATE_RECORDING_TOGGLE: 'shortcuts:updateRecordingToggle',
+    UPDATE_DICTATION_TOGGLE: 'shortcuts:updateDictationToggle',
     TRIGGERED: 'shortcut:triggered',
   },
   RECORDING: {
     TOGGLE: 'recording:toggle',
+  },
+  DICTATION: {
+    TOGGLE: 'dictation:toggle',
   },
   MODEL: {
     PREFERENCES_GET: 'modelPreferences:get',

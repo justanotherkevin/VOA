@@ -43,8 +43,14 @@ const electronAPI = {
   transcriber: {
     start: (options?: unknown) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.START, options),
-    startSession: (startedAt: number) =>
-      ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_START, { startedAt }),
+    startSession: (
+      startedAt: number,
+      options?: { forceType?: 'dictation'; pasteOnComplete?: boolean },
+    ) =>
+      ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_START, {
+        startedAt,
+        ...options,
+      }),
     endSession: (endedAt: number) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_END, { endedAt }),
     initiate: (payload?: unknown) =>
@@ -103,11 +109,18 @@ const electronAPI = {
           CHANNELS.SHORTCUTS.UPDATE_RECORDING_TOGGLE,
           shortcut,
         ),
+      updateDictationToggle: (shortcut: string) =>
+        ipcRenderer.invoke(
+          CHANNELS.SHORTCUTS.UPDATE_DICTATION_TOGGLE,
+          shortcut,
+        ),
       on: {
         triggered: (cb: (...args: unknown[]) => void) =>
           subscribe(CHANNELS.SHORTCUTS.TRIGGERED, cb),
         recordingToggle: (cb: (...args: unknown[]) => void) =>
           subscribe(CHANNELS.RECORDING.TOGGLE, cb),
+        dictationToggle: (cb: (...args: unknown[]) => void) =>
+          subscribe(CHANNELS.DICTATION.TOGGLE, cb),
       },
     },
     model: {

@@ -48,6 +48,14 @@ export function formatMeetingShortDate(ts: number): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+export function formatRecordingDate(ts: number): string {
+  return new Date(ts).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export function formatDurationShort(ms: number): string {
   if (!ms) return '';
   const totalSec = Math.floor(ms / 1000);

@@ -168,7 +168,12 @@ app
             CHANNELS.TRANSCRIBER.ERROR,
             result.message,
           );
+          return;
         }
+        // Without this, the "Loading model… 100%" toast the renderer showed
+        // from the progress broadcasts above never resolves — it's only
+        // ever cleared by a transcriber:ready or transcriber:error broadcast.
+        getMainWindow()?.webContents.send(CHANNELS.TRANSCRIBER.READY);
       })
       .catch((err) => log('[main] Eager model preload threw:', err));
 

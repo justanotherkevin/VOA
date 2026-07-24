@@ -8,7 +8,7 @@ import {
   generateTitle,
   type ModelPreferences,
 } from '@/main/store';
-import { cleanText } from '@/main/pipeline/text-cleaner';
+import { stripNonSpeechTags } from '@/main/pipeline/text-cleaner';
 import { pasteTextToActiveWindow, shouldPasteText } from '@/main/util';
 import { getMainWindow } from '@/main/state/volatile';
 import { CHANNELS } from '@/lib/ipc-channels';
@@ -64,6 +64,7 @@ class TranscriberService {
     endedAt: number;
     type: 'meeting' | 'dictation';
     endedAtMs: number;
+    pasteOnComplete: boolean;
   } | null = null;
   private sessionSegments: Array<{
     text: string;
@@ -73,6 +74,7 @@ class TranscriberService {
   private sessionChunks: any[] = [];
   private sessionStartedAt: number | null = null;
   private sessionSources: Set<'mic' | 'system'> = new Set();
+  private pasteOnComplete = false;
 
   // Proactive calendar match state, resolved at session start (see
   // checkCalendarMatch) and consumed by persistMeeting when the session
@@ -91,6 +93,7 @@ class TranscriberService {
   beginSession(
     startedAt: number,
     type: 'meeting' | 'dictation' = 'dictation',
+    options?: { pasteOnComplete?: boolean },
   ): void {
     this.sessionActive = true;
     this.sessionType = type;
@@ -98,6 +101,7 @@ class TranscriberService {
     this.sessionSegments = [];
     this.sessionChunks = [];
     this.sessionSources = new Set();
+    this.pasteOnComplete = options?.pasteOnComplete ?? false;
 
     this.calendarMatches = [];
     this.calendarMatchDecision = 'pending';
@@ -207,13 +211,19 @@ class TranscriberService {
     this.sessionActive = false;
     const type = this.sessionType;
     this.sessionType = 'dictation';
+    const shouldPasteOnComplete = this.pasteOnComplete;
+    this.pasteOnComplete = false;
 
-    // Snapshot meta for late-segment recovery before clearing state
+    // Snapshot meta for late-segment recovery before clearing state — a
+    // trailing segment that's still transcribing when the session ends
+    // arrives via recoverLateSegment() below instead of this method, so it
+    // needs pasteOnComplete carried along to still honor the dictation paste.
     this.lastSessionMeta = {
       startedAt: this.sessionStartedAt!,
       endedAt,
       type,
       endedAtMs: Date.now(),
+      pasteOnComplete: shouldPasteOnComplete,
     };
     this.lastSavedMeetingId = null;
 
@@ -244,6 +254,12 @@ class TranscriberService {
     else if (sources.has('system')) audioSource = 'system';
 
     if (fullText) {
+      if (shouldPasteOnComplete) {
+        log(
+          `[TranscriberService] Pasting combined dictation transcript (${fullText.length} chars) on session end`,
+        );
+        pasteTextToActiveWindow(fullText);
+      }
       await this.persistMeeting(
         fullText,
         allChunks,
@@ -520,7 +536,18 @@ class TranscriberService {
       return;
     }
 
-    // Session ended with empty buffer — create the meeting now from this late segment
+    // Session ended with empty buffer — create the meeting now from this late segment.
+    // A dictation session's trailing segment commonly lands here (it was still
+    // transcribing when the shortcut's stop press ended the session), so honor
+    // the paste-on-complete intent here too — otherwise dictated text silently
+    // never reaches the clipboard/active window at all.
+    if (meta.pasteOnComplete) {
+      log(
+        `[TranscriberService] Pasting late-recovered dictation transcript (${outputText.length} chars)`,
+      );
+      pasteTextToActiveWindow(outputText);
+    }
+
     const meeting = saveMeeting({
       title: generateTitle(outputText),
       startedAt: meta.startedAt,
@@ -605,9 +632,14 @@ class TranscriberService {
         return 'Failed to transcribe audio';
       }
 
-      const { outputText, outputChunks } = result;
+      const { outputText: rawOutputText, outputChunks } = result;
+      // Strips Whisper's own non-speech hallucination tags (e.g.
+      // "[BLANK_AUDIO]") — a segment that's just silence/noise cleans down to
+      // an empty string and is treated as no speech at all rather than
+      // saved/pasted verbatim.
+      const outputText = stripNonSpeechTags(rawOutputText);
 
-      if (shouldPasteText()) {
+      if (shouldPasteText() && outputText) {
         log(
           `[TranscriberService] Pasting text (${outputText.length} chars, session: ${this.sessionActive}): "${outputText.slice(0, 60)}${outputText.length > 60 ? '...' : ''}"`,
         );
@@ -615,20 +647,28 @@ class TranscriberService {
       }
 
       if (!this.sessionActive) {
-        await this.recoverLateSegment(outputText, outputChunks, source);
+        if (outputText) {
+          await this.recoverLateSegment(outputText, outputChunks, source);
+        }
         return { text: outputText, chunks: outputChunks };
       }
 
-      this.sessionSegments.push({
-        text: outputText,
-        startedAt: recordingStartedAt,
-        source,
-      });
-      this.sessionSources.add(source);
-      this.sessionChunks.push(...outputChunks);
-      log(
-        `[TranscriberService] Segment appended to session buffer (${this.sessionSegments.length} segments so far, source: ${source})`,
-      );
+      if (outputText) {
+        this.sessionSegments.push({
+          text: outputText,
+          startedAt: recordingStartedAt,
+          source,
+        });
+        this.sessionSources.add(source);
+        this.sessionChunks.push(...outputChunks);
+        log(
+          `[TranscriberService] Segment appended to session buffer (${this.sessionSegments.length} segments so far, source: ${source})`,
+        );
+      } else {
+        log(
+          `[TranscriberService] Segment discarded — no speech after cleaning (source: ${source})`,
+        );
+      }
       callbacks.onComplete({
         status: 'complete',
         task: 'automatic-speech-recognition',

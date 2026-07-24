@@ -1,9 +1,88 @@
-import { Page, ElectronApplication, expect } from '@playwright/test';
+import {
+  Page,
+  ElectronApplication,
+  expect,
+  _electron as electron,
+} from '@playwright/test';
+import path from 'path';
+import fs from 'fs';
+import { e2eConfig } from '@e2e/config';
+import { DEFAULT_SHORTCUTS } from '@/main/store';
 
 /**
  * Generic element selectors and interactions
  * These helpers can be used across all e2e tests
  */
+
+// Anchored to this file's own location (tests/e2e/utils/) rather than each
+// caller's __dirname, so the path to the built main process can't drift when
+// a spec file moves to a different directory depth.
+const MAIN_JS_PATH = path.join(__dirname, '../../../dist/main/main.js');
+
+/**
+ * Path to a named electron-store JSON file in the e2e app store directory.
+ */
+export function getStoreFilePath(storeName: string): string {
+  return path.join(e2eConfig.appStorePath, `${storeName}.json`);
+}
+
+/**
+ * Write a named electron-store JSON file with the default fixture data
+ * (empty meetings, default shortcuts, tiny Whisper model already warm in
+ * the local transformers.js cache) so a fresh app launch reads known state.
+ */
+export function writeE2eTestStore(storeName: string): void {
+  if (!fs.existsSync(e2eConfig.appStorePath)) {
+    fs.mkdirSync(e2eConfig.appStorePath, { recursive: true });
+  }
+  fs.writeFileSync(
+    getStoreFilePath(storeName),
+    JSON.stringify(
+      {
+        meetings: [],
+        meetingsMigrated: true,
+        shortcuts: DEFAULT_SHORTCUTS,
+        modelPreferences: {
+          selectedModel: 'Xenova/whisper-tiny',
+          multilingual: false,
+          quantized: false,
+          language: 'english',
+          asrType: 'whisper',
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+/**
+ * Remove a single named electron-store JSON file, without touching the
+ * rest of the store directory (which may be shared with other tests/apps).
+ */
+export function removeStoreFile(storeName: string): void {
+  const file = getStoreFilePath(storeName);
+  if (fs.existsSync(file)) {
+    fs.rmSync(file, { force: true });
+  }
+}
+
+/**
+ * Launch the built Electron app for e2e tests.
+ * `env` is merged over `process.env`; pass NODE_ENV/E2E_STORE_NAME/etc. as needed.
+ */
+export async function launchElectronApp(
+  env: Record<string, string | undefined> = {},
+): Promise<ElectronApplication> {
+  return electron.launch({
+    args: [MAIN_JS_PATH],
+    env: {
+      ...process.env,
+      E2E_TEST: 'true',
+      ...env,
+    },
+  });
+}
 
 /**
  * Poll until both the main (index.html) and notification windows are visible.

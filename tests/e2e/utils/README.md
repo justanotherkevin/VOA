@@ -15,6 +15,16 @@ Generic, reusable helper functions for common Playwright operations. These can b
 
 #### Common Helper Categories
 
+**App Lifecycle**
+
+- `launchElectronApp(env?)` - Launch the built Electron app (`dist/main/main.js`), merging `env` over `process.env`. Path is anchored to `common.helpers.ts` itself, not the caller's `__dirname`, so it keeps working if a spec moves.
+
+**Electron Store Fixtures**
+
+- `getStoreFilePath(storeName)` - Path to a named electron-store JSON file in the e2e app store directory.
+- `writeE2eTestStore(storeName)` - Write default fixture data (empty meetings, default shortcuts, tiny Whisper model) to a named store file.
+- `removeStoreFile(storeName)` - Delete a single named store file, without touching the rest of the store directory.
+
 **Element Selection & Interaction (by selector or data-testid)**
 
 - `clickElement(page, selector)` / `clickByTestId(page, testId)`

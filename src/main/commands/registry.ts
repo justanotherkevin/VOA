@@ -1,7 +1,8 @@
 import { getMainWindow } from '@/main/state/volatile';
 import { CHANNELS } from '@/lib/ipc-channels';
 
-type CommandId = 'recording.toggle' | 'window.show' | 'window.hide';
+type CommandId =
+  'recording.toggle' | 'dictation.toggle' | 'window.show' | 'window.hide';
 
 type CommandFn = () => void;
 
@@ -20,6 +21,10 @@ export function executeCommand(id: CommandId): void {
 export function initCommands(): void {
   register('recording.toggle', () => {
     getMainWindow()?.webContents.send(CHANNELS.RECORDING.TOGGLE);
+  });
+
+  register('dictation.toggle', () => {
+    getMainWindow()?.webContents.send(CHANNELS.DICTATION.TOGGLE);
   });
 
   register('window.show', () => {

@@ -38,15 +38,24 @@ export function setE2eForceMeeting(value: boolean) {
 
 export function registerTranscriberHandlers() {
   ipcMain.handle(CHANNELS.TRANSCRIBER.SESSION_START, async (_event, args) => {
-    const { startedAt } = args || {};
-    const isMeetingApp = await meetingDetector.checkCurrentWindow();
-    let type: 'meeting' | 'dictation' = isMeetingApp ? 'meeting' : 'dictation';
+    const { startedAt, forceType, pasteOnComplete } = args || {};
+    let type: 'meeting' | 'dictation';
+    if (forceType === 'dictation') {
+      // Dictation shortcut: the user explicitly chose dictation, so skip
+      // meeting-app auto-detection entirely rather than let it override intent.
+      type = 'dictation';
+    } else {
+      const isMeetingApp = await meetingDetector.checkCurrentWindow();
+      type = isMeetingApp ? 'meeting' : 'dictation';
+    }
     if (_e2eNextSessionForceMeeting) {
       type = 'meeting';
       _e2eNextSessionForceMeeting = false;
     }
     log('[transcriber:session-start] type:', type);
-    transcriberService.beginSession(startedAt ?? Date.now(), type);
+    transcriberService.beginSession(startedAt ?? Date.now(), type, {
+      pasteOnComplete: !!pasteOnComplete,
+    });
     startTrayAnimation();
   });
 
