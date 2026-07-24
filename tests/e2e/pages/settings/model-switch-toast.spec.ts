@@ -5,6 +5,11 @@
 import { test, expect } from '@e2e/fixtures';
 import { navigateToSettings, wait, pollUntil } from '@e2e/utils/common.helpers';
 
+// Sonner (src/renderer/components/sonner.tsx) renders each toast with
+// data-sonner-toast + data-type attributes — used below to find the error
+// toast without depending on its exact (dynamic, error-message-dependent) text.
+const errorToastSelector = '[data-sonner-toast][data-type="error"]';
+
 async function getModelPrefs(page: any): Promise<Record<string, any>> {
   return page.evaluate(() => (window as any).electronAPI.settings.model.get());
 }
@@ -43,7 +48,7 @@ async function getTranscriberEvents(
 }
 
 test.describe('Settings — model switch toast lifecycle', () => {
-  test('a failing model swap resolves with a transcriber:error broadcast — never stays stuck', async ({
+  test('a failing model swap shows an error toast — never stays stuck', async ({
     page,
   }) => {
     test.setTimeout(30_000);
@@ -55,6 +60,20 @@ test.describe('Settings — model switch toast lifecycle', () => {
         ),
       5_000,
     );
+
+    await navigateToSettings(page, 'Transcription');
+
+    // Wait out the app-launch eager model preload (main.ts's
+    // preloadCurrentModel) before triggering our own failing update. Both
+    // features share one WhisperTranscriber job queue with no coordination
+    // between them, so if the preload's own transcriber:ready broadcast is
+    // still in flight when our update call is enqueued behind it, that
+    // unrelated ready event lands during this test and gets miscounted as
+    // belonging to our (failed) update.
+    const loadingToast = page.getByText(/Loading model/).first();
+    if (await loadingToast.isVisible().catch(() => false)) {
+      await expect(loadingToast).toBeHidden({ timeout: 20_000 });
+    }
 
     await installTranscriberEventCapture(page);
 
@@ -68,10 +87,12 @@ test.describe('Settings — model switch toast lifecycle', () => {
 
     expect(result.success).toBe(false);
 
-    await pollUntil(
-      async () => (await getTranscriberEvents(page)).error.length > 0,
-      15_000,
-    );
+    // useTranscriber.ts's onError handler (mounted app-wide in App.tsx) turns
+    // the transcriber:error broadcast this failure triggers into a toast —
+    // this is the user-visible signal that the swap failed.
+    await expect(page.locator(errorToastSelector).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     const events = await getTranscriberEvents(page);
     expect(events.ready).toBe(0);
