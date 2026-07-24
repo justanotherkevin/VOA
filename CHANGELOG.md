@@ -51,6 +51,7 @@ All notable changes to VOA are documented here.
 
 - **Re-enabled Base as a selectable Whisper model** — repeated manual switching between Tiny/Base in the real app didn't reproduce the native crash Small/Medium hit reliably. A version-bump experiment (`onnxruntime-node` 1.14.0 → 1.24.1) to fix the crash outright made things worse and was reverted; see `docs/whisper-onnxruntime-crash.md`.
 - **Reorganized Settings-related e2e specs** under `tests/e2e/pages/settings/`, added an `@e2e/*` path alias (`tsconfig.json`) for absolute imports, deduplicated a `pollUntil` helper that had been copied into three separate spec files into `tests/e2e/utils/common.helpers.ts`, and removed dead code left over from removed system-audio test scenarios.
+- **`model-switch-toast.spec.ts`'s failing-swap test now asserts on the actual error toast** (Sonner's `data-sonner-toast[data-type="error"]`) instead of only the underlying `transcriber:error` event, and waits out the app-launch model preload race before triggering its own failing update. Also removed a fully commented-out rolling-summary test from `dictation-meeting-flow.spec.ts` and the debug-only `debug-prefs.spec.ts` (no assertions, console-log only).
 
 - **Paused auto-paste-on-transcription** — transcribed text is no longer automatically copied to the clipboard and pasted into the active window after each transcription (`shouldPasteText()` in `src/main/util.ts` now returns `false`). The mechanism is left in place, disabled at a single gate, for possible future opt-in use.
 
