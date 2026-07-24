@@ -10,11 +10,13 @@
  */
 
 import { test as base, expect, Page } from '@playwright/test';
-import path from 'path';
 import fs from 'fs';
 import { e2eConfig } from '@e2e/config';
-import { DEFAULT_SHORTCUTS } from '@/main/store';
-import { launchElectronApp } from '@e2e/utils/common.helpers';
+import {
+  launchElectronApp,
+  getStoreFilePath,
+  writeE2eTestStore,
+} from '@e2e/utils/common.helpers';
 
 type ElectronFixtures = {
   electronApp: any;
@@ -53,33 +55,13 @@ async function getMainWindow(electronApp: any): Promise<Page> {
  * Creates the store directory and populates it with known test data
  */
 function initializeTestStore(): void {
-  const appStorePath = e2eConfig.appStorePath;
-
   try {
-    // Create store directory if it doesn't exist
-    if (!fs.existsSync(appStorePath)) {
-      fs.mkdirSync(appStorePath, { recursive: true });
-    }
-
-    // Create the transcript-history.json file with default test data
     const storeName = process.env.VITE_STORE_NAME || 'audio-to-text-test';
-    const storeFilePath = path.join(appStorePath, `${storeName}.json`);
-
-    const storeData = {
-      meetings: [],
-      meetingsMigrated: true,
-      shortcuts: DEFAULT_SHORTCUTS,
-      modelPreferences: {
-        selectedModel: 'Xenova/whisper-tiny',
-        multilingual: false,
-        quantized: false,
-        language: 'english',
-        asrType: 'whisper',
-      },
-    };
-
-    fs.writeFileSync(storeFilePath, JSON.stringify(storeData, null, 2));
-    console.log('[fixtures-dev] Test store initialized at:', storeFilePath);
+    writeE2eTestStore(storeName);
+    console.log(
+      '[fixtures-dev] Test store initialized at:',
+      getStoreFilePath(storeName),
+    );
   } catch (e) {
     console.error('[fixtures-dev] Error initializing test store:', e);
   }

@@ -6,60 +6,19 @@
 // gets control. Uses its own store file so it doesn't race the shared app
 // instance, which stays alive for the rest of the suite.
 import { test, expect } from '@playwright/test';
-import path from 'path';
-import fs from 'fs';
-import { e2eConfig } from '@e2e/config';
-import { DEFAULT_SHORTCUTS } from '@/main/store';
 import {
   getVisibleWindows,
   launchElectronApp,
+  writeE2eTestStore,
+  removeStoreFile,
 } from '@e2e/utils/common.helpers';
 
 const STORE_NAME = 'audio-to-text-test-startup-toast';
 
-function storeFilePath(): string {
-  return path.join(e2eConfig.appStorePath, `${STORE_NAME}.json`);
-}
-
-function initializeTestStore(): void {
-  if (!fs.existsSync(e2eConfig.appStorePath)) {
-    fs.mkdirSync(e2eConfig.appStorePath, { recursive: true });
-  }
-  fs.writeFileSync(
-    storeFilePath(),
-    JSON.stringify(
-      {
-        meetings: [],
-        meetingsMigrated: true,
-        shortcuts: DEFAULT_SHORTCUTS,
-        // Matches the model the shared fixture seeds elsewhere in the suite,
-        // so it's already warm in the local Whisper/transformers.js cache
-        // and this test isn't paying for a real model download.
-        modelPreferences: {
-          selectedModel: 'Xenova/whisper-tiny',
-          multilingual: false,
-          quantized: false,
-          language: 'english',
-          asrType: 'whisper',
-        },
-      },
-      null,
-      2,
-    ),
-  );
-}
-
-function cleanupTestStore(): void {
-  const file = storeFilePath();
-  if (fs.existsSync(file)) {
-    fs.rmSync(file, { force: true });
-  }
-}
-
 test.describe('App startup — model load toast', () => {
   test('the "Loading model" toast shown on launch disappears once the model finishes loading', async () => {
     test.setTimeout(20_000);
-    initializeTestStore();
+    writeE2eTestStore(STORE_NAME);
 
     const electronApp = await launchElectronApp({
       NODE_ENV: 'development',
@@ -81,7 +40,7 @@ test.describe('App startup — model load toast', () => {
       await expect(loadingToast).toBeHidden({ timeout: 20_000 });
     } finally {
       await electronApp.close();
-      cleanupTestStore();
+      removeStoreFile(STORE_NAME);
     }
   });
 });
