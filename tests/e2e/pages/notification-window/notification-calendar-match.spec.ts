@@ -14,14 +14,30 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Page } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { test, expect } from '../../fixtures';
 import {
   startRecording,
   stopRecording,
-} from './utils/dictation/recording-actions';
-import { mountMockAudioChunks } from './utils/dictation/hardware-mocks';
-import { getVisibleWindows } from './utils/common.helpers';
-import { getMeetings } from './utils/seed.helpers';
+} from '../../utils/dictation/recording-actions';
+import { mountMockAudioChunks } from '../../utils/dictation/hardware-mocks';
+import { getVisibleWindows, pollUntil } from '../../utils/common.helpers';
+import { getMeetings } from '../../utils/seed.helpers';
+import type { Recording } from '@/main/store';
+
+// stopRecording() only waits a fixed 500ms after toggling — real Whisper
+// inference on the mocked audio (city-meeting-short.mp3) can take several
+// seconds, more under system load, so the meeting isn't persisted yet by
+// the time a fixed wait elapses. Poll until it actually shows up instead of
+// racing TranscriberService.persistMeeting.
+async function waitForSavedMeeting(page: Page): Promise<Recording> {
+  let saved: Recording | undefined;
+  await pollUntil(async () => {
+    const meetings = await getMeetings(page);
+    saved = meetings[0];
+    return meetings.length > 0;
+  }, 20_000);
+  return saved as Recording;
+}
 
 interface FixtureAttendee {
   name: string;
@@ -136,7 +152,7 @@ test.describe('Notification — calendar match', () => {
       await mountMockAudioChunks(mainPage, 'city-meeting-short.mp3');
       await stopRecording(mainPage, electronApp);
 
-      const [saved] = await getMeetings(mainPage);
+      const saved = await waitForSavedMeeting(mainPage);
       expect(saved.participants).toEqual(['Alice Smith', 'Bob Jones']);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -165,6 +181,7 @@ test.describe('Notification — calendar match', () => {
       // WEEKLY_SYNC has the larger overlap (the default if left unchosen) —
       // deliberately pick ONE_ON_ONE to prove a real selection took effect,
       // not just the auto-default.
+
       await trigger.click();
       await notificationPage
         .getByRole('option', { name: '1:1 with Sam' })
@@ -173,7 +190,7 @@ test.describe('Notification — calendar match', () => {
       await mountMockAudioChunks(mainPage, 'city-meeting-short.mp3');
       await stopRecording(mainPage, electronApp);
 
-      const [saved] = await getMeetings(mainPage);
+      const saved = await waitForSavedMeeting(mainPage);
       expect(saved.participants).toEqual(['Sam Lee']);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -207,7 +224,7 @@ test.describe('Notification — calendar match', () => {
       await mountMockAudioChunks(mainPage, 'city-meeting-short.mp3');
       await stopRecording(mainPage, electronApp);
 
-      const [saved] = await getMeetings(mainPage);
+      const saved = await waitForSavedMeeting(mainPage);
       expect(saved.participants).toEqual(['Alice Smith', 'Bob Jones']);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));

@@ -1,5 +1,9 @@
 import { ipcMain } from 'electron';
-import { updateNotificationState, NotificationStatePayload } from '../notification-window';
+import {
+  updateNotificationState,
+  getCurrentNotificationState,
+  NotificationStatePayload,
+} from '../notification-window';
 import { getActiveWindow } from '../active-window';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { executeCommand } from '@/main/commands/registry';
@@ -29,14 +33,23 @@ export function registerNotificationHandlers() {
   ipcMain.handle(
     CHANNELS.NOTIFICATIONS.UPDATE_STATE,
     async (event, payload: NotificationStatePayload) => {
-      // If activeWindow is missing, try to detect it
+      // Apply immediately — don't block delivery on the activeWindow lookup
+      // below. It's a real OS query (see active-window.ts) with unpredictable
+      // latency, and awaiting it here used to delay this call's own delivery
+      // long enough that a *later* update (e.g. TranscriberService's
+      // calendar-match push) could reach the renderer first and then get
+      // silently clobbered when this stale 'recording' payload landed after.
+      updateNotificationState(payload);
+
+      // If activeWindow is missing, try to detect it and send a non-blocking
+      // follow-up — but only if the state hasn't moved on since, so this
+      // enrichment can't overwrite a newer state with stale 'recording' data.
       if (!payload.activeWindow && payload.state === 'recording') {
         const activeWin = await getActiveWindow();
-        if (activeWin) {
-          payload.activeWindow = activeWin;
+        if (activeWin && getCurrentNotificationState() === 'recording') {
+          updateNotificationState({ ...payload, activeWindow: activeWin });
         }
       }
-      updateNotificationState(payload);
       return { success: true };
     },
   );

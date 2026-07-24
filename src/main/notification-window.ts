@@ -231,6 +231,16 @@ export function isNotificationWindowOpen(): boolean {
 }
 
 /**
+ * The most recently applied notification state. Used by callers that enrich
+ * a state after the fact (e.g. attaching activeWindow once it resolves — see
+ * ipc/notifications.ts) to check the state hasn't moved on in the meantime
+ * before pushing a stale, out-of-order update.
+ */
+export function getCurrentNotificationState(): NotificationState {
+  return currentState;
+}
+
+/**
  * Send an IPC event to the notification window
  * Used to update notification state from the main process
  */

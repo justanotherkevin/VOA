@@ -124,6 +124,13 @@ function CalendarMatchRow({
   notification: NotificationData;
 }) {
   const matches = notification.calendarMatches ?? [];
+  // Tracks whether a selection was made so handleOpenChange knows to close
+  // the pill once Radix reports its popup has actually finished closing —
+  // state-driven rather than a fixed delay, so it can't race the Select's
+  // own close animation (select.tsx's data-[state=closed]:fade-out) at any
+  // timing (previously a hardcoded setTimeout(160) still detached the
+  // option element under load).
+  const selectedRef = useRef(false);
 
   useEffect(() => {
     const timeout = setTimeout(
@@ -135,11 +142,13 @@ function CalendarMatchRow({
 
   const handleSelect = (id: string) => {
     window.electronAPI.calendar.selectMatch(id);
-    // Deferred so the Select's own close animation (~150ms, see
-    // select.tsx's data-[state=closed]:fade-out) finishes before our flip
-    // transition tears the row down — closing both at once raced Radix's
-    // portal cleanup and could leave the option click never registering.
-    setTimeout(closeCalendarMatchPill, 160);
+    selectedRef.current = true;
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open && selectedRef.current) {
+      closeCalendarMatchPill();
+    }
   };
 
   if (matches.length === 0) return null;
@@ -152,6 +161,7 @@ function CalendarMatchRow({
       </span>
       <Select
         onValueChange={handleSelect}
+        onOpenChange={handleOpenChange}
         defaultValue={matches.length === 1 ? matches[0].id : undefined}
       >
         <SelectTrigger
