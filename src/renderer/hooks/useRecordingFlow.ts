@@ -122,7 +122,10 @@ export function useRecordingFlow({
           sessionStartedAt,
           sessionOptions,
         );
-        showRecordingStart(isDictation ? 'Dictation' : 'Recording');
+        showRecordingStart(isDictation ? 'Dictation' : 'Recording', {
+          isMeeting: !isDictation,
+          systemAudioEnabled: systemAudioEnabledRef.current,
+        });
       }
     },
     [

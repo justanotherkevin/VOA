@@ -28,6 +28,8 @@ export interface NotificationData {
   activeWindow?: ActiveWindow;
   meetingKey?: string;
   calendarMatches?: CalendarMatchOption[];
+  isMeeting?: boolean;
+  systemAudioEnabled?: boolean;
 }
 
 // How long the pill stays mounted (window visible) after a 'done' state so

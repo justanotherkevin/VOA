@@ -1,7 +1,9 @@
+import { ipcRenderer } from 'electron';
 import {
   acquireSystemAudioStream,
   startChunkRecorder,
 } from '../utils/audioHelper';
+import { CHANNELS } from '@/lib/ipc-channels';
 
 /*
   System Audio Capture
@@ -25,6 +27,17 @@ import {
 
 let systemAudioStopHandle: (() => void) | null = null;
 
+// Levels for the notification window's "System" waveform are metered off
+// this same stream/AnalyserNode (not a second acquireSystemAudioStream()
+// call) and forwarded over IPC — see ipc/notifications.ts's relay. A second
+// concurrent loopback capture used to be tried here, but on macOS
+// electron-audio-loopback taps a single OS-level audio source, so a second
+// tap starved this real capture of audio (meetings transcribing to a bare
+// "[ Pause ]" token instead of real speech).
+let meterContext: AudioContext | null = null;
+let meterAnalyser: AnalyserNode | null = null;
+let meterRafId: number | null = null;
+
 export const audioAPI = {
   startSystemAudio: async (
     onChunk: (audio: number[], startedAt: number, endedAt: number) => void,
@@ -39,6 +52,22 @@ export const audioAPI = {
       if (!mimeType) return false;
 
       systemAudioStopHandle = startChunkRecorder(stream, mimeType, onChunk);
+
+      meterContext = new AudioContext();
+      meterAnalyser = meterContext.createAnalyser();
+      meterAnalyser.fftSize = 256;
+      meterAnalyser.smoothingTimeConstant = 0.8;
+      meterContext.createMediaStreamSource(stream).connect(meterAnalyser);
+
+      const tick = () => {
+        if (!meterAnalyser) return;
+        const data = new Uint8Array(meterAnalyser.frequencyBinCount);
+        meterAnalyser.getByteFrequencyData(data);
+        ipcRenderer.send(CHANNELS.SYSTEM_AUDIO.LEVELS, Array.from(data));
+        meterRafId = requestAnimationFrame(tick);
+      };
+      tick();
+
       return true;
     } catch (err) {
       console.error('[preload] startSystemAudio failed:', err);
@@ -49,5 +78,12 @@ export const audioAPI = {
   stopSystemAudio: (): void => {
     systemAudioStopHandle?.();
     systemAudioStopHandle = null;
+    if (meterRafId !== null) cancelAnimationFrame(meterRafId);
+    meterRafId = null;
+    meterAnalyser = null;
+    if (meterContext && meterContext.state !== 'closed') {
+      meterContext.close();
+    }
+    meterContext = null;
   },
 };

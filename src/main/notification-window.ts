@@ -5,7 +5,10 @@ import { preloadPath, resolveHtmlPath } from '@/main/util';
 import type { ActiveWindow } from '@/main/active-window';
 
 // Constants for notification window
-const NOTIFICATION_WIDTH = 520;
+// Wide enough for the dual system-audio + mic waveform in RecordingRow
+// (two 80px waveform columns + divider + title) alongside the plain-text
+// rows the other notification states use.
+const NOTIFICATION_WIDTH = 620;
 const NOTIFICATION_HEIGHT = 80;
 const NOTIFICATION_MARGIN = 60;
 const FADE_DURATION_MS = 300;
@@ -32,6 +35,8 @@ export interface NotificationStatePayload {
   activeWindow?: ActiveWindow;
   meetingKey?: string;
   calendarMatches?: CalendarMatchOption[];
+  isMeeting?: boolean;
+  systemAudioEnabled?: boolean;
 }
 
 export interface NotificationOptions {

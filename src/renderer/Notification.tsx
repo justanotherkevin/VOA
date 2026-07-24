@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@/renderer/App.css';
 import {
@@ -8,6 +8,7 @@ import {
   Check,
   Calendar as CalendarIcon,
 } from 'lucide-react';
+import { LiveWaveform } from '@/renderer/components/live-waveform';
 import {
   useNotifications,
   type NotificationData,
@@ -182,6 +183,99 @@ function CalendarMatchRow({
   );
 }
 
+const WAVEFORM_COLUMN_WIDTH = 80;
+
+// Displays the "System" waveform by listening for levels the main window's
+// real system-audio capture forwards over IPC (see audioCapture.ts /
+// ipc/notifications.ts's relay) — this window never opens its own loopback
+// capture. Returns a stable getter LiveWaveform can pull from each animation
+// tick, so incoming levels don't trigger re-renders.
+function useSystemAudioMeter(enabled: boolean) {
+  const levelsRef = useRef<Uint8Array | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    levelsRef.current = null;
+    const unsubscribe = window.electronAPI.audio.onSystemAudioLevels(
+      (levels: unknown) => {
+        levelsRef.current = Uint8Array.from(levels as number[]);
+      },
+    );
+
+    return () => {
+      unsubscribe();
+      levelsRef.current = null;
+    };
+  }, [enabled]);
+
+  return useCallback(() => levelsRef.current, []);
+}
+
+function RecordingRow({ notification }: { notification: NotificationData }) {
+  const dual = Boolean(
+    notification.isMeeting && notification.systemAudioEnabled,
+  );
+  const getSystemLevels = useSystemAudioMeter(dual);
+
+  return (
+    <div className="flex items-center gap-3 w-full">
+      <StateIcon state="recording" />
+      <span className="text-[12.5px] font-semibold truncate shrink-0 max-w-[160px]">
+        {notification.title || 'Recording'}
+      </span>
+      <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+        {dual && (
+          <>
+            <div
+              className="flex flex-col items-center gap-1 shrink-0"
+              style={{ width: WAVEFORM_COLUMN_WIDTH }}
+            >
+              <span className="text-[9px] font-medium uppercase tracking-wide text-white/40">
+                System
+              </span>
+              <LiveWaveform
+                active
+                source="external"
+                getExternalData={getSystemLevels}
+                barWidth={4}
+                barGap={2}
+                barRadius={1.5}
+                barColor="#ffc370"
+                fadeEdges
+                sensitivity={1}
+                height={24}
+              />
+            </div>
+            <div className="w-px self-stretch bg-white/12" />
+          </>
+        )}
+        <div
+          className="flex flex-col items-center gap-1 shrink-0"
+          style={{ width: WAVEFORM_COLUMN_WIDTH }}
+        >
+          {dual && (
+            <span className="text-[9px] font-medium uppercase tracking-wide text-white/40">
+              Mic
+            </span>
+          )}
+          <LiveWaveform
+            active
+            barWidth={4}
+            barGap={2}
+            barRadius={1.5}
+            barColor="#ffffff"
+            fadeEdges
+            sensitivity={1}
+            height={24}
+          />
+        </div>
+      </div>
+      <span className="sr-only">{notification.state}</span>
+    </div>
+  );
+}
+
 function DefaultRow({ notification }: { notification: NotificationData }) {
   return (
     <div className="flex items-center gap-3 w-full">
@@ -212,6 +306,9 @@ function renderRow(notification: NotificationData) {
   }
   if (notification.state === 'calendar-match') {
     return <CalendarMatchRow notification={notification} />;
+  }
+  if (notification.state === 'recording') {
+    return <RecordingRow notification={notification} />;
   }
   return <DefaultRow notification={notification} />;
 }

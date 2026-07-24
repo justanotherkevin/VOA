@@ -223,6 +223,8 @@ const electronAPI = {
   // ── System Audio (preload-only, see audioCapture.ts) ──────────────────────
   audio: {
     ...audioAPI,
+    onSystemAudioLevels: (cb: (...args: unknown[]) => void) =>
+      subscribe(CHANNELS.SYSTEM_AUDIO.LEVELS, cb),
   },
 
   // ── Transcript History (legacy compat) ────────────────────────────────────

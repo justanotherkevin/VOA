@@ -54,7 +54,11 @@ describe('Notification Component', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Recording Started')).toBeInTheDocument();
-        expect(screen.getByText('Test App')).toBeInTheDocument();
+        // The recording row shows a live mic waveform instead of the
+        // activeWindow badge, to make room for the audio-level indicator.
+        expect(
+          screen.getByRole('img', { name: /live audio waveform/i }),
+        ).toBeInTheDocument();
       });
       // Raw state kept for automation/a11y, not shown visually.
       expect(screen.getByText('recording')).toHaveClass('sr-only');
@@ -137,7 +141,9 @@ describe('Notification Component', () => {
       // Same shell throughout — no remount, no blink.
       await waitFor(
         () => {
-          expect(screen.getByText('Audio App')).toBeInTheDocument();
+          expect(
+            screen.getByRole('img', { name: /live audio waveform/i }),
+          ).toBeInTheDocument();
           expect(screen.getByText('Recording Stopped')).toBeInTheDocument();
         },
         { timeout: 1000 },
@@ -171,7 +177,9 @@ describe('Notification Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Test App')).toBeInTheDocument();
+        expect(
+          screen.getByRole('img', { name: /live audio waveform/i }),
+        ).toBeInTheDocument();
         expect(screen.getByText('Recording Stopped')).toBeInTheDocument();
       });
 

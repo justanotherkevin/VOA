@@ -1,6 +1,5 @@
 import { ipcMain, BrowserWindow, IpcMainInvokeEvent } from 'electron';
 import transcriberService from '../services/transcriber';
-import { meetingDetector } from '../services/meeting-detector';
 import { error, log } from 'electron-log';
 import { CHANNELS } from '@/lib/ipc-channels';
 import type { TranscriberCallbacks } from '../services/transcriber';
@@ -39,15 +38,14 @@ export function setE2eForceMeeting(value: boolean) {
 export function registerTranscriberHandlers() {
   ipcMain.handle(CHANNELS.TRANSCRIBER.SESSION_START, async (_event, args) => {
     const { startedAt, forceType, pasteOnComplete } = args || {};
-    let type: 'meeting' | 'dictation';
-    if (forceType === 'dictation') {
-      // Dictation shortcut: the user explicitly chose dictation, so skip
-      // meeting-app auto-detection entirely rather than let it override intent.
-      type = 'dictation';
-    } else {
-      const isMeetingApp = await meetingDetector.checkCurrentWindow();
-      type = isMeetingApp ? 'meeting' : 'dictation';
-    }
+    // The recording shortcut and the dictation shortcut are two distinct,
+    // explicit user choices — no need to guess intent from the active
+    // window. That auto-detection predates the dedicated dictation shortcut
+    // (when a single shortcut had to infer meeting-vs-dictation), and left
+    // unforced sessions started via the recording shortcut misclassified as
+    // 'dictation' whenever the focused app wasn't on the meeting-app list.
+    let type: 'meeting' | 'dictation' =
+      forceType === 'dictation' ? 'dictation' : 'meeting';
     if (_e2eNextSessionForceMeeting) {
       type = 'meeting';
       _e2eNextSessionForceMeeting = false;
