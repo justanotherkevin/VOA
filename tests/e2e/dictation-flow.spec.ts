@@ -17,8 +17,8 @@
  */
 
 import {
-  startRecording,
-  stopRecording,
+  startDictation,
+  stopDictation,
 } from './utils/dictation/recording-actions';
 import { test, expect } from './fixtures';
 import { Page } from '@playwright/test';
@@ -45,8 +45,10 @@ test.describe('Dictation Workflow', () => {
       mainPage.locator('text=No dictations yet'),
       'should start with empty dictations list',
     ).toBeVisible({ timeout: 5000 });
-    // STEP 2: Start recording
-    await startRecording(mainPage, electronApp);
+    // STEP 2: Start dictation (the dictation shortcut, not the recording
+    // shortcut — SESSION_START now always classifies the plain recording
+    // shortcut as type: 'meeting'; see src/main/ipc/transcriber.ts).
+    await startDictation(mainPage, electronApp);
     await expect(
       notificationPage.locator('text=recording').first(),
       'should show notification window with "Recording" message',
@@ -55,8 +57,8 @@ test.describe('Dictation Workflow', () => {
     // Mock audio data
     await mountMockAudioChunks(mainPage, 'fairy-tails-story.mp3');
 
-    // STEP 3: Stop recording → process audio to transcript
-    await stopRecording(mainPage, electronApp);
+    // STEP 3: Stop dictation → process audio to transcript
+    await stopDictation(mainPage, electronApp);
 
     // STEP 4: Wait for the dictation to appear in the UI and verify transcript content
     await expect(
