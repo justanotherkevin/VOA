@@ -8,6 +8,8 @@ All notable changes to VOA are documented here.
 
 ### Added
 
+- **Added a configurable dictation shortcut (default `F2`)**, separate from the existing recording-toggle shortcut. Pressing it starts/stops a capture forced to `type: 'dictation'` (skipping meeting-app detection) and, on completion, pastes the transcribed text into the active window. Rebindable from Settings → Shortcuts via the existing `ShortcutConfigDialog.tsx`, now generalized to configure either binding.
+- **Split `src/main/store.ts` into `src/main/store/`** (`schema.ts`, `instance.ts`, `migrations.ts`, `meetings.ts`, `preferences.ts`, `dismissed-meetings.ts`, `legacy.ts`) for clearer per-concern ownership; `store.ts` is now a barrel re-export and the only import surface (`@/main/store`) — no behavior change.
 - **Rebuilt the transcript's "Gutter" tag style on shadcn's Message component.** `TranscriptTagRenderer.tsx`'s `GutterView` now composes `Message`/`MessageAvatar`/`MessageContent` (`src/renderer/components/message.tsx`) with `Bubble`/`BubbleContent` (`bubble.tsx`) and `Avatar`/`AvatarFallback` (`avatar.tsx`), matching ui.shadcn.com/docs/components/base/message, instead of a hand-rolled flex/inline-style gutter column.
   - Each contiguous `[Meeting]`/`[Mic]` speaker turn gets its own avatar (`Volume2`/`Mic` icon tinted with the existing brand colors) and an accessible `aria-label` ("System audio" / "Mic audio").
   - Mic turns align to the end (right) and meeting/system-audio turns align to the start (left), so the transcript reads like a two-party conversation. The "Pill" tag style is unchanged.
