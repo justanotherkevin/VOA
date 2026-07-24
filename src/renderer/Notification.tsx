@@ -135,7 +135,11 @@ function CalendarMatchRow({
 
   const handleSelect = (id: string) => {
     window.electronAPI.calendar.selectMatch(id);
-    closeCalendarMatchPill();
+    // Deferred so the Select's own close animation (~150ms, see
+    // select.tsx's data-[state=closed]:fade-out) finishes before our flip
+    // transition tears the row down — closing both at once raced Radix's
+    // portal cleanup and could leave the option click never registering.
+    setTimeout(closeCalendarMatchPill, 160);
   };
 
   if (matches.length === 0) return null;
