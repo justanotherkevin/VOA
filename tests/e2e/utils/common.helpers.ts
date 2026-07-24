@@ -1,9 +1,37 @@
-import { Page, ElectronApplication, expect } from '@playwright/test';
+import {
+  Page,
+  ElectronApplication,
+  expect,
+  _electron as electron,
+} from '@playwright/test';
+import path from 'path';
 
 /**
  * Generic element selectors and interactions
  * These helpers can be used across all e2e tests
  */
+
+// Anchored to this file's own location (tests/e2e/utils/) rather than each
+// caller's __dirname, so the path to the built main process can't drift when
+// a spec file moves to a different directory depth.
+const MAIN_JS_PATH = path.join(__dirname, '../../../dist/main/main.js');
+
+/**
+ * Launch the built Electron app for e2e tests.
+ * `env` is merged over `process.env`; pass NODE_ENV/E2E_STORE_NAME/etc. as needed.
+ */
+export async function launchElectronApp(
+  env: Record<string, string | undefined> = {},
+): Promise<ElectronApplication> {
+  return electron.launch({
+    args: [MAIN_JS_PATH],
+    env: {
+      ...process.env,
+      E2E_TEST: 'true',
+      ...env,
+    },
+  });
+}
 
 /**
  * Poll until both the main (index.html) and notification windows are visible.

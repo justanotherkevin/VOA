@@ -9,16 +9,12 @@
  *   // Tests don't import this directly
  */
 
-import {
-  test as base,
-  expect,
-  _electron as electron,
-  Page,
-} from '@playwright/test';
+import { test as base, expect, Page } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
-import { e2eConfig } from './config';
+import { e2eConfig } from '@e2e/config';
 import { DEFAULT_SHORTCUTS } from '@/main/store';
+import { launchElectronApp } from '@e2e/utils/common.helpers';
 
 type ElectronFixtures = {
   electronApp: any;
@@ -114,21 +110,19 @@ export const test = base.extend<ElectronFixtures>({
       // This is the only reliable initialization point — the app reads the file on boot,
       // and the worker-scoped app is shared across all tests in this worker.
       initializeTestStore();
-      const app = await electron.launch({
-        args: [path.join(__dirname, '../../dist/main/main.js')],
-        env: {
-          ...process.env,
-          NODE_ENV: 'development',
-          E2E_TEST: 'true',
-          E2E_STORE_NAME: 'audio-to-text-test',
-        },
+      const app = await launchElectronApp({
+        NODE_ENV: 'development',
+        E2E_STORE_NAME: 'audio-to-text-test',
       });
 
       await use(app);
       try {
         await app.close();
       } catch (e) {
-        console.error('[fixtures-dev] app.close() failed (app may have crashed):', e);
+        console.error(
+          '[fixtures-dev] app.close() failed (app may have crashed):',
+          e,
+        );
       }
       cleanupElectronStore();
     },
@@ -150,7 +144,9 @@ export const test = base.extend<ElectronFixtures>({
           if (ready) return;
           await new Promise((r) => setTimeout(r, 100));
         }
-        console.warn('[fixtures-dev] __e2eStore not ready after 10s — clearing may be a no-op');
+        console.warn(
+          '[fixtures-dev] __e2eStore not ready after 10s — clearing may be a no-op',
+        );
       };
 
       const reset = async () => {

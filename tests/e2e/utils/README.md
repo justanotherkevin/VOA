@@ -15,6 +15,10 @@ Generic, reusable helper functions for common Playwright operations. These can b
 
 #### Common Helper Categories
 
+**App Lifecycle**
+
+- `launchElectronApp(env?)` - Launch the built Electron app (`dist/main/main.js`), merging `env` over `process.env`. Path is anchored to `common.helpers.ts` itself, not the caller's `__dirname`, so it keeps working if a spec moves.
+
 **Element Selection & Interaction (by selector or data-testid)**
 
 - `clickElement(page, selector)` / `clickByTestId(page, testId)`
