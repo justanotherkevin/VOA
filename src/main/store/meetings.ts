@@ -2,6 +2,12 @@ import { getStore } from './instance';
 import { normalizeRecording, generateTitle } from './migrations';
 import { Recording } from './schema';
 
+// Dictations accumulate much faster than meetings, so each type is capped
+// independently — otherwise a burst of dictations would evict older, more
+// valuable meetings from the shared `meetings` array.
+const MAX_MEETINGS = 30;
+const MAX_DICTATIONS = 30;
+
 export function saveMeeting(data: Omit<Recording, 'id'>): Recording {
   const store = getStore();
   const meetings: Recording[] = store.get('meetings') ?? [];
@@ -12,12 +18,26 @@ export function saveMeeting(data: Omit<Recording, 'id'>): Recording {
 
   meetings.unshift(newMeeting);
 
-  if (meetings.length > 100) {
-    meetings.length = 100;
-  }
+  const capped = capByType(meetings);
 
-  store.set('meetings', meetings);
+  store.set('meetings', capped);
   return newMeeting;
+}
+
+function capByType(meetings: Recording[]): Recording[] {
+  const limits: Record<Recording['type'], number> = {
+    meeting: MAX_MEETINGS,
+    dictation: MAX_DICTATIONS,
+  };
+  const counts: Record<Recording['type'], number> = {
+    meeting: 0,
+    dictation: 0,
+  };
+
+  return meetings.filter((m) => {
+    counts[m.type]++;
+    return counts[m.type] <= limits[m.type];
+  });
 }
 
 export function getMeetings(): Recording[] {
