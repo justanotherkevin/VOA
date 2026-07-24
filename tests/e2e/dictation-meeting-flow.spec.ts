@@ -92,7 +92,7 @@ test.describe('Meeting Dictation Flow', () => {
     // as a meeting so Qwen enrichment is triggered after Whisper transcription)
     await startRecording(mainPage, electronApp, { isMeeting: true });
     await expect(
-      notificationPage.locator('text=recording'),
+      notificationPage.locator('text=recording').first(),
       'should show notification window with "Recording" message',
     ).toBeVisible({ timeout: 5_000 });
 

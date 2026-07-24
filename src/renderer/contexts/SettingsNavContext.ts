@@ -7,7 +7,8 @@ export type SettingsPaneId =
   | 'audio'
   | 'privacy'
   | 'permissions'
-  | 'shortcuts';
+  | 'shortcuts'
+  | 'calendar';
 
 export interface SettingsNavContextType {
   activePane: SettingsPaneId;

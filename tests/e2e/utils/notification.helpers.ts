@@ -38,13 +38,17 @@ export async function waitForNotificationWindow(
 
 // Polls via locator waiting rather than a fixed delay — activeWindow
 // resolves asynchronously (see getActiveWindow() in src/main/active-window.ts).
+// Uses .first() because the substring text= match can hit more than one
+// element (e.g. a visible title like "Recording Started" and the sr-only
+// raw-state label both contain "recording") — callers just want to know
+// the text is present somewhere, not which element it's on.
 export async function waitForNotificationText(
   notificationWindow: Page,
   text: string,
   timeoutMs = 5_000,
 ): Promise<void> {
-  const locator = notificationWindow.locator(
-    `[data-testid="notification-window"] >> text=${text}`,
-  );
+  const locator = notificationWindow
+    .locator(`[data-testid="notification-window"] >> text=${text}`)
+    .first();
   await locator.waitFor({ state: 'visible', timeout: timeoutMs });
 }

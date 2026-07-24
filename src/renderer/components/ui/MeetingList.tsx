@@ -150,11 +150,11 @@ function RecordingTypeSection({
         <ItemGroup>
           {Array.from(groups.entries()).map(([label, items]) => (
             <div key={label}>
-              <div className="px-3 py-1.5">
+              {/* <div className="px-3 py-1.5">
                 <span className="text-xs text-sidebar-foreground/60 font-medium">
                   {label}
                 </span>
-              </div>
+              </div> */}
               {items.map((meeting) => (
                 <MeetingRow
                   key={meeting.id}

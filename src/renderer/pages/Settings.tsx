@@ -205,6 +205,14 @@ export default function Settings() {
   } | null>(null);
   const [lmStudioTesting, setLmStudioTesting] = useState(false);
 
+  const [calendarPrefs, setCalendarPrefs] = useState({ feedUrl: '' });
+  const [calendarTestResult, setCalendarTestResult] = useState<{
+    success: boolean;
+    eventCount?: number;
+    message?: string;
+  } | null>(null);
+  const [calendarTesting, setCalendarTesting] = useState(false);
+
   const [isShortcutDialogOpen, setIsShortcutDialogOpen] = useState(false);
 
   const { currentShortcut, isSaving, updateShortcut, resetShortcut } =
@@ -246,6 +254,8 @@ export default function Settings() {
         if (paths) setCachePaths(paths);
         const lmPrefs = await window.electronAPI.lmStudio.getPreferences();
         if (lmPrefs) setLmStudioPrefs((prev) => ({ ...prev, ...lmPrefs }));
+        const calPrefs = await window.electronAPI.calendar.getPreferences();
+        if (calPrefs) setCalendarPrefs((prev) => ({ ...prev, ...calPrefs }));
       } catch (error) {
         console.error('Failed to load settings:', error);
       }
@@ -380,6 +390,30 @@ export default function Settings() {
       setLmStudioTestResult({ ok: false });
     } finally {
       setLmStudioTesting(false);
+    }
+  }
+
+  async function handleCalendarFeedUrlChange(value: string) {
+    setCalendarPrefs({ feedUrl: value });
+    setCalendarTestResult(null);
+  }
+
+  async function saveCalendarPrefs() {
+    await window.electronAPI.calendar.savePreferences(calendarPrefs);
+  }
+
+  async function handleTestCalendarConnection() {
+    setCalendarTesting(true);
+    setCalendarTestResult(null);
+    try {
+      const result = await window.electronAPI.calendar.testConnection(
+        calendarPrefs.feedUrl,
+      );
+      setCalendarTestResult(result ?? { success: false });
+    } catch {
+      setCalendarTestResult({ success: false });
+    } finally {
+      setCalendarTesting(false);
     }
   }
 
@@ -2735,6 +2769,151 @@ export default function Settings() {
                 }}
                 onCancel={() => setIsShortcutDialogOpen(false)}
               />
+            </div>
+          )}
+
+          {activePane === 'calendar' && (
+            <div className="s-pane">
+              <div style={{ marginBottom: 20 }}>
+                <h1
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 680,
+                    letterSpacing: '-.2px',
+                    margin: 0,
+                    color: 'var(--s-text)',
+                  }}
+                >
+                  Calendar
+                </h1>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: 'var(--s-text2)',
+                    margin: '4px 0 0',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  Automatically fill in meeting participants by matching
+                  recordings to your calendar.
+                </p>
+              </div>
+
+              <div style={{ marginBottom: 22 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: 'var(--s-text2)',
+                    margin: '0 0 7px 3px',
+                  }}
+                >
+                  Feed
+                </div>
+                <div className="s-card-rows">
+                  <div className="s-row">
+                    <CalendarClock
+                      size={17}
+                      color="var(--s-text2)"
+                      style={{ flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13.5,
+                          fontWeight: 500,
+                          color: 'var(--s-text)',
+                        }}
+                      >
+                        Private calendar feed URL
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--s-text2)',
+                          marginTop: 2,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        <a
+                          href="https://calendar.google.com/calendar"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: 'var(--s-accent)',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Google Calendar
+                        </a>
+                        : Settings → Select your calendar → Search for "iCal" →
+                        "Secret address in iCal format". Click the copy button
+                        and paste the copied text in the input below. iCloud and
+                        Outlook.com have an equivalent private/secret ICS
+                        address in their calendar sharing settings.
+                      </div>
+                    </div>
+                  </div>
+                  <div className="s-row">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <input
+                        data-testid="calendar-feed-url-input"
+                        value={calendarPrefs.feedUrl}
+                        onChange={(e) =>
+                          handleCalendarFeedUrlChange(e.target.value)
+                        }
+                        onBlur={saveCalendarPrefs}
+                        placeholder="https://calendar.google.com/calendar/ical/…/private-…/basic.ics"
+                        style={{
+                          width: '100%',
+                          background: 'var(--s-field)',
+                          border: '0.5px solid var(--s-field-line)',
+                          borderRadius: 7,
+                          padding: '4px 9px',
+                          fontSize: 12.5,
+                          color: 'var(--s-text)',
+                          fontFamily:
+                            'ui-monospace, "SF Mono", Menlo, monospace',
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="s-row">
+                    <div
+                      data-testid="calendar-test-result"
+                      style={{ flex: 1, minWidth: 0 }}
+                    >
+                      {calendarTestResult !== null &&
+                        (calendarTestResult.success ? (
+                          <span className="s-pill s-pill-good">
+                            <span className="s-pdot" />
+                            {`Connected — ${calendarTestResult.eventCount ?? 0} event${(calendarTestResult.eventCount ?? 0) !== 1 ? 's' : ''} found`}
+                          </span>
+                        ) : (
+                          <span className="s-pill s-pill-danger">
+                            <span className="s-pdot" />
+                            {calendarTestResult.message ??
+                              'Unreachable — check the feed URL'}
+                          </span>
+                        ))}
+                    </div>
+                    <button
+                      className="s-btn"
+                      data-testid="calendar-test-connection-button"
+                      onClick={handleTestCalendarConnection}
+                      disabled={calendarTesting || !calendarPrefs.feedUrl}
+                    >
+                      {calendarTesting ? 'Testing…' : 'Test Connection'}
+                    </button>
+                  </div>
+                </div>
+                <div className="s-note">
+                  <Info size={13} />
+                  Only used to look up attendees for a recording's time window —
+                  never written to. Stored encrypted on this device.
+                </div>
+              </div>
             </div>
           )}
         </div>

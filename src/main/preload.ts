@@ -161,6 +161,18 @@ const electronAPI = {
       ipcRenderer.invoke(CHANNELS.LM_STUDIO.TEST, baseUrl),
   },
 
+  // ── Calendar ─────────────────────────────────────────────────────────────
+  calendar: {
+    getPreferences: () => ipcRenderer.invoke(CHANNELS.CALENDAR.GET_PREFERENCES),
+    savePreferences: (prefs: Record<string, unknown>) =>
+      ipcRenderer.invoke(CHANNELS.CALENDAR.SET_PREFERENCES, prefs),
+    testConnection: (feedUrl: string) =>
+      ipcRenderer.invoke(CHANNELS.CALENDAR.TEST_CONNECTION, feedUrl),
+    declineMatch: () => ipcRenderer.invoke(CHANNELS.CALENDAR.DECLINE_MATCH),
+    selectMatch: (id: string) =>
+      ipcRenderer.invoke(CHANNELS.CALENDAR.SELECT_MATCH, id),
+  },
+
   // ── Shell ─────────────────────────────────────────────────────────────────
   shell: {
     openPath: (filePath: string) =>

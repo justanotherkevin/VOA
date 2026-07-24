@@ -48,7 +48,7 @@ test.describe('Dictation Workflow', () => {
     // STEP 2: Start recording
     await startRecording(mainPage, electronApp);
     await expect(
-      notificationPage.locator('text=recording'),
+      notificationPage.locator('text=recording').first(),
       'should show notification window with "Recording" message',
     ).toBeVisible();
 

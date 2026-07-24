@@ -25,3 +25,9 @@ export const shell = {
   openPath: vi.fn(),
   openExternal: vi.fn(),
 };
+
+export const safeStorage = {
+  isEncryptionAvailable: vi.fn(() => true),
+  encryptString: vi.fn((value: string) => Buffer.from(value, 'utf-8')),
+  decryptString: vi.fn((buffer: Buffer) => buffer.toString('utf-8')),
+};
