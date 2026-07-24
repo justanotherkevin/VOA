@@ -90,4 +90,11 @@ export const CHANNELS = {
     SET: 'lmStudio:set',
     TEST: 'lmStudio:test',
   },
+  CALENDAR: {
+    GET_PREFERENCES: 'calendar:get-preferences',
+    SET_PREFERENCES: 'calendar:set-preferences',
+    TEST_CONNECTION: 'calendar:test-connection',
+    DECLINE_MATCH: 'calendar:decline-match',
+    SELECT_MATCH: 'calendar:select-match',
+  },
 } as const;

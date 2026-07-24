@@ -198,10 +198,25 @@ export function attachGlobalElectronMock() {
       toggle: vi.fn(() => {}),
     },
 
+    // ── Calendar ──────────────────────────────────────────────────────────────
+    calendar: {
+      getPreferences: vi.fn(async () => ({ feedUrl: '' })),
+      savePreferences: vi.fn(async () => ({ success: true })),
+      testConnection: vi.fn(async () => ({ success: true, eventCount: 0 })),
+      declineMatch: vi.fn(async () => ({ success: true })),
+      selectMatch: vi.fn(async () => ({ success: true })),
+    },
+
     // ── Notifications ─────────────────────────────────────────────────────────
     notifications: {
       getActiveWindow: vi.fn(async () => null),
-      updateState: vi.fn(async () => {}),
+      // The real main process echoes UPDATE_STATE calls back down as a
+      // 'notification:update-state' push (see notification-window.ts) —
+      // this is how e.g. InMeetingPill/CalendarMatchPill self-close.
+      // Simulate that round trip so tests can exercise it.
+      updateState: vi.fn(async (payload: any) => {
+        notificationStateUpdateCallback?.(payload);
+      }),
       on: {
         updateState: vi.fn((cb: (data: any) => void) => {
           notificationStateUpdateCallback = cb;
@@ -293,6 +308,17 @@ export function triggerNotificationHide() {
     state: 'done',
     title: '',
     message: '',
+  });
+}
+
+export function triggerCalendarMatch(
+  calendarMatches: Array<{ id: string; title: string }>,
+) {
+  notificationStateUpdateCallback?.({
+    state: 'calendar-match',
+    title: '',
+    message: '',
+    calendarMatches,
   });
 }
 

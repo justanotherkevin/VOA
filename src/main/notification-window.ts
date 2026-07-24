@@ -11,7 +11,19 @@ const NOTIFICATION_MARGIN = 60;
 const FADE_DURATION_MS = 300;
 const FADE_BUFFER_MS = 50; // Buffer after fade animation to ensure UI is ready
 
-export type NotificationState = 'idle' | 'in-meeting' | 'recording' | 'recording-stopped' | 'processing' | 'done';
+export type NotificationState =
+  | 'idle'
+  | 'in-meeting'
+  | 'recording'
+  | 'recording-stopped'
+  | 'processing'
+  | 'done'
+  | 'calendar-match';
+
+export interface CalendarMatchOption {
+  id: string;
+  title: string;
+}
 
 export interface NotificationStatePayload {
   state: NotificationState;
@@ -19,13 +31,14 @@ export interface NotificationStatePayload {
   message: string;
   activeWindow?: ActiveWindow;
   meetingKey?: string;
+  calendarMatches?: CalendarMatchOption[];
 }
 
 export interface NotificationOptions {
   title: string;
   message: string;
   duration?: number;
-  activeWindow?: ActiveWindow
+  activeWindow?: ActiveWindow;
 }
 
 let notificationWindow: BrowserWindow | null = null;
@@ -38,7 +51,6 @@ let currentState: NotificationState = 'idle';
  * It is reused for all notifications.
  */
 export function createNotificationWindow(): BrowserWindow {
-
   if (notificationWindow && !notificationWindow.isDestroyed()) {
     log.info('Notification window already exists, reusing it');
     return notificationWindow;
@@ -97,7 +109,9 @@ export function createNotificationWindow(): BrowserWindow {
  * Update the notification state and send state update to the renderer
  * This is the primary way to control notification display and behavior
  */
-export function updateNotificationState(payload: NotificationStatePayload): void {
+export function updateNotificationState(
+  payload: NotificationStatePayload,
+): void {
   try {
     // Ensure the persistent window exists
     if (!notificationWindow || notificationWindow.isDestroyed()) {
@@ -116,16 +130,19 @@ export function updateNotificationState(payload: NotificationStatePayload): void
     // Send state update to the renderer
     notificationWindow?.webContents.send('notification:update-state', payload);
 
-    // Allow mouse interaction only for in-meeting state (so the "Start Recording" button is clickable)
+    // Allow mouse interaction only for states with clickable UI (the
+    // "Start Recording"/"Dismiss" buttons for in-meeting, and the
+    // Select control for calendar-match)
     if (process.platform === 'darwin') {
-      notificationWindow?.setIgnoreMouseEvents(payload.state !== 'in-meeting');
+      notificationWindow?.setIgnoreMouseEvents(
+        payload.state !== 'in-meeting' && payload.state !== 'calendar-match',
+      );
     }
 
     // Show the window for non-idle states
     if (payload.state !== 'idle') {
       notificationWindow?.showInactive();
     }
-
   } catch (error) {
     log.error('Error updating notification state:', error);
   }
@@ -175,7 +192,6 @@ export function showNotification(options: NotificationOptions): void {
         hideTimer = null;
       }, options.duration);
     }
-
   } catch (error) {
     log.error('Error showing notification:', error);
   }
@@ -223,7 +239,10 @@ export function sendToNotificationWindow(channel: string, data?: any): void {
     try {
       notificationWindow.webContents.send(channel, data);
     } catch (error) {
-      log.error(`Error sending to notification window on channel ${channel}:`, error);
+      log.error(
+        `Error sending to notification window on channel ${channel}:`,
+        error,
+      );
     }
   }
 }

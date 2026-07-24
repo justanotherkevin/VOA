@@ -24,6 +24,15 @@ vi.mock('@/main/store', () => ({
   updateMeeting: vi.fn((id: string, patch: any) => ({ id, ...patch })),
   getModelPreferences: vi.fn(() => ({ asrType: 'whisper' })),
   generateTitle: vi.fn((text: string) => text.split(' ').slice(0, 8).join(' ')),
+  getMeetingById: vi.fn(() => null),
+  // Consumed by beginSession()'s calendar-match lookup; returning no feedUrl
+  // makes it a no-op by default (individual tests override as needed).
+  getCalendarPreferences: vi.fn(() => ({ feedUrl: '' })),
+}));
+
+const mockCreateCalendarProvider = vi.fn();
+vi.mock('@/main/notification-window', () => ({
+  updateNotificationState: vi.fn(),
 }));
 
 vi.mock('@/main/pipeline/structured-summarizer', () => ({
@@ -55,6 +64,9 @@ vi.mock('@/main/pipeline', () => ({
     initialize: vi.fn(),
     transcribe: vi.fn(),
     dispose: vi.fn(),
+  },
+  CalendarProviderFactory: {
+    createProvider: (...args: any[]) => mockCreateCalendarProvider(...args),
   },
 }));
 
@@ -249,6 +261,195 @@ describe('TranscriberService - Helper Methods', () => {
       await service.persistMeeting('test text', [], 0, 0, mockCallbacks);
 
       expect(mockCallbacks.onError).toHaveBeenCalledWith('Persistence failed');
+    });
+  });
+
+  describe('resolveCalendarParticipants', () => {
+    const matches = [
+      {
+        id: 'best',
+        title: 'Best Overlap',
+        overlapMs: 1000,
+        participants: [{ name: 'Alice', email: 'alice@example.com' }],
+      },
+      {
+        id: 'other',
+        title: 'Other Match',
+        overlapMs: 500,
+        participants: [{ name: null, email: 'bob@example.com' }],
+      },
+    ];
+
+    afterEach(() => {
+      const service = transcriberService as any;
+      service.calendarMatches = [];
+      service.calendarMatchDecision = 'pending';
+    });
+
+    it('returns [] for dictation-type sessions even if matches are present', () => {
+      const service = transcriberService as any;
+      service.calendarMatches = matches;
+      service.calendarMatchDecision = 'pending';
+
+      expect(service.resolveCalendarParticipants('dictation')).toEqual([]);
+    });
+
+    it('returns [] when there are no matches', () => {
+      const service = transcriberService as any;
+      service.calendarMatches = [];
+
+      expect(service.resolveCalendarParticipants('meeting')).toEqual([]);
+    });
+
+    it('defaults to the best-overlap match when the decision is still pending', () => {
+      const service = transcriberService as any;
+      service.calendarMatches = matches;
+      service.calendarMatchDecision = 'pending';
+
+      expect(service.resolveCalendarParticipants('meeting')).toEqual(['Alice']);
+    });
+
+    it('returns [] when the user declined', () => {
+      const service = transcriberService as any;
+      service.calendarMatches = matches;
+      service.calendarMatchDecision = 'declined';
+
+      expect(service.resolveCalendarParticipants('meeting')).toEqual([]);
+    });
+
+    it("returns the explicitly selected match's participants", () => {
+      const service = transcriberService as any;
+      service.calendarMatches = matches;
+      service.calendarMatchDecision = 'other';
+
+      expect(service.resolveCalendarParticipants('meeting')).toEqual([
+        'bob@example.com',
+      ]);
+    });
+
+    it('persistMeeting includes the resolved participants in the saved meeting', async () => {
+      const { saveMeeting } = await import('@/main/store');
+      const service = transcriberService as any;
+      service.calendarMatches = matches;
+      service.calendarMatchDecision = 'pending';
+
+      await service.persistMeeting(
+        'test text',
+        [],
+        1000,
+        2000,
+        mockCallbacks,
+        'mic',
+        'meeting',
+      );
+
+      expect(saveMeeting).toHaveBeenCalledWith(
+        expect.objectContaining({ participants: ['Alice'] }),
+      );
+    });
+  });
+
+  describe('beginSession calendar match lookup', () => {
+    afterEach(() => {
+      const service = transcriberService as any;
+      service.calendarMatches = [];
+      service.calendarMatchDecision = 'pending';
+      service.sessionActive = false;
+      mockCreateCalendarProvider.mockReset();
+    });
+
+    it('does not look up the calendar for dictation-type sessions', async () => {
+      const { getCalendarPreferences } = await import('@/main/store');
+      (getCalendarPreferences as any).mockReturnValue({
+        feedUrl: 'https://example.com/feed.ics',
+      });
+
+      transcriberService.beginSession(1000, 'dictation');
+      await Promise.resolve();
+
+      expect(mockCreateCalendarProvider).not.toHaveBeenCalled();
+    });
+
+    it('does not look up the calendar when no feed URL is configured', async () => {
+      const { getCalendarPreferences } = await import('@/main/store');
+      (getCalendarPreferences as any).mockReturnValue({ feedUrl: '' });
+
+      transcriberService.beginSession(1000, 'meeting');
+      await Promise.resolve();
+
+      expect(mockCreateCalendarProvider).not.toHaveBeenCalled();
+    });
+
+    it('stores matches and shows the notification when the calendar lookup finds events', async () => {
+      const { getCalendarPreferences } = await import('@/main/store');
+      const { updateNotificationState } =
+        await import('@/main/notification-window');
+      (getCalendarPreferences as any).mockReturnValue({
+        feedUrl: 'https://example.com/feed.ics',
+      });
+      const found = [
+        {
+          id: 'evt-1',
+          title: 'Weekly Sync — 2:00 PM',
+          overlapMs: 100,
+          participants: [{ name: 'Alice', email: 'alice@example.com' }],
+        },
+      ];
+      mockCreateCalendarProvider.mockReturnValue({
+        findMatchingEvents: vi.fn().mockResolvedValue(found),
+      });
+
+      transcriberService.beginSession(1000, 'meeting');
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const service = transcriberService as any;
+      expect(service.calendarMatches).toEqual(found);
+      expect(updateNotificationState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          state: 'calendar-match',
+          calendarMatches: [{ id: 'evt-1', title: 'Weekly Sync — 2:00 PM' }],
+        }),
+      );
+    });
+
+    it('discards a stale lookup result from a session that was already restarted', async () => {
+      const { getCalendarPreferences } = await import('@/main/store');
+      (getCalendarPreferences as any).mockReturnValue({
+        feedUrl: 'https://example.com/feed.ics',
+      });
+
+      let resolveFirstLookup: (value: any[]) => void = () => {};
+      const firstLookup = new Promise<any[]>((resolve) => {
+        resolveFirstLookup = resolve;
+      });
+      mockCreateCalendarProvider.mockReturnValueOnce({
+        findMatchingEvents: vi.fn().mockReturnValue(firstLookup),
+      });
+      mockCreateCalendarProvider.mockReturnValueOnce({
+        findMatchingEvents: vi.fn().mockResolvedValue([]),
+      });
+
+      // Start session A (its lookup stays pending), then immediately start
+      // session B — bumping calendarSessionToken before A resolves.
+      transcriberService.beginSession(1000, 'meeting');
+      transcriberService.beginSession(2000, 'meeting');
+      await Promise.resolve();
+
+      // Late resolution of session A's stale lookup should be discarded.
+      resolveFirstLookup([
+        {
+          id: 'stale-event',
+          title: 'Stale',
+          overlapMs: 1,
+          participants: [],
+        },
+      ]);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const service = transcriberService as any;
+      expect(service.calendarMatches).toEqual([]);
     });
   });
 

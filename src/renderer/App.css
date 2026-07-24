@@ -248,6 +248,34 @@
   .tag-marquee-track {
     animation: tag-marquee linear infinite;
   }
+
+  /* Notification window: persistent glass shell (see Notification.tsx). The
+     shell itself is created once and never remounts — only the row inside
+     .notification-flip-wrap swaps between states. */
+  .notification-pill {
+    @apply flex items-center rounded-[20px] border border-white/10 bg-neutral-800/55 px-4 py-2.5 text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)];
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    min-width: 440px;
+    /* Lives on the shell, not the flip-wrap, so the wrap's own rotateX
+       transform (below) gets real perspective foreshortening. */
+    perspective: 900px;
+  }
+
+  .notification-flip-wrap {
+    width: 100%;
+    backface-visibility: hidden;
+  }
+
+  .notification-flip-out {
+    animation: notification-flip-out 200ms cubic-bezier(0.55, 0, 1, 0.45)
+      forwards;
+  }
+
+  .notification-flip-in {
+    animation: notification-flip-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1)
+      forwards;
+  }
 }
 
 @keyframes tag-marquee {
@@ -259,9 +287,39 @@
   }
 }
 
+@keyframes notification-flip-out {
+  from {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+  to {
+    transform: rotateX(80deg);
+    opacity: 0;
+  }
+}
+
+@keyframes notification-flip-in {
+  from {
+    transform: rotateX(-80deg);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tag-marquee-track {
     animation: none;
     transform: none;
+  }
+
+  .notification-flip-out,
+  .notification-flip-in {
+    animation: none;
   }
 }

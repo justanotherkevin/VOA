@@ -4,6 +4,7 @@ import {
   updateMeeting,
   getMeetingById,
   getModelPreferences,
+  getCalendarPreferences,
   generateTitle,
   type ModelPreferences,
 } from '@/main/store';
@@ -12,14 +13,15 @@ import { pasteTextToActiveWindow, shouldPasteText } from '@/main/util';
 import { getMainWindow } from '@/main/state/volatile';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { log } from 'electron-log';
-import { whisperTranscriber } from '@/main/pipeline';
-import type { AsrTranscriber } from '@/main/pipeline';
+import { whisperTranscriber, CalendarProviderFactory } from '@/main/pipeline';
+import type { AsrTranscriber, CalendarEventMatch } from '@/main/pipeline';
 import {
   AsrFactory,
   type AsrModelConfig,
   type AsrType,
 } from '@/main/pipeline/asr-factory';
 import type { Recording } from '@/main/store';
+import { updateNotificationState } from '@/main/notification-window';
 
 export interface CompletePayload {
   status: 'complete';
@@ -72,6 +74,15 @@ class TranscriberService {
   private sessionStartedAt: number | null = null;
   private sessionSources: Set<'mic' | 'system'> = new Set();
 
+  // Proactive calendar match state, resolved at session start (see
+  // checkCalendarMatch) and consumed by persistMeeting when the session
+  // ends. calendarMatchDecision is either 'pending' (no user action yet —
+  // resolved to a default at persist time), 'declined', or a matched
+  // event's id.
+  private calendarMatches: CalendarEventMatch[] = [];
+  private calendarMatchDecision: 'pending' | 'declined' | string = 'pending';
+  private calendarSessionToken = 0;
+
   constructor(transcriber: AsrTranscriber = whisperTranscriber) {
     this.transcriber = transcriber;
     this.currentAsrType = 'whisper';
@@ -87,9 +98,102 @@ class TranscriberService {
     this.sessionSegments = [];
     this.sessionChunks = [];
     this.sessionSources = new Set();
+
+    this.calendarMatches = [];
+    this.calendarMatchDecision = 'pending';
+    const token = ++this.calendarSessionToken;
+    if (type === 'meeting') {
+      void this.checkCalendarMatch(startedAt, token);
+    }
+
     log(
       `[TranscriberService] Session started at startedAt=${startedAt} type=${type}`,
     );
+  }
+
+  // Fire-and-forget, called from beginSession for meeting-type sessions
+  // only. Looks up nearby calendar events and, if any are found, prompts
+  // the user via the notification window. `token` guards against applying
+  // a stale result if the session was stopped/restarted before this
+  // resolved (see calendarSessionToken).
+  private async checkCalendarMatch(
+    startedAt: number,
+    token: number,
+  ): Promise<void> {
+    const { feedUrl } = getCalendarPreferences();
+    if (!feedUrl) {
+      log(
+        '[TranscriberService] Skipping calendar match check — no feed URL configured',
+      );
+      return;
+    }
+
+    log(
+      `[TranscriberService] Checking calendar for events near startedAt=${startedAt}`,
+    );
+
+    try {
+      const provider = CalendarProviderFactory.createProvider({
+        type: 'ics-feed',
+        feedUrl,
+      });
+      const matches = await provider.findMatchingEvents(startedAt);
+
+      if (token !== this.calendarSessionToken || !this.sessionActive) {
+        log(
+          '[TranscriberService] Discarding stale calendar match result (session ended/restarted)',
+        );
+        return;
+      }
+      if (matches.length === 0) {
+        log('[TranscriberService] Calendar match check found no nearby events');
+        return;
+      }
+
+      log(
+        `[TranscriberService] Calendar match check found ${matches.length} event(s): ${matches.map((m) => `"${m.title}"`).join(', ')}`,
+      );
+      this.calendarMatches = matches;
+      updateNotificationState({
+        state: 'calendar-match',
+        title: '',
+        message: '',
+        calendarMatches: matches.map((m) => ({ id: m.id, title: m.title })),
+      });
+    } catch (error) {
+      log('[TranscriberService] Calendar match lookup failed:', error);
+    }
+  }
+
+  // Called from the CALENDAR.DECLINE_MATCH IPC handler.
+  declineCalendarMatch(): void {
+    this.calendarMatchDecision = 'declined';
+  }
+
+  // Called from the CALENDAR.SELECT_MATCH IPC handler.
+  selectCalendarMatch(id: string): void {
+    this.calendarMatchDecision = id;
+  }
+
+  // Resolves whichever calendar match (if any) should be attached to the
+  // recording being persisted, applying the default when the user never
+  // interacted with the notification: a single match auto-confirms, and
+  // multiple matches default to the best time-overlap (calendarMatches is
+  // already sorted descending by overlap, so [0] is that default).
+  private resolveCalendarParticipants(type: 'meeting' | 'dictation'): string[] {
+    if (
+      type !== 'meeting' ||
+      this.calendarMatches.length === 0 ||
+      this.calendarMatchDecision === 'declined'
+    ) {
+      return [];
+    }
+
+    const chosen =
+      this.calendarMatches.find((m) => m.id === this.calendarMatchDecision) ??
+      this.calendarMatches[0];
+
+    return chosen.participants.map((p) => p.name ?? p.email ?? 'Unknown');
   }
 
   async endSession(
@@ -312,6 +416,7 @@ class TranscriberService {
     try {
       const durationMs = endedAt - startedAt;
       const title = generateTitle(outputText);
+      const participants = this.resolveCalendarParticipants(type);
 
       // TODO: generate a lightweight plain-text summary here using
       // Xenova/distilbart-xsum-6-6 or Xenova/t5-small (<500 MB, fast) and
@@ -332,7 +437,7 @@ class TranscriberService {
         topics: [],
         actionItems: [],
         audioSource,
-        participants: [],
+        participants,
         tags: [],
       });
 

@@ -1,3 +1,4 @@
+import { safeStorage } from 'electron';
 import { RECORDING_SHORTCUT } from '@/lib/shortcuts';
 import log from 'electron-log';
 
@@ -87,6 +88,17 @@ export interface LMStudioPreferences {
   model: string;
 }
 
+export interface CalendarPreferences {
+  feedUrl: string;
+}
+
+// The store persists only the encrypted form (see get/saveCalendarPreferences
+// below) — feedUrl is a bearer-token-like secret (the URL alone grants read
+// access to the full calendar), unlike other preferences in this schema.
+interface StoredCalendarPreferences {
+  encryptedFeedUrl: string;
+}
+
 interface StoreSchema {
   meetings: Recording[];
   meetingsMigrated: boolean;
@@ -98,6 +110,7 @@ interface StoreSchema {
   audioPreferences?: AudioPreferences;
   uiPreferences?: UIPreferences;
   lmStudioPreferences?: LMStudioPreferences;
+  calendarPreferences?: StoredCalendarPreferences;
   transcriptHistory?: StoredTranscript[];
   dismissedMeetingKeys?: string[];
 }
@@ -143,6 +156,14 @@ export const DEFAULT_LM_STUDIO_PREFERENCES: LMStudioPreferences = {
   model: '',
 };
 
+export const DEFAULT_CALENDAR_PREFERENCES: CalendarPreferences = {
+  feedUrl: '',
+};
+
+const DEFAULT_STORED_CALENDAR_PREFERENCES: StoredCalendarPreferences = {
+  encryptedFeedUrl: '',
+};
+
 // ─── Store Init ───────────────────────────────────────────────────────────────
 
 export async function initializeStore() {
@@ -164,6 +185,7 @@ export async function initializeStore() {
       audioPreferences: DEFAULT_AUDIO_PREFERENCES,
       uiPreferences: DEFAULT_UI_PREFERENCES,
       lmStudioPreferences: DEFAULT_LM_STUDIO_PREFERENCES,
+      calendarPreferences: DEFAULT_STORED_CALENDAR_PREFERENCES,
       dismissedMeetingKeys: [],
     },
   });
@@ -384,6 +406,36 @@ export function saveLMStudioPreferences(
   const current =
     store?.get('lmStudioPreferences') ?? DEFAULT_LM_STUDIO_PREFERENCES;
   store?.set('lmStudioPreferences', { ...current, ...prefs });
+}
+
+export function getCalendarPreferences(): CalendarPreferences {
+  const stored =
+    store?.get('calendarPreferences') ?? DEFAULT_STORED_CALENDAR_PREFERENCES;
+  if (!stored.encryptedFeedUrl) return DEFAULT_CALENDAR_PREFERENCES;
+
+  try {
+    const feedUrl = safeStorage.decryptString(
+      Buffer.from(stored.encryptedFeedUrl, 'base64'),
+    );
+    return { feedUrl };
+  } catch (error) {
+    log.info(
+      '[Store] Failed to decrypt calendar feed URL, treating as not configured:',
+      error,
+    );
+    return DEFAULT_CALENDAR_PREFERENCES;
+  }
+}
+
+export function saveCalendarPreferences(
+  prefs: Partial<CalendarPreferences>,
+): void {
+  if (prefs.feedUrl === undefined) return;
+
+  const encryptedFeedUrl = prefs.feedUrl
+    ? safeStorage.encryptString(prefs.feedUrl).toString('base64')
+    : '';
+  store?.set('calendarPreferences', { encryptedFeedUrl });
 }
 
 // ─── Dismissed Meeting Keys ───────────────────────────────────────────────────

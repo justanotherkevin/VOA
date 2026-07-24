@@ -13,7 +13,13 @@ type NotificationState =
   | 'recording'
   | 'recording-stopped'
   | 'processing'
-  | 'done';
+  | 'done'
+  | 'calendar-match';
+
+export interface CalendarMatchOption {
+  id: string;
+  title: string;
+}
 
 export interface NotificationData {
   state: NotificationState;
@@ -21,9 +27,13 @@ export interface NotificationData {
   message: string;
   activeWindow?: ActiveWindow;
   meetingKey?: string;
+  calendarMatches?: CalendarMatchOption[];
 }
 
-const FADE_DURATION_MS = 300;
+// How long the pill stays mounted (window visible) after a 'done' state so
+// its own exit animation (see App.css's .notification-flip-out) can finish
+// before the content is torn down.
+const DONE_LINGER_MS = 300;
 // const DEV_MODE = process.env.NODE_ENV === 'development';
 const DEV_MODE = false;
 
@@ -42,84 +52,54 @@ export function useNotifications() {
     DEV_MODE ? DEV_NOTIFICATION : null,
   );
   const [isVisible, setIsVisible] = useState(DEV_MODE);
-  const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const unsubscribeStateUpdate = window.electronAPI.notifications.on.updateState(
-      (data: unknown) => {
+    const unsubscribeStateUpdate =
+      window.electronAPI.notifications.on.updateState((data: unknown) => {
         const notificationData = data as NotificationData;
 
-        if (fadeTimeoutRef.current) {
-          clearTimeout(fadeTimeoutRef.current);
-          fadeTimeoutRef.current = null;
+        if (clearTimeoutRef.current) {
+          clearTimeout(clearTimeoutRef.current);
+          clearTimeoutRef.current = null;
         }
 
-        // Handle state transitions
-        if (notificationData.state === 'in-meeting') {
-          // Show meeting prompt pill and keep it visible until recording starts or meeting ends
-          setIsVisible((prevIsVisible) => {
-            if (prevIsVisible) {
-              setIsVisible(false);
-              const timeout = setTimeout(() => {
-                setNotification(notificationData);
-                setIsVisible(true);
-                fadeTimeoutRef.current = null;
-              }, FADE_DURATION_MS);
-              fadeTimeoutRef.current = timeout;
-              return prevIsVisible;
-            } else {
-              setNotification(notificationData);
-              return true;
-            }
-          });
-        } else if (notificationData.state === 'done') {
-          // Fade out and hide
-          setIsVisible(false);
-          const timeout = setTimeout(() => {
-            setNotification(null);
-            fadeTimeoutRef.current = null;
-          }, FADE_DURATION_MS);
-          fadeTimeoutRef.current = timeout;
-        } else if (notificationData.state === 'idle') {
-          // Hide idle state
+        if (notificationData.state === 'idle') {
           setIsVisible(false);
           setNotification(null);
-        } else {
-          // For recording, recording-stopped, processing states
-          setIsVisible((prevIsVisible) => {
-            if (prevIsVisible) {
-              // Smoothly transition between states
-              setIsVisible(false);
-              const timeout = setTimeout(() => {
-                setNotification(notificationData);
-                setIsVisible(true);
-                fadeTimeoutRef.current = null;
-              }, FADE_DURATION_MS);
-              fadeTimeoutRef.current = timeout;
-              return prevIsVisible;
-            } else {
-              // Show immediately if not visible
-              setNotification(notificationData);
-              return true;
-            }
-          });
+          return;
         }
-      },
-    );
+
+        if (notificationData.state === 'done') {
+          // Hide the window but keep the last content mounted briefly so its
+          // exit animation can play before Notification.tsx unmounts it.
+          setNotification(notificationData);
+          setIsVisible(false);
+          clearTimeoutRef.current = setTimeout(() => {
+            setNotification(null);
+            clearTimeoutRef.current = null;
+          }, DONE_LINGER_MS);
+          return;
+        }
+
+        // recording / recording-stopped / processing / in-meeting /
+        // calendar-match: just swap the content. The notification window
+        // shell itself never remounts between these states — Notification.tsx
+        // owns the flip transition between the old and new content.
+        setNotification(notificationData);
+        setIsVisible(true);
+      });
 
     return () => {
-      if (fadeTimeoutRef.current) {
-        clearTimeout(fadeTimeoutRef.current);
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
       }
       unsubscribeStateUpdate();
     };
   }, []);
 
-  const processing = notification?.state === 'processing';
-
   return {
     notification,
     isVisible,
-    processing,
   };
 }

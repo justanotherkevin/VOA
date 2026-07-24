@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AudioLines,
+  CalendarDays,
   ChevronRight,
   CircleDot,
   Keyboard,
@@ -72,6 +73,7 @@ const SETTINGS_NAV_ITEMS: Array<{
   },
   { id: 'permissions', label: 'Permissions', icon: LockKeyhole, bg: '#14b3c2' },
   { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard, bg: '#f0902e' },
+  { id: 'calendar', label: 'Calendar', icon: CalendarDays, bg: '#6a5cf0' },
 ];
 
 // Mirrors the section grouping the old standalone Settings-page nav used:
