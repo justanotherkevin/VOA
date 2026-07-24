@@ -1,9 +1,5 @@
-import { RECORDING_SHORTCUT } from '@/lib/shortcuts';
+import { RECORDING_SHORTCUT, DICTATION_SHORTCUT } from '@/lib/shortcuts';
 import { useState, useEffect } from 'react';
-
-interface ShortcutPreferences {
-  recordingToggle: string;
-}
 
 interface UseShortcuts {
   currentShortcut: string;
@@ -12,27 +8,41 @@ interface UseShortcuts {
   resetShortcut: () => Promise<boolean>;
 }
 
-export function useShortcuts(): UseShortcuts {
-  const [currentShortcut, setCurrentShortcut] = useState(RECORDING_SHORTCUT);
+export function useShortcuts(
+  kind: 'recording' | 'dictation' = 'recording',
+): UseShortcuts {
+  const defaultShortcut =
+    kind === 'recording' ? RECORDING_SHORTCUT : DICTATION_SHORTCUT;
+  const [currentShortcut, setCurrentShortcut] = useState(defaultShortcut);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const loadShortcut = async () => {
       try {
         const shortcuts = await window.electronAPI.settings.shortcuts.get();
-        setCurrentShortcut(shortcuts.recordingToggle);
+        setCurrentShortcut(
+          kind === 'recording'
+            ? shortcuts.recordingToggle
+            : shortcuts.dictationToggle,
+        );
       } catch (error) {
         console.error('Failed to load shortcuts:', error);
       }
     };
     loadShortcut();
-  }, []);
+  }, [kind]);
 
   const updateShortcut = async (newShortcut: string): Promise<boolean> => {
     setIsSaving(true);
     try {
       const result =
-        await window.electronAPI.settings.shortcuts.updateRecordingToggle(newShortcut);
+        kind === 'recording'
+          ? await window.electronAPI.settings.shortcuts.updateRecordingToggle(
+              newShortcut,
+            )
+          : await window.electronAPI.settings.shortcuts.updateDictationToggle(
+              newShortcut,
+            );
       if (result.success) {
         setCurrentShortcut(newShortcut);
         return true;
@@ -49,7 +59,7 @@ export function useShortcuts(): UseShortcuts {
   };
 
   const resetShortcut = async (): Promise<boolean> => {
-    return updateShortcut(RECORDING_SHORTCUT);
+    return updateShortcut(defaultShortcut);
   };
 
   return {

@@ -10,12 +10,13 @@
  *
  * Tests can import triggerUpdate/triggerComplete to fire messages.
  */
-import { RECORDING_SHORTCUT } from '@/lib/shortcuts';
+import { RECORDING_SHORTCUT, DICTATION_SHORTCUT } from '@/lib/shortcuts';
 import { vi } from 'vitest';
 
 let updateCallback: ((msg: any) => void) | null = null;
 let completeCallback: ((msg: any) => void) | null = null;
 let recordingToggleCallback: (() => void) | null = null;
+let dictationToggleCallback: (() => void) | null = null;
 let notificationStateUpdateCallback: ((data: any) => void) | null = null;
 let meetingSavedCallback: ((meeting: any) => void) | null = null;
 let meetingClearedCallback: (() => void) | null = null;
@@ -95,14 +96,24 @@ export function attachGlobalElectronMock() {
     // ── Settings ──────────────────────────────────────────────────────────────
     settings: {
       shortcuts: {
-        get: vi.fn(async () => ({ recordingToggle: RECORDING_SHORTCUT })),
+        get: vi.fn(async () => ({
+          recordingToggle: RECORDING_SHORTCUT,
+          dictationToggle: DICTATION_SHORTCUT,
+        })),
         updateRecordingToggle: vi.fn(async () => ({ success: true })),
+        updateDictationToggle: vi.fn(async () => ({ success: true })),
         on: {
           triggered: vi.fn(() => () => {}),
           recordingToggle: vi.fn((cb: () => void) => {
             recordingToggleCallback = cb;
             return () => {
               recordingToggleCallback = null;
+            };
+          }),
+          dictationToggle: vi.fn((cb: () => void) => {
+            dictationToggleCallback = cb;
+            return () => {
+              dictationToggleCallback = null;
             };
           }),
         },
@@ -253,6 +264,7 @@ export function detachGlobalElectronMock() {
     updateCallback = null;
     completeCallback = null;
     recordingToggleCallback = null;
+    dictationToggleCallback = null;
     notificationStateUpdateCallback = null;
     meetingSavedCallback = null;
     meetingClearedCallback = null;
@@ -276,6 +288,7 @@ export function resetElectronMockCallbacks() {
   updateCallback = null;
   completeCallback = null;
   recordingToggleCallback = null;
+  dictationToggleCallback = null;
   notificationStateUpdateCallback = null;
   meetingSavedCallback = null;
   meetingClearedCallback = null;
@@ -285,6 +298,10 @@ export function resetElectronMockCallbacks() {
 
 export function triggerRecordingToggle() {
   recordingToggleCallback?.();
+}
+
+export function triggerDictationToggle() {
+  dictationToggleCallback?.();
 }
 
 export function triggerNotificationShow(data: {

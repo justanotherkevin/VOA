@@ -73,7 +73,9 @@ describe('Transcriber IPC Handlers', () => {
       { sender: {} },
       { startedAt: 123 },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(123, 'meeting');
+    expect(mockBeginSession).toHaveBeenCalledWith(123, 'meeting', {
+      pasteOnComplete: false,
+    });
     expect(mockStartTray).toHaveBeenCalled();
   });
 
@@ -82,8 +84,23 @@ describe('Transcriber IPC Handlers', () => {
     const now = 555;
     vi.spyOn(Date, 'now').mockReturnValue(now);
     await h[CHANNELS.TRANSCRIBER.SESSION_START]({ sender: {} }, {});
-    expect(mockBeginSession).toHaveBeenCalledWith(now, 'dictation');
+    expect(mockBeginSession).toHaveBeenCalledWith(now, 'dictation', {
+      pasteOnComplete: false,
+    });
     vi.spyOn(Date, 'now').mockRestore();
+  });
+
+  it('SESSION_START with forceType=dictation skips meeting-app detection and forces type=dictation', async () => {
+    const h = await loadAndRegister();
+    mockCheckCurrentWindow.mockResolvedValueOnce(true); // would be 'meeting' if checked
+    await h[CHANNELS.TRANSCRIBER.SESSION_START](
+      { sender: {} },
+      { startedAt: 999, forceType: 'dictation', pasteOnComplete: true },
+    );
+    expect(mockCheckCurrentWindow).not.toHaveBeenCalled();
+    expect(mockBeginSession).toHaveBeenCalledWith(999, 'dictation', {
+      pasteOnComplete: true,
+    });
   });
 
   it('SESSION_END calls transcriberService.endSession and stops tray animation', async () => {
@@ -156,13 +173,17 @@ describe('Transcriber IPC Handlers', () => {
       { sender: {} },
       { startedAt: 1 },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(1, 'meeting');
+    expect(mockBeginSession).toHaveBeenCalledWith(1, 'meeting', {
+      pasteOnComplete: false,
+    });
 
     mockBeginSession.mockClear();
     await handlers[CHANNELS.TRANSCRIBER.SESSION_START](
       { sender: {} },
       { startedAt: 2 },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(2, 'dictation');
+    expect(mockBeginSession).toHaveBeenCalledWith(2, 'dictation', {
+      pasteOnComplete: false,
+    });
   });
 });

@@ -47,7 +47,7 @@ import { useShortcuts } from '@/renderer/hooks/useShortcuts';
 import { usePermissions } from '@/renderer/hooks/usePermissions';
 import { useSettingsNavContext } from '@/renderer/hooks/useSettingsNavContext';
 import { APP_NAME, MODEL_META_DATA, CACHED_MODEL_META } from '@/lib/Constants';
-import { RECORDING_SHORTCUT } from '@/lib/shortcuts';
+import { RECORDING_SHORTCUT, DICTATION_SHORTCUT } from '@/lib/shortcuts';
 
 function MeterDots({
   count,
@@ -214,9 +214,17 @@ export default function Settings() {
   const [calendarTesting, setCalendarTesting] = useState(false);
 
   const [isShortcutDialogOpen, setIsShortcutDialogOpen] = useState(false);
+  const [isDictationShortcutDialogOpen, setIsDictationShortcutDialogOpen] =
+    useState(false);
 
   const { currentShortcut, isSaving, updateShortcut, resetShortcut } =
-    useShortcuts();
+    useShortcuts('recording');
+  const {
+    currentShortcut: currentDictationShortcut,
+    isSaving: isDictationSaving,
+    updateShortcut: updateDictationShortcut,
+    resetShortcut: resetDictationShortcut,
+  } = useShortcuts('dictation');
   const { permissions, openSettings: openPermSettings } = usePermissions();
 
   useEffect(() => {
@@ -418,7 +426,10 @@ export default function Settings() {
   }
 
   async function handleResetShortcut() {
-    if (window.confirm('Reset shortcut to default?')) await resetShortcut();
+    if (window.confirm('Reset shortcuts to defaults?')) {
+      await resetShortcut();
+      await resetDictationShortcut();
+    }
   }
 
   const accents = [
@@ -2652,6 +2663,46 @@ export default function Settings() {
                       </button>
                     </div>
                   </div>
+                  <div className="s-row">
+                    <Mic
+                      size={17}
+                      color="var(--s-text2)"
+                      style={{ flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13.5,
+                          fontWeight: 500,
+                          color: 'var(--s-text)',
+                        }}
+                      >
+                        Start / stop dictation
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {currentDictationShortcut.split('+').map((k, i) => (
+                        <span key={i} className="s-kbd">
+                          {k}
+                        </span>
+                      ))}
+                      <button
+                        className="s-btn"
+                        data-testid="customize-dictation-shortcut-button"
+                        onClick={() => setIsDictationShortcutDialogOpen(true)}
+                        disabled={isDictationSaving}
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
                   <ComingSoon>
                     <div className="s-row">
                       <Bookmark
@@ -2753,7 +2804,12 @@ export default function Settings() {
                 <button
                   className="s-btn"
                   onClick={handleResetShortcut}
-                  disabled={isSaving || currentShortcut === RECORDING_SHORTCUT}
+                  disabled={
+                    isSaving ||
+                    isDictationSaving ||
+                    (currentShortcut === RECORDING_SHORTCUT &&
+                      currentDictationShortcut === DICTATION_SHORTCUT)
+                  }
                 >
                   <RotateCcw size={13} />
                   Reset to defaults
@@ -2763,11 +2819,23 @@ export default function Settings() {
               <ShortcutConfigDialog
                 isOpen={isShortcutDialogOpen}
                 currentShortcut={currentShortcut}
+                title="Customize Recording Shortcut"
                 onSave={async (s) => {
                   const ok = await updateShortcut(s);
                   if (ok) setIsShortcutDialogOpen(false);
                 }}
                 onCancel={() => setIsShortcutDialogOpen(false)}
+              />
+
+              <ShortcutConfigDialog
+                isOpen={isDictationShortcutDialogOpen}
+                currentShortcut={currentDictationShortcut}
+                title="Customize Dictation Shortcut"
+                onSave={async (s) => {
+                  const ok = await updateDictationShortcut(s);
+                  if (ok) setIsDictationShortcutDialogOpen(false);
+                }}
+                onCancel={() => setIsDictationShortcutDialogOpen(false)}
               />
             </div>
           )}

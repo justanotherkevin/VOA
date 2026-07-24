@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import Settings from '@/renderer/pages/Settings';
 import { MemoryRouter } from 'react-router-dom';
-import { RECORDING_SHORTCUT } from '@/lib/shortcuts';
+import { RECORDING_SHORTCUT, DICTATION_SHORTCUT } from '@/lib/shortcuts';
 import type { SettingsPaneId } from '@/renderer/contexts/SettingsNavContext';
 
 vi.mock('@/renderer/hooks/useShortcuts', () => ({
-  useShortcuts: () => ({
-    currentShortcut: RECORDING_SHORTCUT,
+  useShortcuts: (kind: 'recording' | 'dictation' = 'recording') => ({
+    currentShortcut:
+      kind === 'recording' ? RECORDING_SHORTCUT : DICTATION_SHORTCUT,
     isSaving: false,
     updateShortcut: vi.fn(async () => true),
     resetShortcut: vi.fn(async () => true),
@@ -114,6 +115,7 @@ describe('Settings Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Start / stop recording')).toBeDefined();
+      expect(screen.getByText('Start / stop dictation')).toBeDefined();
     });
   });
 });

@@ -49,6 +49,7 @@ vi.mock('@/main/pipeline/structured-summarizer', () => ({
 
 vi.mock('@/main/pipeline/text-cleaner', () => ({
   cleanText: vi.fn((text) => text),
+  stripNonSpeechTags: vi.fn((text) => text),
 }));
 
 vi.mock('@/main/util', () => ({

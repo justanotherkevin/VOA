@@ -24,13 +24,24 @@ The local approach is also the privacy answer: no cloud subscription, no bot joi
 
 ## Features
 
-- **Global hotkey capture** — start and stop recording from any app (configurable shortcut, default F1)
+- **Global hotkey capture** — start and stop recording from any app (configurable shortcut, default `Cmd+Shift+Space`; see [Shortcuts](#shortcuts))
 - **On-device Whisper transcription** — runs locally via `@xenova/transformers` + ONNX Runtime; no cloud
 - **Voice Activity Detection** — automatically segments speech from silence using `@ricky0123/vad-web`
 - **Smart meeting detection** — detects active calls in Zoom, Teams, Google Meet, and Slack via Accessibility API
 - **AI summaries with rolling context** — for long meetings, the transcript is processed in chunks and the summary is updated incrementally; bring your own model via LM Studio or Ollama
 - **Meetings and monologues** — distinguishes group calls from solo voice capture
 - **Privacy-first** — all audio processing stays on your Mac; no telemetry, no account required
+
+---
+
+## Shortcuts
+
+Both shortcuts are global (work from any app) and configurable in Settings.
+
+| Shortcut         | Default           | What it does                                          |
+| ---------------- | ----------------- | ----------------------------------------------------- |
+| Recording toggle | `Cmd+Shift+Space` | Starts/stops recording (meeting or dictation capture) |
+| Dictation toggle | `F2`              | Starts/stops a dictation-to-paste session             |
 
 ---
 

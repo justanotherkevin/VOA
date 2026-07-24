@@ -47,6 +47,10 @@ export function useRecordingFlow({
   // misfires on mount or when transcript.output is undefined (VAD-only mode
   // never sets transcriber.isBusy, so we can't rely on that signal).
   const hasActiveSessionRef = useRef(false);
+  // Tracks how the *currently active* session actually started, since either
+  // shortcut can stop a session started by the other one — system audio must
+  // only be stopped if it was actually started for this session.
+  const isDictationSessionRef = useRef(false);
   const {
     isRecording,
     hasPendingVadSegment,
@@ -81,34 +85,68 @@ export function useRecordingFlow({
     showMeetingEnded,
   } = useNotificationFlow();
 
-  const handleToggleRecording = useCallback(async () => {
-    if (isRecording) {
-      setIsRecordingActive(false);
-      stopRecording();
-      // Read from ref so this handler never has a stale systemAudioEnabled value,
-      // even when re-wiring of the recording:toggle listener is still in flight.
-      if (systemAudioEnabledRef.current) stopSystemRecording();
-      showRecordingStopped();
-      showProcessing();
-    } else {
-      const sessionStartedAt = Date.now();
-      hasActiveSessionRef.current = true;
-      setIsRecordingActive(true);
-      await startRecording();
-      if (systemAudioEnabledRef.current) startSystemRecording();
-      window.electronAPI.transcriber.startSession(sessionStartedAt);
-      showRecordingStart();
-    }
-  }, [
-    isRecording,
-    startRecording,
-    stopRecording,
-    startSystemRecording,
-    stopSystemRecording,
-    showRecordingStart,
-    showRecordingStopped,
-    showProcessing,
-  ]);
+  const handleToggleCapture = useCallback(
+    async (sessionOptions?: {
+      forceType?: 'dictation';
+      pasteOnComplete?: boolean;
+    }) => {
+      if (isRecording) {
+        const label = isDictationSessionRef.current ? 'Dictation' : 'Recording';
+        setIsRecordingActive(false);
+        stopRecording();
+        // Read from ref so this handler never has a stale systemAudioEnabled value,
+        // even when re-wiring of the recording:toggle listener is still in flight.
+        // Dictation sessions never start system audio (see below), so never stop it either —
+        // otherwise pressing the dictation shortcut mid-meeting-recording would
+        // wrongly cut off the other session's system audio capture.
+        if (!isDictationSessionRef.current && systemAudioEnabledRef.current) {
+          stopSystemRecording();
+        }
+        showRecordingStopped(label);
+        showProcessing();
+      } else {
+        const isDictation = sessionOptions?.forceType === 'dictation';
+        isDictationSessionRef.current = isDictation;
+        const sessionStartedAt = Date.now();
+        hasActiveSessionRef.current = true;
+        setIsRecordingActive(true);
+        await startRecording();
+        // Dictation is mic-only by design — never pull in system audio, even if
+        // the user has "Record system audio" enabled for meeting recordings.
+        // Capturing (near-)silent system audio here is what produced
+        // Whisper's "[BLANK_AUDIO]" hallucination in dictated/pasted text.
+        if (!isDictation && systemAudioEnabledRef.current) {
+          startSystemRecording();
+        }
+        window.electronAPI.transcriber.startSession(
+          sessionStartedAt,
+          sessionOptions,
+        );
+        showRecordingStart(isDictation ? 'Dictation' : 'Recording');
+      }
+    },
+    [
+      isRecording,
+      startRecording,
+      stopRecording,
+      startSystemRecording,
+      stopSystemRecording,
+      showRecordingStart,
+      showRecordingStopped,
+      showProcessing,
+    ],
+  );
+
+  const handleToggleRecording = useCallback(
+    () => handleToggleCapture(),
+    [handleToggleCapture],
+  );
+
+  const handleToggleDictation = useCallback(
+    () =>
+      handleToggleCapture({ forceType: 'dictation', pasteOnComplete: true }),
+    [handleToggleCapture],
+  );
 
   // Meeting detector integration:
   // - auto/auto-stop modes trigger recording directly
@@ -156,6 +194,17 @@ export function useRecordingFlow({
       unsubscribe();
     };
   }, [handleToggleRecording]);
+
+  useEffect(() => {
+    const unsubscribe =
+      window.electronAPI.settings.shortcuts.on.dictationToggle(() => {
+        handleToggleDictation();
+      });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [handleToggleDictation]);
   // Use ref to capture transcriber without triggering re-setup
   useEffect(() => {
     transcriberRef.current = transcriber;

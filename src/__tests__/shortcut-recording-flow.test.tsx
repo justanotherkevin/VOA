@@ -11,7 +11,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { triggerRecordingToggle } from '@/testing/electronMocks';
+import {
+  triggerRecordingToggle,
+  triggerDictationToggle,
+} from '@/testing/electronMocks';
 
 // Note: active-win dependency was removed due to Electron 35 compatibility issues
 // Window tracking will be implemented using Electron APIs in the future
@@ -28,7 +31,9 @@ describe('Shortcut Recording Flow - IPC Communication', () => {
     const recordingToggleHandler = vi.fn();
 
     // Register listener for recording toggle event
-    window.electronAPI.settings.shortcuts.on.recordingToggle(recordingToggleHandler);
+    window.electronAPI.settings.shortcuts.on.recordingToggle(
+      recordingToggleHandler,
+    );
 
     // Simulate the global shortcut being pressed
     triggerRecordingToggle();
@@ -78,7 +83,9 @@ describe('Shortcut Recording Flow - IPC Communication', () => {
     const recordingToggleHandler = vi.fn();
 
     // Register listener for recording toggle event
-    window.electronAPI.settings.shortcuts.on.recordingToggle(recordingToggleHandler);
+    window.electronAPI.settings.shortcuts.on.recordingToggle(
+      recordingToggleHandler,
+    );
 
     // Simulate the global shortcut being pressed
     triggerRecordingToggle();
@@ -89,6 +96,26 @@ describe('Shortcut Recording Flow - IPC Communication', () => {
     expect(recordingToggleHandler).toHaveBeenCalledTimes(1);
 
     // Verify the IPC handler is properly registered
-    expect(window.electronAPI.settings.shortcuts.on.recordingToggle).toHaveBeenCalled();
+    expect(
+      window.electronAPI.settings.shortcuts.on.recordingToggle,
+    ).toHaveBeenCalled();
+  });
+
+  it('should fire the dictation toggle independently of the recording toggle', async () => {
+    const recordingToggleHandler = vi.fn();
+    const dictationToggleHandler = vi.fn();
+
+    window.electronAPI.settings.shortcuts.on.recordingToggle(
+      recordingToggleHandler,
+    );
+    window.electronAPI.settings.shortcuts.on.dictationToggle(
+      dictationToggleHandler,
+    );
+
+    triggerDictationToggle();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(dictationToggleHandler).toHaveBeenCalledTimes(1);
+    expect(recordingToggleHandler).not.toHaveBeenCalled();
   });
 });
