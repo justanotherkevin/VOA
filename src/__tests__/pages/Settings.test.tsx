@@ -60,7 +60,7 @@ describe('Settings Page', () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getAllByText('Recording').length).toBeGreaterThan(0);
+      expect(screen.getByTestId('settings-pane-recording')).toBeInTheDocument();
     });
   });
 
@@ -71,7 +71,7 @@ describe('Settings Page', () => {
       </MemoryRouter>,
     );
     await waitFor(() => {
-      expect(screen.getByText('Auto-record meeting detection')).toBeDefined();
+      expect(screen.getByTestId('settings-row-auto-record')).toBeDefined();
     });
   });
 
@@ -84,10 +84,10 @@ describe('Settings Page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByText('Tiny').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Base').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Small').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Medium').length).toBeGreaterThan(0);
+      expect(screen.getByTestId('settings-model-option-tiny')).toBeDefined();
+      expect(screen.getByTestId('settings-model-option-base')).toBeDefined();
+      expect(screen.getByTestId('settings-model-option-small')).toBeDefined();
+      expect(screen.getByTestId('settings-model-option-medium')).toBeDefined();
     });
   });
 
@@ -100,8 +100,8 @@ describe('Settings Page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Microphone')).toBeDefined();
-      expect(screen.getByText('Accessibility')).toBeDefined();
+      expect(screen.getByTestId('settings-row-microphone')).toBeDefined();
+      expect(screen.getByTestId('settings-row-accessibility')).toBeDefined();
     });
   });
 
@@ -114,8 +114,12 @@ describe('Settings Page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Start / stop recording')).toBeDefined();
-      expect(screen.getByText('Start / stop dictation')).toBeDefined();
+      expect(
+        screen.getByTestId('settings-row-start-stop-recording'),
+      ).toBeDefined();
+      expect(
+        screen.getByTestId('settings-row-start-stop-dictation'),
+      ).toBeDefined();
     });
   });
 });

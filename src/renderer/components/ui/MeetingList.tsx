@@ -82,6 +82,7 @@ export function MeetingList({
             placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            data-testid="meeting-list-search-input"
             className="bg-transparent text-sm text-sidebar-foreground placeholder:text-muted-foreground outline-none w-full"
           />
         </div>
@@ -137,14 +138,17 @@ function RecordingTypeSection({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div>
+    <div data-testid={`meeting-list-section-${heading.toLowerCase()}`}>
       <div className="px-3 pt-2 pb-1">
         <span className="text-xs uppercase tracking-wide text-sidebar-foreground/40 font-semibold">
           {heading}
         </span>
       </div>
       {groups.size === 0 ? (
-        <div className="px-4 py-3">
+        <div
+          className="px-4 py-3"
+          data-testid={`meeting-list-empty-${heading.toLowerCase()}`}
+        >
           <p className="text-sm text-muted-foreground">{emptyLabel}</p>
         </div>
       ) : (
@@ -191,6 +195,7 @@ function MeetingRow({
     <Item
       asChild
       size="sm"
+      data-testid="meeting-list-row"
       className={cn(
         'w-full cursor-pointer items-start rounded-none border-l-2 border-t-0 border-r-0 border-b-0',
         isSelected

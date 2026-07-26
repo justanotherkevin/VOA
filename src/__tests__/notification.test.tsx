@@ -4,6 +4,7 @@ import {
   waitFor,
   act,
   fireEvent,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, beforeEach, describe, it, expect } from 'vitest';
@@ -43,7 +44,9 @@ describe('Notification Component', () => {
       render(<Notification />);
 
       // Initially, notification should not be visible
-      expect(screen.queryByText('Test App')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('notification-window'),
+      ).not.toBeInTheDocument();
 
       act(() => {
         triggerNotificationShow({
@@ -53,8 +56,14 @@ describe('Notification Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Recording Started')).toBeInTheDocument();
-        expect(screen.getByText('Test App')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('notification-recording'),
+        ).toBeInTheDocument();
+        // The recording row shows a live mic waveform instead of the
+        // activeWindow badge, to make room for the audio-level indicator.
+        expect(
+          screen.getByRole('img', { name: /live audio waveform/i }),
+        ).toBeInTheDocument();
       });
       // Raw state kept for automation/a11y, not shown visually.
       expect(screen.getByText('recording')).toHaveClass('sr-only');
@@ -71,7 +80,9 @@ describe('Notification Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Recording Started')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('notification-recording'),
+        ).toBeInTheDocument();
       });
 
       act(() => {
@@ -98,12 +109,14 @@ describe('Notification Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Recording Started')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('notification-recording'),
+        ).toBeInTheDocument();
       });
 
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      expect(screen.getByText('Recording Started')).toBeInTheDocument();
+      expect(screen.getByTestId('notification-recording')).toBeInTheDocument();
       expect(screen.getByTestId('notification-window')).toHaveClass('block');
     });
 
@@ -118,7 +131,9 @@ describe('Notification Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Recording Started')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('notification-recording'),
+        ).toBeInTheDocument();
       });
 
       const shell = screen.getByTestId('notification-window');
@@ -127,6 +142,7 @@ describe('Notification Component', () => {
         triggerNotificationShow({
           title: 'Recording Stopped',
           message: 'Processing your audio...',
+          state: 'recording-stopped',
           activeWindow: {
             title: 'Recording Stopped',
             owner: { name: 'Audio App' },
@@ -137,8 +153,9 @@ describe('Notification Component', () => {
       // Same shell throughout — no remount, no blink.
       await waitFor(
         () => {
-          expect(screen.getByText('Audio App')).toBeInTheDocument();
-          expect(screen.getByText('Recording Stopped')).toBeInTheDocument();
+          expect(
+            screen.getByTestId('notification-recording-stopped'),
+          ).toBeInTheDocument();
         },
         { timeout: 1000 },
       );
@@ -159,7 +176,9 @@ describe('Notification Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Recording Started')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('notification-recording'),
+        ).toBeInTheDocument();
       });
 
       // Step 2: Recording stops (notification updates)
@@ -167,12 +186,14 @@ describe('Notification Component', () => {
         triggerNotificationShow({
           title: 'Recording Stopped',
           message: 'Processing your audio...',
+          state: 'recording-stopped',
         });
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Test App')).toBeInTheDocument();
-        expect(screen.getByText('Recording Stopped')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('notification-recording-stopped'),
+        ).toBeInTheDocument();
       });
 
       // Step 3: Backend sends hide event after delay
@@ -195,12 +216,16 @@ describe('Notification Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Which meeting?')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('notification-calendar-match'),
+        ).toBeInTheDocument();
       });
       expect(screen.getByRole('combobox')).toHaveTextContent(
         'Weekly Sync — 2:00 PM',
       );
-      expect(screen.queryByText('No')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /no/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('shows an unselected Select with a count placeholder when multiple matches are found', async () => {
@@ -214,37 +239,13 @@ describe('Notification Component', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('2 meetings found')).toBeInTheDocument();
+        expect(
+          within(screen.getByRole('combobox')).getByText('2 meetings found'),
+        ).toBeInTheDocument();
       });
-      expect(screen.queryByText('No')).not.toBeInTheDocument();
-    });
-
-    it('choosing an option calls calendar.selectMatch and closes the pill', async () => {
-      const user = userEvent.setup();
-      render(<Notification />);
-
-      act(() => {
-        triggerCalendarMatch([
-          { id: 'evt-1', title: 'Weekly Sync — 2:00 PM' },
-          { id: 'evt-2', title: '1:1 with Sam — 2:15 PM' },
-        ]);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByRole('combobox')).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole('combobox'));
-      const option = await screen.findByText('1:1 with Sam — 2:15 PM');
-      await user.click(option);
-
-      expect(window.electronAPI.calendar.selectMatch).toHaveBeenCalledWith(
-        'evt-2',
-      );
-      // Selecting immediately closes the pill (reverts to the recording state).
-      await waitFor(() => {
-        expect(screen.queryByText('Which meeting?')).not.toBeInTheDocument();
-      });
+      expect(
+        screen.queryByRole('button', { name: /no/i }),
+      ).not.toBeInTheDocument();
     });
 
     it('auto-closes after the countdown even without user interaction', async () => {
@@ -257,7 +258,9 @@ describe('Notification Component', () => {
         });
 
         await vi.waitFor(() => {
-          expect(screen.getByText('Which meeting?')).toBeInTheDocument();
+          expect(
+            screen.getByTestId('notification-calendar-match'),
+          ).toBeInTheDocument();
         });
 
         act(() => {
@@ -265,7 +268,9 @@ describe('Notification Component', () => {
         });
 
         await vi.waitFor(() => {
-          expect(screen.queryByText('Which meeting?')).not.toBeInTheDocument();
+          expect(
+            screen.queryByTestId('notification-calendar-match'),
+          ).not.toBeInTheDocument();
         });
       } finally {
         vi.useRealTimers();

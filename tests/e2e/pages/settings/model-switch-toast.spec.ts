@@ -4,6 +4,14 @@
 // AIModel.tsx.
 import { test, expect } from '@e2e/fixtures';
 import { navigateToSettings, wait, pollUntil } from '@e2e/utils/common.helpers';
+import { triggerRecordingToggle } from '@e2e/utils/notification.helpers';
+import { toggleDictation } from '@e2e/utils/dictation/recording-actions';
+import type { ElectronApplication, Page } from '@playwright/test';
+
+// Sonner (src/renderer/components/sonner.tsx) renders each toast with
+// data-sonner-toast + data-type attributes — used below to find the error
+// toast without depending on its exact (dynamic, error-message-dependent) text.
+const errorToastSelector = '[data-sonner-toast][data-type="error"]';
 
 async function getModelPrefs(page: any): Promise<Record<string, any>> {
   return page.evaluate(() => (window as any).electronAPI.settings.model.get());
@@ -42,11 +50,56 @@ async function getTranscriberEvents(
   return page.evaluate(() => (window as any).__transcriberEvents);
 }
 
+async function isSessionActive(page: any): Promise<boolean> {
+  return page.evaluate(() =>
+    (window as any).__e2eTestAPI.isTranscriberSessionActive(),
+  );
+}
+
+async function getSessionType(
+  page: any,
+): Promise<'meeting' | 'dictation' | null> {
+  return page.evaluate(() =>
+    (window as any).__e2eTestAPI.getTranscriberSessionType(),
+  );
+}
+
+// A recording session left active by an earlier spec (electronApp is
+// worker-scoped — see notification-visibility.spec.ts's own comment on this)
+// makes settings.ts's model-update handler reject outright with "Stop
+// recording before changing the transcription model." instead of ever
+// reaching the transcriber, so no ready/error broadcast (or toast) follows.
+// Defensively clear any leaked session before asserting on either. Must send
+// the toggle matching the leaked session's actual type — useRecordingFlow.ts's
+// handler ignores a mismatched toggle (e.g. the plain recording toggle can't
+// stop a session started via the dictation shortcut) and shows a toast instead.
+// A leaked session's real teardown (VAD flush + persistMeeting, see
+// useRecordingFlow.ts's done-transition effect) can occasionally take
+// considerably longer than a couple of seconds under load — matches the
+// budget notification-visibility.spec.ts's own afterEach already needs for
+// the same reason.
+async function ensureNoActiveRecordingSession(
+  page: Page,
+  electronApp: ElectronApplication,
+): Promise<void> {
+  if (!(await isSessionActive(page))) return;
+  const type = await getSessionType(page);
+  if (type === 'dictation') {
+    await toggleDictation(page, electronApp);
+  } else {
+    await triggerRecordingToggle(electronApp);
+  }
+  await pollUntil(async () => !(await isSessionActive(page)), 25_000);
+}
+
 test.describe('Settings — model switch toast lifecycle', () => {
-  test('a failing model swap resolves with a transcriber:error broadcast — never stays stuck', async ({
+  test('a failing model swap shows an error toast — never stays stuck', async ({
     page,
+    electronApp,
   }) => {
-    test.setTimeout(30_000);
+    // Headroom for ensureNoActiveRecordingSession's real teardown wait
+    // (up to 25s — see its own comment) plus this test's other polls.
+    test.setTimeout(45_000);
 
     await pollUntil(
       () =>
@@ -55,6 +108,21 @@ test.describe('Settings — model switch toast lifecycle', () => {
         ),
       5_000,
     );
+
+    await navigateToSettings(page, 'Transcription');
+    await ensureNoActiveRecordingSession(page, electronApp);
+
+    // Wait out the app-launch eager model preload (main.ts's
+    // preloadCurrentModel) before triggering our own failing update. Both
+    // features share one WhisperTranscriber job queue with no coordination
+    // between them, so if the preload's own transcriber:ready broadcast is
+    // still in flight when our update call is enqueued behind it, that
+    // unrelated ready event lands during this test and gets miscounted as
+    // belonging to our (failed) update.
+    const loadingToast = page.getByText(/Loading model/).first();
+    if (await loadingToast.isVisible().catch(() => false)) {
+      await expect(loadingToast).toBeHidden({ timeout: 20_000 });
+    }
 
     await installTranscriberEventCapture(page);
 
@@ -68,10 +136,12 @@ test.describe('Settings — model switch toast lifecycle', () => {
 
     expect(result.success).toBe(false);
 
-    await pollUntil(
-      async () => (await getTranscriberEvents(page)).error.length > 0,
-      15_000,
-    );
+    // useTranscriber.ts's onError handler (mounted app-wide in App.tsx) turns
+    // the transcriber:error broadcast this failure triggers into a toast —
+    // this is the user-visible signal that the swap failed.
+    await expect(page.locator(errorToastSelector).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     const events = await getTranscriberEvents(page);
     expect(events.ready).toBe(0);
@@ -79,8 +149,10 @@ test.describe('Settings — model switch toast lifecycle', () => {
 
   test('a successful model swap resolves with a transcriber:ready broadcast and persists the preference', async ({
     page,
+    electronApp,
   }) => {
-    test.setTimeout(30_000);
+    // Same headroom rationale as the previous test.
+    test.setTimeout(45_000);
 
     await pollUntil(
       () =>
@@ -89,6 +161,8 @@ test.describe('Settings — model switch toast lifecycle', () => {
         ),
       5_000,
     );
+
+    await ensureNoActiveRecordingSession(page, electronApp);
 
     const before = await getModelPrefs(page);
 

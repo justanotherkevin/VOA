@@ -56,6 +56,54 @@ export async function stopRecording(
 }
 
 /**
+ * Toggle dictation using direct IPC event from Main process (E2E only) —
+ * the dictation-shortcut path, distinct from toggleRecording()'s plain
+ * recording-shortcut path. SESSION_START classifies a dictation-toggled
+ * session as type: 'dictation' unconditionally (forceType), while a
+ * recording-toggled session is always type: 'meeting' — see
+ * src/main/ipc/transcriber.ts.
+ */
+export async function toggleDictation(
+  page: Page,
+  electronApp: ElectronApplication,
+): Promise<void> {
+  await (electronApp as ElectronApplication).evaluate(
+    ({ BrowserWindow }: any) => {
+      const wins = BrowserWindow.getAllWindows();
+      const mainWin = wins.find((w: BrowserWindow) =>
+        w.webContents.getURL().includes('index.html'),
+      );
+      if (mainWin) {
+        mainWin.webContents.send('dictation:toggle');
+      }
+    },
+  );
+}
+
+/**
+ * Start dictation via Main process interaction (dictation shortcut).
+ */
+export async function startDictation(
+  page: Page,
+  electronApp: ElectronApplication,
+): Promise<void> {
+  await wait(100);
+  await toggleDictation(page, electronApp);
+  await wait(500);
+}
+
+/**
+ * Stop dictation via Main process interaction (dictation shortcut).
+ */
+export async function stopDictation(
+  page: Page,
+  electronApp: ElectronApplication,
+): Promise<void> {
+  await toggleDictation(page, electronApp);
+  await wait(500);
+}
+
+/**
  * Wait for recording to start (status shows "Recording..." in notification window)
  */
 export async function waitForRecordingToStart(

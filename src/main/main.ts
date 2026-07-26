@@ -182,7 +182,14 @@ app
       createTray(mainWindow);
     }
     getShortcutManager().setupDefaultShortcuts();
-    meetingDetector.start();
+    // Polls the real system active-window (not mockable) — left running during
+    // e2e tests, it can auto-start a genuine recording session mid-suite if the
+    // actual foreground app on the machine running the tests happens to match a
+    // monitored meeting app, causing nondeterministic leaked-session flakiness
+    // unrelated to any spec's own actions.
+    if (process.env.E2E_TEST !== 'true') {
+      meetingDetector.start();
+    }
 
     registerIpcHandlers({ permissionsService });
 

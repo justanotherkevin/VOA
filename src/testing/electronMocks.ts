@@ -11,6 +11,7 @@
  * Tests can import triggerUpdate/triggerComplete to fire messages.
  */
 import { RECORDING_SHORTCUT, DICTATION_SHORTCUT } from '@/lib/shortcuts';
+import type { NotificationData } from '@/renderer/hooks/useNotifications';
 import { vi } from 'vitest';
 
 let updateCallback: ((msg: any) => void) | null = null;
@@ -307,10 +308,11 @@ export function triggerDictationToggle() {
 export function triggerNotificationShow(data: {
   title: string;
   message: string;
+  state?: NotificationData['state'];
   activeWindow?: any;
 }) {
   notificationStateUpdateCallback?.({
-    state: 'recording',
+    state: data.state ?? 'recording',
     title: data.title,
     message: data.message,
     activeWindow: data.activeWindow || {

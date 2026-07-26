@@ -2,6 +2,8 @@ import { ipcMain } from 'electron';
 import {
   updateNotificationState,
   getCurrentNotificationState,
+  hideNotification,
+  sendToNotificationWindow,
   NotificationStatePayload,
 } from '../notification-window';
 import { getActiveWindow } from '../active-window';
@@ -15,6 +17,13 @@ export function registerNotificationHandlers() {
   // any UI button calling recordings.toggle() is silently ignored.
   ipcMain.on(CHANNELS.RECORDING.TOGGLE, () => {
     executeCommand('recording.toggle');
+  });
+
+  // Relay system-audio levels from the main window's real capture (the only
+  // one — see audioCapture.ts) to the notification window, so its "System"
+  // waveform can visualize live levels without opening a second loopback tap.
+  ipcMain.on(CHANNELS.SYSTEM_AUDIO.LEVELS, (_event, levels: number[]) => {
+    sendToNotificationWindow(CHANNELS.SYSTEM_AUDIO.LEVELS, levels);
   });
 
   /**
@@ -53,4 +62,14 @@ export function registerNotificationHandlers() {
       return { success: true };
     },
   );
+
+  /**
+   * Allow the renderer to hide the notification window outright — used by
+   * Settings' dev-only notification preview controls to dismiss whichever
+   * state is currently showing.
+   */
+  ipcMain.handle(CHANNELS.NOTIFICATIONS.HIDE, async () => {
+    hideNotification();
+    return { success: true };
+  });
 }

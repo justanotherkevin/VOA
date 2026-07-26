@@ -17,7 +17,7 @@ const SUMMARY_STATUS_LABEL: Record<Recording['summaryStatus'], string> = {
 export function MeetingKeyFacts({ meeting }: { meeting: Recording }) {
   const openItems = meeting.actionItems.filter((a) => !a.done).length;
 
-  const facts: Array<{ label: string; value: string }> = [
+  const facts: Array<{ label: string; value: string; testId?: string }> = [
     { label: 'Recorded', value: formatDateTime(meeting.startedAt) },
     { label: 'Duration', value: formatDuration(meeting.durationMs) },
     { label: 'Source', value: AUDIO_SOURCE_LABEL[meeting.audioSource] },
@@ -32,7 +32,11 @@ export function MeetingKeyFacts({ meeting }: { meeting: Recording }) {
       label: 'Open Items',
       value: meeting.actionItems.length > 0 ? String(openItems) : '—',
     },
-    { label: 'Status', value: SUMMARY_STATUS_LABEL[meeting.summaryStatus] },
+    {
+      label: 'Status',
+      value: SUMMARY_STATUS_LABEL[meeting.summaryStatus],
+      testId: `key-fact-status-${meeting.summaryStatus}`,
+    },
   ];
 
   return (
@@ -42,7 +46,12 @@ export function MeetingKeyFacts({ meeting }: { meeting: Recording }) {
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
             {f.label}
           </div>
-          <div className="text-sm font-medium text-foreground">{f.value}</div>
+          <div
+            className="text-sm font-medium text-foreground"
+            data-testid={f.testId}
+          >
+            {f.value}
+          </div>
         </div>
       ))}
     </div>

@@ -26,7 +26,9 @@ describe('Permissions Page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Permissions/i)).toBeTruthy();
+      expect(
+        screen.getByRole('heading', { level: 1, name: /permissions/i }),
+      ).toBeTruthy();
     });
   });
 
@@ -38,11 +40,19 @@ describe('Permissions Page', () => {
     );
 
     await waitFor(() => {
-      const headings = screen.getAllByText(/Keyboard Shortcut/i);
-      expect(headings.length).toBeGreaterThan(0);
-      expect(screen.getByText(/Microphone Access/i)).toBeTruthy();
-      expect(screen.getByText(/Accessibility Access/i)).toBeTruthy();
-      expect(screen.getByText(/Screen Recording Access/i)).toBeTruthy();
+      expect(screen.getAllByTestId(/^permission-card-/)).toHaveLength(4);
+      expect(
+        screen.getByRole('heading', { name: /Keyboard Shortcut/i }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('heading', { name: /Microphone Access/i }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('heading', { name: /Accessibility Access/i }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('heading', { name: /Screen Recording Access/i }),
+      ).toBeTruthy();
     });
   });
 });

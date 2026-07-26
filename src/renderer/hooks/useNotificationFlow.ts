@@ -3,11 +3,16 @@ import type { NotificationData } from './useNotifications';
 
 export function useNotificationFlow() {
   const showRecordingStart = useCallback(
-    (label: 'Recording' | 'Dictation' = 'Recording'): void => {
+    (
+      label: 'Recording' | 'Dictation' = 'Recording',
+      options?: { isMeeting?: boolean; systemAudioEnabled?: boolean },
+    ): void => {
       window.electronAPI.notifications.updateState({
         state: 'recording',
         title: `${label} Started`,
         message: 'Speak now...',
+        isMeeting: options?.isMeeting,
+        systemAudioEnabled: options?.systemAudioEnabled,
       });
     },
     [],

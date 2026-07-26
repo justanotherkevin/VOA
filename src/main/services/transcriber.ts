@@ -300,6 +300,10 @@ class TranscriberService {
     return this.sessionActive;
   }
 
+  getSessionType(): 'meeting' | 'dictation' | null {
+    return this.sessionActive ? this.sessionType : null;
+  }
+
   private resolveModelConfig(preferences: ModelPreferences): {
     modelName: string;
     quantized: boolean;

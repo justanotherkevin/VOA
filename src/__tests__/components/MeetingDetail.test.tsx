@@ -74,21 +74,33 @@ describe('sidebar column visibility', () => {
   it('renders sidebar when decisions, topics, and action items are populated', () => {
     render(<MeetingDetail meeting={BASE_MEETING} />);
 
-    expect(screen.getByText('Key Decisions')).toBeInTheDocument();
-    expect(screen.getByText('Action Items')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Key Decisions' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Action Items' }),
+    ).toBeInTheDocument();
 
     openParticipantsTab();
-    expect(screen.getByText('Topics')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Topics', level: 4 }),
+    ).toBeInTheDocument();
   });
 
   it('hides sidebar entirely when all structured fields are empty and summary is ready', () => {
     render(<MeetingDetail meeting={emptyStructured()} />);
 
-    expect(screen.queryByText('Key Decisions')).not.toBeInTheDocument();
-    expect(screen.queryByText('Action Items')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Key Decisions' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Action Items' }),
+    ).not.toBeInTheDocument();
 
     openParticipantsTab();
-    expect(screen.queryByText('Topics')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Topics', level: 4 }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows sidebar with spinner when summaryStatus is pending', () => {
@@ -96,7 +108,7 @@ describe('sidebar column visibility', () => {
       <MeetingDetail meeting={emptyStructured({ summaryStatus: 'pending' })} />,
     );
 
-    expect(screen.getByText('Generating…')).toBeInTheDocument();
+    expect(screen.getByTestId('key-fact-status-pending')).toBeInTheDocument();
   });
 
   it('shows sidebar only for action items when decisions and topics are empty but actions exist', () => {
@@ -105,11 +117,17 @@ describe('sidebar column visibility', () => {
     });
     render(<MeetingDetail meeting={meeting} />);
 
-    expect(screen.getByText('Action Items')).toBeInTheDocument();
-    expect(screen.queryByText('Key Decisions')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Action Items' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Key Decisions' }),
+    ).not.toBeInTheDocument();
 
     openParticipantsTab();
-    expect(screen.queryByText('Topics')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Topics', level: 4 }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -132,7 +150,9 @@ describe('Key Decisions section', () => {
   it('hides Key Decisions when decisions array is empty', () => {
     render(<MeetingDetail meeting={{ ...BASE_MEETING, decisions: [] }} />);
 
-    expect(screen.queryByText('Key Decisions')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Key Decisions' }),
+    ).not.toBeInTheDocument();
   });
 
   it('hides Key Decisions when summaryStatus is not ready', () => {
@@ -165,7 +185,9 @@ describe('Topics section', () => {
     render(<MeetingDetail meeting={{ ...BASE_MEETING, topics: [] }} />);
     openParticipantsTab();
 
-    expect(screen.queryByText('Topics')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Topics', level: 4 }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -225,7 +247,7 @@ describe('Overview section', () => {
       <MeetingDetail meeting={{ ...BASE_MEETING, summaryStatus: 'pending' }} />,
     );
 
-    expect(screen.getByText('Generating summary…')).toBeInTheDocument();
+    expect(screen.getByTestId('overview-summary-pending')).toBeInTheDocument();
   });
 
   it('shows fallback text when failed', () => {
@@ -233,7 +255,7 @@ describe('Overview section', () => {
       <MeetingDetail meeting={{ ...BASE_MEETING, summaryStatus: 'failed' }} />,
     );
 
-    expect(screen.getByText('Summary unavailable.')).toBeInTheDocument();
+    expect(screen.getByTestId('overview-summary-failed')).toBeInTheDocument();
   });
 });
 
@@ -244,7 +266,7 @@ describe('null meeting', () => {
     render(<MeetingDetail meeting={null} />);
 
     expect(
-      screen.getByText('Select a meeting to view details'),
+      screen.getByTestId('meeting-detail-empty-state'),
     ).toBeInTheDocument();
   });
 });

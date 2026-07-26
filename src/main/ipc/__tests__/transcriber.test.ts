@@ -13,7 +13,6 @@ const mockFromWebContents = vi.fn(() => ({ webContents: { send: mockSend } }));
 const mockBeginSession = vi.fn();
 const mockEndSession = vi.fn();
 const mockTranscribe = vi.fn();
-const mockCheckCurrentWindow = vi.fn(async () => false);
 const mockStartTray = vi.fn();
 const mockStopTray = vi.fn();
 
@@ -33,10 +32,6 @@ vi.mock('@/main/services/transcriber', () => ({
     endSession: mockEndSession,
     transcribe: mockTranscribe,
   },
-}));
-
-vi.mock('@/main/services/meeting-detector', () => ({
-  meetingDetector: { checkCurrentWindow: mockCheckCurrentWindow },
 }));
 
 vi.mock('@/main/models/tray', () => ({
@@ -66,9 +61,12 @@ describe('Transcriber IPC Handlers', () => {
     expect(h['transcriber:e2e-mock-enrich-meeting']).toBeUndefined();
   });
 
-  it('SESSION_START calls checkCurrentWindow, beginSession, and starts tray animation', async () => {
+  it('SESSION_START without forceType classifies as meeting and starts tray animation', async () => {
+    // Unforced sessions (the plain recording shortcut) are always 'meeting'
+    // — no active-window auto-detection. Only the dictation shortcut
+    // (forceType: 'dictation') opts into 'dictation'. See the comment in
+    // ../transcriber.ts for why this replaced meetingDetector-based guessing.
     const h = await loadAndRegister();
-    mockCheckCurrentWindow.mockResolvedValueOnce(true);
     await h[CHANNELS.TRANSCRIBER.SESSION_START](
       { sender: {} },
       { startedAt: 123 },
@@ -84,20 +82,18 @@ describe('Transcriber IPC Handlers', () => {
     const now = 555;
     vi.spyOn(Date, 'now').mockReturnValue(now);
     await h[CHANNELS.TRANSCRIBER.SESSION_START]({ sender: {} }, {});
-    expect(mockBeginSession).toHaveBeenCalledWith(now, 'dictation', {
+    expect(mockBeginSession).toHaveBeenCalledWith(now, 'meeting', {
       pasteOnComplete: false,
     });
     vi.spyOn(Date, 'now').mockRestore();
   });
 
-  it('SESSION_START with forceType=dictation skips meeting-app detection and forces type=dictation', async () => {
+  it('SESSION_START with forceType=dictation forces type=dictation', async () => {
     const h = await loadAndRegister();
-    mockCheckCurrentWindow.mockResolvedValueOnce(true); // would be 'meeting' if checked
     await h[CHANNELS.TRANSCRIBER.SESSION_START](
       { sender: {} },
       { startedAt: 999, forceType: 'dictation', pasteOnComplete: true },
     );
-    expect(mockCheckCurrentWindow).not.toHaveBeenCalled();
     expect(mockBeginSession).toHaveBeenCalledWith(999, 'dictation', {
       pasteOnComplete: true,
     });
@@ -162,25 +158,25 @@ describe('Transcriber IPC Handlers', () => {
     expect(() => callbacks.onUpdate({ text: 'hi' })).not.toThrow();
   });
 
-  it('setE2eForceMeeting forces type=meeting on the next SESSION_START and resets after one use', async () => {
+  it('setE2eForceMeeting forces type=meeting even over forceType=dictation, and resets after one use', async () => {
     const { registerTranscriberHandlers, setE2eForceMeeting } =
       await import('../transcriber');
     registerTranscriberHandlers();
-    mockCheckCurrentWindow.mockResolvedValue(false);
 
     setE2eForceMeeting(true);
     await handlers[CHANNELS.TRANSCRIBER.SESSION_START](
       { sender: {} },
-      { startedAt: 1 },
+      { startedAt: 1, forceType: 'dictation' },
     );
     expect(mockBeginSession).toHaveBeenCalledWith(1, 'meeting', {
       pasteOnComplete: false,
     });
 
+    // Flag is single-use — the next session goes back to honoring forceType.
     mockBeginSession.mockClear();
     await handlers[CHANNELS.TRANSCRIBER.SESSION_START](
       { sender: {} },
-      { startedAt: 2 },
+      { startedAt: 2, forceType: 'dictation' },
     );
     expect(mockBeginSession).toHaveBeenCalledWith(2, 'dictation', {
       pasteOnComplete: false,

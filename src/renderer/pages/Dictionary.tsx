@@ -9,7 +9,10 @@ export default function Dictionary() {
       <div className="p-8 max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900">Dictionary</h1>
-          <p className="text-gray-600 mt-2">Manage your custom words and phrases for better transcription accuracy</p>
+          <p className="text-gray-600 mt-2">
+            Manage your custom words and phrases for better transcription
+            accuracy
+          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-6">
@@ -33,8 +36,12 @@ export default function Dictionary() {
           {/* Dictionary Entries */}
           <Card className="border-0">
             <CardContent className="p-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Dictionary Entries</h2>
-              <p className="text-gray-600">No entries yet. Add your first custom word above!</p>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Your Dictionary Entries
+              </h2>
+              <p className="text-gray-600" data-testid="dictionary-empty-state">
+                No entries yet. Add your first custom word above!
+              </p>
             </CardContent>
           </Card>
         </div>

@@ -80,9 +80,10 @@ Contains helper functions specific to testing the dictation workflow. These help
 
 #### Recording Control
 
-- `startRecording(page)` - Start recording by pressing the global shortcut (Control+Shift+Space)
+- `startRecording(page)` - Start recording by pressing the global shortcut (Control+Shift+Space); classifies as `type: 'meeting'` unless `{ isMeeting: true }` is passed to force it explicitly via the e2e-only flag
 - `stopRecording(page)` - Stop recording by pressing the global shortcut (Control+Shift+Space)
 - `toggleRecording(page)` - Toggle recording state using the global shortcut
+- `startDictation(page)` / `stopDictation(page)` / `toggleDictation(page)` - Same, via the dictation shortcut (`dictation:toggle`); always classifies as `type: 'dictation'`
 - `waitForRecordingToStart(page, timeout)` - Wait for recording status indicator
 - `waitForRecordingToStop(page, timeout)` - Wait for ready status
 

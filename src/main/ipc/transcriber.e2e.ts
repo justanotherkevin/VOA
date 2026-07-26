@@ -10,6 +10,21 @@ export function registerTranscriberE2eHandlers() {
     setE2eForceMeeting(true);
   });
 
+  // Lets a test check for (and defensively clear) a recording session
+  // leaked by an earlier spec before running its own model-swap assertion —
+  // settings.ts's model-update handler rejects outright while a session is
+  // active. See model-switch-toast.spec.ts.
+  ipcMain.handle('transcriber:e2e-session-active', () => {
+    return transcriberService.isSessionActive();
+  });
+
+  // Lets a test know which shortcut (recording vs. dictation) actually needs
+  // pressing to stop a leaked session — useRecordingFlow.ts's toggle handler
+  // ignores a toggle whose type doesn't match the active session's type.
+  ipcMain.handle('transcriber:e2e-session-type', () => {
+    return transcriberService.getSessionType();
+  });
+
   // Decode an audio file entirely in the main process and run the full
   // transcribe → endSession pipeline. Avoids renderer-side OfflineAudioContext
   // memory pressure for large files (e.g. city-meeting.mp3 at 11 minutes).
