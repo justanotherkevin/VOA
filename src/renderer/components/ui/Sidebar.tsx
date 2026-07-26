@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AudioLines,
+  Bell,
   CalendarDays,
   ChevronRight,
   CircleDot,
+  FlaskConical,
   Keyboard,
   type LucideIcon,
   LockKeyhole,
@@ -13,6 +15,7 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
+  ChevronDown,
 } from 'lucide-react';
 import appIcon from '../../../../assets/icons/64x64.png';
 import { useMeetingsContext } from '@/renderer/hooks/useMeetingsContext';
@@ -87,6 +90,98 @@ const SETTINGS_NAV_GROUPS: Array<{
   { heading: 'Trust', items: SETTINGS_NAV_ITEMS.slice(4, 6) },
   { heading: null, items: SETTINGS_NAV_ITEMS.slice(6) },
 ];
+
+// Never true in a packaged build — matches the guard already used by
+// src/renderer/testing/TestHooks.ts for other dev-only affordances.
+const isDev = process.env.NODE_ENV !== 'production';
+
+// Sample payloads for previewing the notification overlay window from
+// inside the main app, without needing a real recording/meeting/calendar
+// match to trigger each state.
+const NOTIFICATION_PREVIEW_STATES: Array<{
+  label: string;
+  payload: Record<string, unknown>;
+}> = [
+  {
+    label: 'In meeting',
+    payload: {
+      state: 'in-meeting',
+      title: 'Meeting detected',
+      message: 'Weekly Sync — 2:00 PM',
+      isMeeting: true,
+    },
+  },
+  {
+    label: 'Recording',
+    payload: {
+      state: 'recording',
+      title: 'Recording',
+      message: 'Speak now...',
+      activeWindow: { title: 'Zoom Meeting', owner: { name: 'zoom.us' } },
+    },
+  },
+  {
+    label: 'Recording stopped',
+    payload: {
+      state: 'recording-stopped',
+      title: 'Recording Stopped',
+      message: 'Processing your audio...',
+    },
+  },
+  {
+    label: 'Processing',
+    payload: {
+      state: 'processing',
+      title: 'Processing',
+      message: 'Transcribing your audio...',
+    },
+  },
+  {
+    label: 'Done',
+    payload: {
+      state: 'done',
+      title: 'Done',
+      message: 'Transcript ready',
+    },
+  },
+  {
+    label: 'Calendar match',
+    payload: {
+      state: 'calendar-match',
+      title: 'Which meeting?',
+      message: '',
+      calendarMatches: [
+        { id: 'evt-1', title: 'Weekly Sync — 2:00 PM' },
+        { id: 'evt-2', title: '1:1 with Sam — 2:15 PM' },
+      ],
+    },
+  },
+];
+
+// One collapsible row nested inside the "Development" sidebar group — e.g.
+// "Notification window" below. Add sibling <DevSubgroup>s here for other
+// dev-testing areas as they show up; each gets its own collapsed-by-default
+// disclosure so the group doesn't get noisy as more are added.
+function DevSubgroup({
+  label,
+  icon: Icon,
+  children,
+}: {
+  label: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <Collapsible className="group/dev-subgroup">
+      <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+        <ChevronRight className="size-3 shrink-0 transition-transform duration-200 group-data-[state=open]/dev-subgroup:rotate-90" />
+        <Icon className="size-3.5 shrink-0" />
+        {label}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-1 pl-5">{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 interface SidebarProps {
   status?: AppStatus;
@@ -249,6 +344,59 @@ export default function Sidebar({
             </SidebarMenuItem>
           </SidebarMenu>
         </Collapsible>
+
+        {isDev && (
+          <Collapsible className="group/collapsible">
+            <SidebarGroup data-testid="dev-notification-preview">
+              <SidebarGroupLabel asChild>
+                <CollapsibleTrigger className="flex w-full items-center">
+                  <FlaskConical className="mr-2" />
+                  Development
+                  <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                </CollapsibleTrigger>
+              </SidebarGroupLabel>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <div className="flex flex-col gap-0.5 px-1">
+                    <DevSubgroup label="Notification window" icon={Bell}>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="grid grid-cols-2 gap-1">
+                          {NOTIFICATION_PREVIEW_STATES.map(
+                            ({ label, payload }) => (
+                              <button
+                                key={payload.state as string}
+                                type="button"
+                                data-testid={`dev-notification-preview-${payload.state}`}
+                                onClick={() =>
+                                  window.electronAPI.notifications.updateState(
+                                    payload,
+                                  )
+                                }
+                                className="rounded-md border border-sidebar-border px-2 py-1 text-left text-xs text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                              >
+                                {label}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          data-testid="dev-notification-preview-hide"
+                          onClick={() =>
+                            window.electronAPI.notifications.hide()
+                          }
+                          className="mt-1 rounded-md border border-sidebar-border px-2 py-1 text-xs text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        >
+                          Hide notification
+                        </button>
+                      </div>
+                    </DevSubgroup>
+                  </div>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
+        )}
       </SidebarFooter>
     </SidebarPrimitive>
   );

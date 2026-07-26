@@ -21,9 +21,9 @@ export function MeetingParticipantsTopics({
       <div className="space-y-4">
         {showParticipants && (
           <div>
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Participants
-            </div>
+            </h4>
             <div className="flex flex-wrap gap-1.5">
               {meeting.participants.map((p, i) => (
                 <span
@@ -38,9 +38,9 @@ export function MeetingParticipantsTopics({
         )}
         {showTopics && (
           <div>
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Topics
-            </div>
+            </h4>
             <div className="flex flex-wrap gap-1.5">
               {meeting.topics.map((t, i) => (
                 <span

@@ -88,7 +88,10 @@ function InMeetingRow({ notification }: { notification: NotificationData }) {
   };
 
   return (
-    <div className="flex items-center gap-3 w-full">
+    <div
+      className="flex items-center gap-3 w-full"
+      data-testid="notification-in-meeting"
+    >
       <StateIcon state="in-meeting" />
       <div className="flex flex-col min-w-0 flex-1 gap-px">
         <span className="text-[12.5px] font-semibold truncate">
@@ -155,7 +158,10 @@ function CalendarMatchRow({
   if (matches.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-3 w-full">
+    <div
+      className="flex items-center gap-3 w-full"
+      data-testid="notification-calendar-match"
+    >
       <StateIcon state="calendar-match" />
       <span className="text-[12.5px] font-semibold shrink-0 whitespace-nowrap">
         Which meeting?
@@ -219,7 +225,10 @@ function RecordingRow({ notification }: { notification: NotificationData }) {
   const getSystemLevels = useSystemAudioMeter(dual);
 
   return (
-    <div className="flex items-center gap-3 w-full">
+    <div
+      className="flex items-center gap-3 w-full"
+      data-testid={`notification-${notification.state}`}
+    >
       <StateIcon state="recording" />
       <span className="text-[12.5px] font-semibold truncate shrink-0 max-w-[160px]">
         {notification.title || 'Recording'}
@@ -278,7 +287,10 @@ function RecordingRow({ notification }: { notification: NotificationData }) {
 
 function DefaultRow({ notification }: { notification: NotificationData }) {
   return (
-    <div className="flex items-center gap-3 w-full">
+    <div
+      className="flex items-center gap-3 w-full"
+      data-testid={`notification-${notification.state}`}
+    >
       <StateIcon state={notification.state} />
       <div className="flex flex-col min-w-0 flex-1 gap-px">
         <span className="text-[12.5px] font-semibold truncate">

@@ -53,7 +53,10 @@ export function MeetingDetail({
 
   if (!meeting) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background text-muted-foreground">
+      <div
+        className="flex-1 flex items-center justify-center bg-background text-muted-foreground"
+        data-testid="meeting-detail-empty-state"
+      >
         <div className="text-center">
           <Mic size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">Select a meeting to view details</p>

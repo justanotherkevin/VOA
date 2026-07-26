@@ -214,6 +214,7 @@ const electronAPI = {
       ipcRenderer.invoke(CHANNELS.NOTIFICATIONS.GET_ACTIVE_WINDOW),
     updateState: (payload: unknown) =>
       ipcRenderer.invoke(CHANNELS.NOTIFICATIONS.UPDATE_STATE, payload),
+    hide: () => ipcRenderer.invoke(CHANNELS.NOTIFICATIONS.HIDE),
     on: {
       updateState: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.NOTIFICATIONS.UPDATE_STATE, cb),
@@ -249,6 +250,8 @@ if (process.env.E2E_TEST === 'true') {
       ipcRenderer.invoke('transcriber:e2e-mock-enrich-meeting'),
     seedMeeting: (data: unknown) =>
       ipcRenderer.invoke('meetings:e2e-seed', data),
+    isTranscriberSessionActive: () =>
+      ipcRenderer.invoke('transcriber:e2e-session-active'),
   });
 }
 

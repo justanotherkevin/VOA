@@ -461,7 +461,7 @@ export default function Settings() {
       >
         <div style={{ maxWidth: 620, margin: '0 auto' }}>
           {activePane === 'recording' && (
-            <div className="s-pane">
+            <div className="s-pane" data-testid="settings-pane-recording">
               <div style={{ marginBottom: 20 }}>
                 <h1
                   style={{
@@ -494,6 +494,7 @@ export default function Settings() {
                     color: 'var(--s-text2)',
                     margin: '0 0 7px 3px',
                   }}
+                  data-testid="settings-row-auto-record"
                 >
                   Auto-record meeting detection
                 </div>
@@ -845,7 +846,7 @@ export default function Settings() {
           )}
 
           {activePane === 'audio' && (
-            <div className="s-pane">
+            <div className="s-pane" data-testid="settings-pane-audio">
               <div style={{ marginBottom: 20 }}>
                 <h1
                   style={{
@@ -1157,7 +1158,7 @@ export default function Settings() {
           )}
 
           {activePane === 'general' && (
-            <div className="s-pane">
+            <div className="s-pane" data-testid="settings-pane-general">
               <div style={{ marginBottom: 20 }}>
                 <h1
                   style={{
@@ -1436,7 +1437,7 @@ export default function Settings() {
           )}
 
           {activePane === 'transcription' && (
-            <div className="s-pane">
+            <div className="s-pane" data-testid="settings-pane-transcription">
               <div style={{ marginBottom: 20 }}>
                 <h1
                   style={{
@@ -1555,6 +1556,7 @@ export default function Settings() {
                     <div
                       key={m.model}
                       role="radio"
+                      data-testid={`settings-model-option-${m.name.toLowerCase()}`}
                       aria-checked={modelPrefs.selectedModel === m.model}
                       aria-disabled={m.disabled === true}
                       tabIndex={m.disabled ? -1 : 0}
@@ -2073,7 +2075,7 @@ export default function Settings() {
           )}
 
           {activePane === 'privacy' && (
-            <div className="s-pane">
+            <div className="s-pane" data-testid="settings-pane-privacy">
               <div style={{ marginBottom: 20 }}>
                 <h1
                   style={{
@@ -2365,7 +2367,7 @@ export default function Settings() {
           )}
 
           {activePane === 'permissions' && (
-            <div className="s-pane">
+            <div className="s-pane" data-testid="settings-pane-permissions">
               <div style={{ marginBottom: 20 }}>
                 <h1
                   style={{
@@ -2405,6 +2407,7 @@ export default function Settings() {
                           fontWeight: 500,
                           color: 'var(--s-text)',
                         }}
+                        data-testid="settings-row-microphone"
                       >
                         Microphone
                       </div>
@@ -2474,6 +2477,7 @@ export default function Settings() {
                           fontWeight: 500,
                           color: 'var(--s-text)',
                         }}
+                        data-testid="settings-row-accessibility"
                       >
                         Accessibility
                       </div>
@@ -2596,7 +2600,7 @@ export default function Settings() {
           )}
 
           {activePane === 'shortcuts' && (
-            <div className="s-pane">
+            <div className="s-pane" data-testid="settings-pane-shortcuts">
               <div style={{ marginBottom: 20 }}>
                 <h1
                   style={{
@@ -2636,6 +2640,7 @@ export default function Settings() {
                           fontWeight: 500,
                           color: 'var(--s-text)',
                         }}
+                        data-testid="settings-row-start-stop-recording"
                       >
                         Start / stop recording
                       </div>
@@ -2676,6 +2681,7 @@ export default function Settings() {
                           fontWeight: 500,
                           color: 'var(--s-text)',
                         }}
+                        data-testid="settings-row-start-stop-dictation"
                       >
                         Start / stop dictation
                       </div>
@@ -2841,7 +2847,7 @@ export default function Settings() {
           )}
 
           {activePane === 'calendar' && (
-            <div className="s-pane">
+            <div className="s-pane" data-testid="settings-pane-calendar">
               <div style={{ marginBottom: 20 }}>
                 <h1
                   style={{

@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import {
   updateNotificationState,
   getCurrentNotificationState,
+  hideNotification,
   sendToNotificationWindow,
   NotificationStatePayload,
 } from '../notification-window';
@@ -61,4 +62,14 @@ export function registerNotificationHandlers() {
       return { success: true };
     },
   );
+
+  /**
+   * Allow the renderer to hide the notification window outright — used by
+   * Settings' dev-only notification preview controls to dismiss whichever
+   * state is currently showing.
+   */
+  ipcMain.handle(CHANNELS.NOTIFICATIONS.HIDE, async () => {
+    hideNotification();
+    return { success: true };
+  });
 }

@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import type { Transcriber } from '@/renderer/hooks/useTranscriber';
 import type { UseAudioRecorderReturn } from '@/renderer/hooks/useAudioRecorder';
@@ -47,9 +48,9 @@ export function useRecordingFlow({
   // misfires on mount or when transcript.output is undefined (VAD-only mode
   // never sets transcriber.isBusy, so we can't rely on that signal).
   const hasActiveSessionRef = useRef(false);
-  // Tracks how the *currently active* session actually started, since either
-  // shortcut can stop a session started by the other one — system audio must
-  // only be stopped if it was actually started for this session.
+  // Tracks how the *currently active* session actually started: gates which
+  // shortcut may stop it (see handleToggleCapture) and whether system audio
+  // needs stopping (only started for meeting sessions).
   const isDictationSessionRef = useRef(false);
   const {
     isRecording,
@@ -91,14 +92,25 @@ export function useRecordingFlow({
       pasteOnComplete?: boolean;
     }) => {
       if (isRecording) {
+        // Only the shortcut that matches the active session's type may stop it —
+        // otherwise the other shortcut mid-session would stop the wrong capture
+        // (e.g. dictation shortcut cutting off an in-progress meeting recording).
+        const incomingIsDictation = sessionOptions?.forceType === 'dictation';
+        if (incomingIsDictation !== isDictationSessionRef.current) {
+          const activeLabel = isDictationSessionRef.current
+            ? 'dictation'
+            : 'meeting';
+          toast.info(
+            `Use the ${activeLabel} shortcut to stop the active ${activeLabel} session.`,
+          );
+          return;
+        }
         const label = isDictationSessionRef.current ? 'Dictation' : 'Recording';
         setIsRecordingActive(false);
         stopRecording();
         // Read from ref so this handler never has a stale systemAudioEnabled value,
         // even when re-wiring of the recording:toggle listener is still in flight.
-        // Dictation sessions never start system audio (see below), so never stop it either —
-        // otherwise pressing the dictation shortcut mid-meeting-recording would
-        // wrongly cut off the other session's system audio capture.
+        // Dictation sessions never start system audio (see below), so never stop it either.
         if (!isDictationSessionRef.current && systemAudioEnabledRef.current) {
           stopSystemRecording();
         }

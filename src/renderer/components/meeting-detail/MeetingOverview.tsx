@@ -28,13 +28,19 @@ export function MeetingOverview({
   return (
     <Section icon={<AlignLeft size={15} />} title="Overview">
       {summaryPending && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+          data-testid="overview-summary-pending"
+        >
           <Loader2 size={13} className="animate-spin" />
           <span>Generating summary…</span>
         </div>
       )}
       {meeting.summaryStatus === 'failed' && (
-        <p className="text-sm text-muted-foreground italic">
+        <p
+          className="text-sm text-muted-foreground italic"
+          data-testid="overview-summary-failed"
+        >
           Summary unavailable.
         </p>
       )}

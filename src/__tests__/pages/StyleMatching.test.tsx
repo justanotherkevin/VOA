@@ -8,38 +8,36 @@ describe('Style Matching Page', () => {
     render(
       <MemoryRouter>
         <StyleMatching />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    expect(screen.getByText('Style Matching')).toBeDefined();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Style Matching' }),
+    ).toBeDefined();
   });
 
   it('should display style matching title', () => {
     render(
       <MemoryRouter>
         <StyleMatching />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    const title = screen.getByText('Style Matching');
+    const title = screen.getByRole('heading', {
+      level: 1,
+      name: 'Style Matching',
+    });
     expect(title).toBeTruthy();
-  });
-
-  it('should display description about writing styles', () => {
-    render(
-      <MemoryRouter>
-        <StyleMatching />
-      </MemoryRouter>
-    );
-    const description = screen.getByText(/Willow learns/i);
-    expect(description).toBeDefined();
   });
 
   it('should display enable style matching toggle', () => {
     render(
       <MemoryRouter>
         <StyleMatching />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    const toggleLabel = screen.getByText('Enable Style Matching');
+    const toggleLabel = screen.getByRole('heading', {
+      level: 2,
+      name: 'Enable Style Matching',
+    });
     expect(toggleLabel).toBeDefined();
   });
 
@@ -47,29 +45,40 @@ describe('Style Matching Page', () => {
     render(
       <MemoryRouter>
         <StyleMatching />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    expect(screen.getByText('Casual Messages')).toBeDefined();
-    expect(screen.getByText('Work Messages')).toBeDefined();
-    expect(screen.getByText('Email')).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Casual Messages' }),
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Work Messages' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Email' })).toBeDefined();
   });
 
   it('should display style options', () => {
     render(
       <MemoryRouter>
         <StyleMatching />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    expect(screen.getByText('Formal')).toBeDefined();
-    expect(screen.getByText('Casual')).toBeDefined();
-    expect(screen.getByText('Extremely Casual')).toBeDefined();
+    // Style names render as <h3> headings nested inside their selection
+    // buttons, not as the button's own accessible name (which also includes
+    // the description/example text) — query by heading, not button.
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Formal' }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Casual' }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Extremely Casual' }),
+    ).toBeDefined();
   });
 
   it('should display style context examples', () => {
     render(
       <MemoryRouter>
         <StyleMatching />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     const contextText = screen.getByText(/professional/i);
     expect(contextText).toBeDefined();

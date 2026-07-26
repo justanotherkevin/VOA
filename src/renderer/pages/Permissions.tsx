@@ -115,6 +115,7 @@ export default function Permissions() {
             return (
               <Card
                 key={permission.id}
+                data-testid={`permission-card-${permission.id}`}
                 className="border-0 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => handleOpenSettings(permission.id)}
               >

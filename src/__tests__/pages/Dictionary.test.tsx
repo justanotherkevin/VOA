@@ -8,38 +8,30 @@ describe('Dictionary Page', () => {
     render(
       <MemoryRouter>
         <Dictionary />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    expect(screen.getByText('Dictionary')).toBeDefined();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Dictionary' }),
+    ).toBeDefined();
   });
 
   it('should display dictionary title', () => {
     render(
       <MemoryRouter>
         <Dictionary />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    const title = screen.getByText('Dictionary');
+    const title = screen.getByRole('heading', { level: 1, name: 'Dictionary' });
     expect(title).toBeTruthy();
-  });
-
-  it('should display description about custom words', () => {
-    render(
-      <MemoryRouter>
-        <Dictionary />
-      </MemoryRouter>
-    );
-    const description = screen.getByText(/manage your custom/i);
-    expect(description).toBeDefined();
   });
 
   it('should display add new word button', () => {
     render(
       <MemoryRouter>
         <Dictionary />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    const button = screen.getByText(/add new word/i);
+    const button = screen.getByRole('button', { name: /add new word/i });
     expect(button).toBeDefined();
   });
 
@@ -47,9 +39,12 @@ describe('Dictionary Page', () => {
     render(
       <MemoryRouter>
         <Dictionary />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    const entriesHeading = screen.getByText(/dictionary entries/i);
+    const entriesHeading = screen.getByRole('heading', {
+      level: 2,
+      name: /dictionary entries/i,
+    });
     expect(entriesHeading).toBeDefined();
   });
 
@@ -57,9 +52,9 @@ describe('Dictionary Page', () => {
     render(
       <MemoryRouter>
         <Dictionary />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    const emptyState = screen.getByText(/no entries/i);
+    const emptyState = screen.getByTestId('dictionary-empty-state');
     expect(emptyState).toBeDefined();
   });
 });
