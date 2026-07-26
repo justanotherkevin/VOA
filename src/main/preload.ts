@@ -252,6 +252,8 @@ if (process.env.E2E_TEST === 'true') {
       ipcRenderer.invoke('meetings:e2e-seed', data),
     isTranscriberSessionActive: () =>
       ipcRenderer.invoke('transcriber:e2e-session-active'),
+    getTranscriberSessionType: () =>
+      ipcRenderer.invoke('transcriber:e2e-session-type'),
   });
 }
 

@@ -276,23 +276,30 @@ export function useRecordingFlow({
       hasActiveSessionRef.current
     ) {
       hasActiveSessionRef.current = false;
-      console.log(
-        '[RecordingFlow] Session ending — isRecordingActive:',
-        isRecordingActive,
-        'isBusy:',
-        transcriber.isBusy,
-      );
-      window.electronAPI.transcriber.endSession(Date.now());
-      showDone();
+      // Waits for the real backend teardown (endSession) to resolve before
+      // touching UI state, instead of a fixed setTimeout that had no idea
+      // whether a newer session had already started underneath it. If this
+      // effect gets superseded (a new session starts before this resolves),
+      // React runs the cleanup below and sets `cancelled`, so the stale
+      // continuation skips its UI-state side effects instead of stomping
+      // the new session.
+      let cancelled = false;
+      (async () => {
+        await window.electronAPI.transcriber.endSession(Date.now());
+        if (cancelled) return;
+        showDone();
 
-      // Schedule cleanup and reset after animation completes (300ms fade)
-      const cleanupTimer = setTimeout(() => {
+        // Keep the 300ms "done" fade before returning to idle.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (cancelled) return;
         cleanup();
         showIdle();
         setIsRecordingActive(false);
-      }, 300);
+      })();
 
-      return () => clearTimeout(cleanupTimer);
+      return () => {
+        cancelled = true;
+      };
     }
   }, [
     isRecordingActive,

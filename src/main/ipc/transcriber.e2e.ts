@@ -18,6 +18,13 @@ export function registerTranscriberE2eHandlers() {
     return transcriberService.isSessionActive();
   });
 
+  // Lets a test know which shortcut (recording vs. dictation) actually needs
+  // pressing to stop a leaked session — useRecordingFlow.ts's toggle handler
+  // ignores a toggle whose type doesn't match the active session's type.
+  ipcMain.handle('transcriber:e2e-session-type', () => {
+    return transcriberService.getSessionType();
+  });
+
   // Decode an audio file entirely in the main process and run the full
   // transcribe → endSession pipeline. Avoids renderer-side OfflineAudioContext
   // memory pressure for large files (e.g. city-meeting.mp3 at 11 minutes).
