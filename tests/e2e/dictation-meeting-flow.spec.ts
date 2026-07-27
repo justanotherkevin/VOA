@@ -82,6 +82,9 @@ test.describe('Meeting Dictation Flow', () => {
   }) => {
     test.setTimeout(120_000); // dominated by Whisper transcription of 90 s audio
 
+    // Meetings section is collapsed by default — expand it to see its empty-state line.
+    await mainPage.getByTestId('meeting-list-section-toggle-meetings').click();
+
     // STEP 1: Confirm the app starts with no meetings (store is seeded clean by fixtures)
     await expect(
       mainPage.locator('text=No meetings yet'),
