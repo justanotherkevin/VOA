@@ -4,6 +4,7 @@ import Settings from '@/renderer/pages/Settings';
 import { MemoryRouter } from 'react-router-dom';
 import { RECORDING_SHORTCUT, DICTATION_SHORTCUT } from '@/lib/shortcuts';
 import type { SettingsPaneId } from '@/renderer/contexts/SettingsNavContext';
+import { UIPreferencesProvider } from '@/renderer/contexts/UIPreferencesProvider';
 
 vi.mock('@/renderer/hooks/useShortcuts', () => ({
   useShortcuts: (kind: 'recording' | 'dictation' = 'recording') => ({
@@ -55,9 +56,11 @@ describe('Settings Page', () => {
 
   it('should render without crashing', async () => {
     render(
-      <MemoryRouter>
-        <Settings transcriber={mockTranscriber} />
-      </MemoryRouter>,
+      <UIPreferencesProvider>
+        <MemoryRouter>
+          <Settings transcriber={mockTranscriber} />
+        </MemoryRouter>
+      </UIPreferencesProvider>,
     );
     await waitFor(() => {
       expect(screen.getByTestId('settings-pane-recording')).toBeInTheDocument();
@@ -66,9 +69,11 @@ describe('Settings Page', () => {
 
   it('should show Recording pane by default', async () => {
     render(
-      <MemoryRouter>
-        <Settings transcriber={mockTranscriber} />
-      </MemoryRouter>,
+      <UIPreferencesProvider>
+        <MemoryRouter>
+          <Settings transcriber={mockTranscriber} />
+        </MemoryRouter>
+      </UIPreferencesProvider>,
     );
     await waitFor(() => {
       expect(screen.getByTestId('settings-row-auto-record')).toBeDefined();
@@ -78,9 +83,11 @@ describe('Settings Page', () => {
   it('should show Transcription pane and model options when active', async () => {
     mockActivePane = 'transcription';
     render(
-      <MemoryRouter>
-        <Settings transcriber={mockTranscriber} />
-      </MemoryRouter>,
+      <UIPreferencesProvider>
+        <MemoryRouter>
+          <Settings transcriber={mockTranscriber} />
+        </MemoryRouter>
+      </UIPreferencesProvider>,
     );
 
     await waitFor(() => {
@@ -94,9 +101,11 @@ describe('Settings Page', () => {
   it('should show Permissions pane and permission status when active', async () => {
     mockActivePane = 'permissions';
     render(
-      <MemoryRouter>
-        <Settings transcriber={mockTranscriber} />
-      </MemoryRouter>,
+      <UIPreferencesProvider>
+        <MemoryRouter>
+          <Settings transcriber={mockTranscriber} />
+        </MemoryRouter>
+      </UIPreferencesProvider>,
     );
 
     await waitFor(() => {
@@ -108,9 +117,11 @@ describe('Settings Page', () => {
   it('should show Shortcuts pane and recording shortcut when active', async () => {
     mockActivePane = 'shortcuts';
     render(
-      <MemoryRouter>
-        <Settings transcriber={mockTranscriber} />
-      </MemoryRouter>,
+      <UIPreferencesProvider>
+        <MemoryRouter>
+          <Settings transcriber={mockTranscriber} />
+        </MemoryRouter>
+      </UIPreferencesProvider>,
     );
 
     await waitFor(() => {
