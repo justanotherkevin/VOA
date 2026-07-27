@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Mic } from 'lucide-react';
+import { Search, Mic, ChevronDown } from 'lucide-react';
 import type { Recording } from '@/renderer/hooks/useMeetings';
 import {
   formatMeetingDate,
@@ -16,6 +16,11 @@ import {
   ItemFooter,
   ItemTitle,
 } from '@/renderer/components/item';
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from '@/renderer/components/collapsible';
 
 interface MeetingListProps {
   meetings: Recording[];
@@ -137,44 +142,64 @@ function RecordingTypeSection({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <div data-testid={`meeting-list-section-${heading.toLowerCase()}`}>
-      <div className="px-3 pt-2 pb-1">
-        <span className="text-xs uppercase tracking-wide text-sidebar-foreground/40 font-semibold">
-          {heading}
-        </span>
-      </div>
-      {groups.size === 0 ? (
-        <div
-          className="px-4 py-3"
-          data-testid={`meeting-list-empty-${heading.toLowerCase()}`}
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      data-testid={`meeting-list-section-${heading.toLowerCase()}`}
+    >
+      <CollapsibleTrigger asChild>
+        <button
+          className="flex w-full items-center justify-between px-3 pt-2 pb-1"
+          data-testid={`meeting-list-section-toggle-${heading.toLowerCase()}`}
         >
-          <p className="text-sm text-muted-foreground">{emptyLabel}</p>
-        </div>
-      ) : (
-        <ItemGroup>
-          {Array.from(groups.entries()).map(([label, items]) => (
-            <div key={label}>
-              {/* <div className="px-3 py-1.5">
-                <span className="text-xs text-sidebar-foreground/60 font-medium">
-                  {label}
-                </span>
-              </div> */}
-              {items.map((meeting) => (
-                <MeetingRow
-                  key={meeting.id}
-                  meeting={meeting}
-                  isSelected={meeting.id === selectedId}
-                  onSelect={() => onSelect(meeting.id)}
-                  shortDate={formatMeetingShortDate(meeting.startedAt)}
-                  duration={formatDurationShort(meeting.durationMs)}
-                />
-              ))}
-            </div>
-          ))}
-        </ItemGroup>
-      )}
-    </div>
+          <span className="text-xs uppercase tracking-wide text-sidebar-foreground/40 font-semibold">
+            {heading}
+          </span>
+          <ChevronDown
+            size={14}
+            className={cn(
+              'text-sidebar-foreground/40 transition-transform',
+              !open && '-rotate-90',
+            )}
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {groups.size === 0 ? (
+          <div
+            className="px-4 py-3"
+            data-testid={`meeting-list-empty-${heading.toLowerCase()}`}
+          >
+            <p className="text-sm text-muted-foreground">{emptyLabel}</p>
+          </div>
+        ) : (
+          <ItemGroup>
+            {Array.from(groups.entries()).map(([label, items]) => (
+              <div key={label}>
+                {/* <div className="px-3 py-1.5">
+                  <span className="text-xs text-sidebar-foreground/60 font-medium">
+                    {label}
+                  </span>
+                </div> */}
+                {items.map((meeting) => (
+                  <MeetingRow
+                    key={meeting.id}
+                    meeting={meeting}
+                    isSelected={meeting.id === selectedId}
+                    onSelect={() => onSelect(meeting.id)}
+                    shortDate={formatMeetingShortDate(meeting.startedAt)}
+                    duration={formatDurationShort(meeting.durationMs)}
+                  />
+                ))}
+              </div>
+            ))}
+          </ItemGroup>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
