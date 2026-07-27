@@ -9,6 +9,7 @@ import { useTranscriber } from '@/renderer/hooks/useTranscriber';
 import { PermissionsProvider } from '@/renderer/contexts/PermissionsProvider';
 import { MeetingsProvider } from '@/renderer/contexts/MeetingsProvider';
 import { SettingsNavProvider } from '@/renderer/contexts/SettingsNavProvider';
+import { UIPreferencesProvider } from '@/renderer/contexts/UIPreferencesProvider';
 import MainLayout from '@/renderer/components/ui/MainLayout';
 import Meetings from '@/renderer/pages/Meetings';
 import Settings from '@/renderer/pages/Settings';
@@ -37,31 +38,33 @@ export default function App() {
   }, []);
 
   return (
-    <PermissionsProvider>
-      <Toaster />
-      <Router initialEntries={['/']}>
-        <MeetingsProvider>
-          <SettingsNavProvider>
-            <Routes>
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route
-                element={
-                  <MainLayout
-                    status={status}
-                    onNewRecording={handleNewRecording}
-                  >
-                    <Outlet />
-                  </MainLayout>
-                }
-              >
-                <Route path="/" element={<Meetings />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/permissions" element={<Permissions />} />
-              </Route>
-            </Routes>
-          </SettingsNavProvider>
-        </MeetingsProvider>
-      </Router>
-    </PermissionsProvider>
+    <UIPreferencesProvider>
+      <PermissionsProvider>
+        <Toaster />
+        <Router initialEntries={['/']}>
+          <MeetingsProvider>
+            <SettingsNavProvider>
+              <Routes>
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route
+                  element={
+                    <MainLayout
+                      status={status}
+                      onNewRecording={handleNewRecording}
+                    >
+                      <Outlet />
+                    </MainLayout>
+                  }
+                >
+                  <Route path="/" element={<Meetings />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/permissions" element={<Permissions />} />
+                </Route>
+              </Routes>
+            </SettingsNavProvider>
+          </MeetingsProvider>
+        </Router>
+      </PermissionsProvider>
+    </UIPreferencesProvider>
   );
 }
