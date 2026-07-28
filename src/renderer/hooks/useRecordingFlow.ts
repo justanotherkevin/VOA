@@ -11,8 +11,8 @@ import {
   setupRecordingFlowTestHooks,
   cleanupRecordingFlowTestHooks,
   setRecordingActiveForTests,
-  exposeSystemAudioSetterForTests,
-  cleanupSystemAudioSetterForTests,
+  exposeSystemAudioCapabilitySetterForTests,
+  cleanupSystemAudioCapabilitySetterForTests,
 } from '@/renderer/testing/TestHooks';
 
 interface UseRecordingFlowParams {
@@ -43,7 +43,7 @@ export function useRecordingFlow({
 }: UseRecordingFlowParams): void {
   const transcriberRef = useRef(transcriber);
   const [isRecordingActive, setIsRecordingActive] = useState(false);
-  const [systemAudioEnabled, setSystemAudioEnabled] = useState(false);
+  const [systemAudioSupported, setSystemAudioSupported] = useState(false);
   // Tracks whether a session was explicitly started so the done-trigger never
   // misfires on mount or when transcript.output is undefined (VAD-only mode
   // never sets transcriber.isBusy, so we can't rely on that signal).
@@ -64,16 +64,14 @@ export function useRecordingFlow({
 
   // Keep a ref so handleToggleRecording always reads the latest value without
   // needing to be recreated (and without the onRecordingToggle listener
-  // being re-registered) every time systemAudioEnabled changes.
-  const systemAudioEnabledRef = useRef(systemAudioEnabled);
+  // being re-registered) every time systemAudioSupported changes.
+  const systemAudioSupportedRef = useRef(systemAudioSupported);
   useEffect(() => {
-    systemAudioEnabledRef.current = systemAudioEnabled;
-  }, [systemAudioEnabled]);
+    systemAudioSupportedRef.current = systemAudioSupported;
+  }, [systemAudioSupported]);
 
   useEffect(() => {
-    window.electronAPI.settings.recording.get().then((prefs: any) => {
-      setSystemAudioEnabled(!!prefs?.systemAudioEnabled);
-    });
+    window.electronAPI.audio.getCapability().then(setSystemAudioSupported);
   }, []);
   const {
     showRecordingStart,
@@ -108,26 +106,33 @@ export function useRecordingFlow({
         const label = isDictationSessionRef.current ? 'Dictation' : 'Recording';
         setIsRecordingActive(false);
         stopRecording();
-        // Read from ref so this handler never has a stale systemAudioEnabled value,
-        // even when re-wiring of the recording:toggle listener is still in flight.
-        // Dictation sessions never start system audio (see below), so never stop it either.
-        if (!isDictationSessionRef.current && systemAudioEnabledRef.current) {
+        // Dictation sessions never start system audio (see below), so never
+        // stop it either. Meeting sessions always start it when supported.
+        if (!isDictationSessionRef.current) {
           stopSystemRecording();
         }
         showRecordingStopped(label);
         showProcessing();
       } else {
         const isDictation = sessionOptions?.forceType === 'dictation';
+        // Meeting recordings require system audio (per product decision —
+        // mic-only meeting capture isn't useful) so unsupported machines
+        // block the whole session rather than silently degrading.
+        if (!isDictation && !systemAudioSupportedRef.current) {
+          toast.info(
+            "This machine isn't supported for meeting recording (requires macOS 14 Sonoma or later). Dictation still works.",
+          );
+          return;
+        }
         isDictationSessionRef.current = isDictation;
         const sessionStartedAt = Date.now();
         hasActiveSessionRef.current = true;
         setIsRecordingActive(true);
         await startRecording();
-        // Dictation is mic-only by design — never pull in system audio, even if
-        // the user has "Record system audio" enabled for meeting recordings.
+        // Dictation is mic-only by design — never pull in system audio.
         // Capturing (near-)silent system audio here is what produced
         // Whisper's "[BLANK_AUDIO]" hallucination in dictated/pasted text.
-        if (!isDictation && systemAudioEnabledRef.current) {
+        if (!isDictation) {
           startSystemRecording();
         }
         window.electronAPI.transcriber.startSession(
@@ -136,7 +141,7 @@ export function useRecordingFlow({
         );
         showRecordingStart(isDictation ? 'Dictation' : 'Recording', {
           isMeeting: !isDictation,
-          systemAudioEnabled: systemAudioEnabledRef.current,
+          systemAudioEnabled: !isDictation && systemAudioSupportedRef.current,
         });
       }
     },
@@ -190,13 +195,13 @@ export function useRecordingFlow({
     setRecordingActiveForTests(isRecordingActive);
   }, [isRecordingActive]);
 
-  // Expose systemAudioEnabled getter+setter for E2E tests
+  // Expose systemAudioSupported getter+setter for E2E tests
   useEffect(() => {
-    exposeSystemAudioSetterForTests(
-      () => systemAudioEnabledRef.current,
-      setSystemAudioEnabled,
+    exposeSystemAudioCapabilitySetterForTests(
+      () => systemAudioSupportedRef.current,
+      setSystemAudioSupported,
     );
-    return () => cleanupSystemAudioSetterForTests();
+    return () => cleanupSystemAudioCapabilitySetterForTests();
   }, []);
 
   useEffect(() => {

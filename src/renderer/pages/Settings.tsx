@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useShortcuts } from '@/renderer/hooks/useShortcuts';
 import { usePermissions } from '@/renderer/hooks/usePermissions';
+import { useAudioDevices } from '@/renderer/hooks/useAudioDevices';
 import { useSettingsNavContext } from '@/renderer/hooks/useSettingsNavContext';
 import { useUIPreferencesContext } from '@/renderer/hooks/useUIPreferencesContext';
 import { RecordingPane } from './settings/RecordingPane';
@@ -20,7 +21,7 @@ export default function Settings() {
   const [autoRecordMode, setAutoRecordMode] = useState<
     'manual' | 'ask' | 'auto' | 'auto-stop'
   >('manual');
-  const [systemAudioEnabled, setSystemAudioEnabled] = useState(false);
+  const [systemAudioSupported, setSystemAudioSupported] = useState(false);
   const [watchedApps, setWatchedApps] = useState({
     zoom: true,
     teams: true,
@@ -47,11 +48,18 @@ export default function Settings() {
     showMenuBar: true,
     showDockIcon: true,
   });
-  const [audioPrefs, setAudioPrefs] = useState({
+  const [audioPrefs, setAudioPrefs] = useState<{
+    micGain: number;
+    noiseSuppression: boolean;
+    labelSpeakers: boolean;
+    selectedMicDeviceId?: string;
+  }>({
     micGain: 62,
     noiseSuppression: true,
     labelSpeakers: true,
   });
+  const { microphones, defaultOutputLabel, labelsAvailable } =
+    useAudioDevices();
   const [modelPrefs, setModelPrefs] = useState({
     selectedModel: 'Xenova/whisper-tiny',
     asrType: 'whisper' as const,
@@ -94,6 +102,10 @@ export default function Settings() {
   const { permissions, openSettings: openPermSettings } = usePermissions();
 
   useEffect(() => {
+    window.electronAPI.audio.getCapability().then(setSystemAudioSupported);
+  }, []);
+
+  useEffect(() => {
     const loadAllPrefs = async () => {
       try {
         const [recording, app, audio, model] = await Promise.all([
@@ -105,7 +117,6 @@ export default function Settings() {
 
         if (recording) {
           setAutoRecordMode(recording.autoRecordMode || 'manual');
-          setSystemAudioEnabled(!!recording.systemAudioEnabled);
         }
         if (app) {
           setAppPrefs((prev) => ({ ...prev, ...app }));
@@ -135,7 +146,6 @@ export default function Settings() {
   async function updateRecordingPref(key: string, value: unknown) {
     const update = { [key]: value };
     if (key === 'autoRecordMode') setAutoRecordMode(value as any);
-    if (key === 'systemAudioEnabled') setSystemAudioEnabled(value as boolean);
     await window.electronAPI.settings.recording.update(update);
   }
 
@@ -298,10 +308,12 @@ export default function Settings() {
 
           {activePane === 'audio' && (
             <AudioPane
-              systemAudioEnabled={systemAudioEnabled}
-              updateRecordingPref={updateRecordingPref}
+              systemAudioSupported={systemAudioSupported}
               audioPrefs={audioPrefs}
               updateAudioPref={updateAudioPref}
+              microphones={microphones}
+              defaultOutputLabel={defaultOutputLabel}
+              labelsAvailable={labelsAvailable}
             />
           )}
 

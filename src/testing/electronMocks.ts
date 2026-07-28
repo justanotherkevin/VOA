@@ -138,7 +138,6 @@ export function attachGlobalElectronMock() {
       },
       recording: {
         get: vi.fn(async () => ({
-          systemAudioEnabled: false,
           autoRecordMode: 'manual',
         })),
         update: vi.fn(async () => ({ success: true })),
@@ -243,6 +242,7 @@ export function attachGlobalElectronMock() {
     audio: {
       startSystemAudio: vi.fn(async () => false),
       stopSystemAudio: vi.fn(),
+      getCapability: vi.fn(async () => true),
     },
 
     // ── Transcript History ────────────────────────────────────────────────────

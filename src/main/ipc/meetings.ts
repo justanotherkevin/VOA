@@ -13,6 +13,7 @@ import {
 import { CHANNELS } from '@/lib/ipc-channels';
 import { getMainWindow } from '../state/volatile';
 import enrichmentService from '../services/enrichment';
+import { isSystemAudioCaptureSupported } from '../utils/systemAudioCapability';
 
 export function registerMeetingsHandlers() {
   ipcMain.handle(CHANNELS.MEETINGS.GET_ALL, async () => {
@@ -51,6 +52,10 @@ export function registerMeetingsHandlers() {
       return { success: true };
     },
   );
+
+  ipcMain.handle(CHANNELS.SYSTEM_AUDIO.CAPABILITY, async () => {
+    return isSystemAudioCaptureSupported();
+  });
 
   ipcMain.handle(
     CHANNELS.MEETINGS.ENRICH,

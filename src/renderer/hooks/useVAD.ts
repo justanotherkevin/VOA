@@ -8,6 +8,32 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { MicVAD } from '@ricky0123/vad-web';
 import { VAD_CONFIG } from '@/renderer/utils/VadConfig';
 import { sendAudioToTranscriber } from '@/renderer/utils/ElectronAPIHelper';
+import {
+  getPreferredMicConstraints,
+  isOverconstrainedError,
+} from '@/renderer/utils/MicConstraints';
+
+// Matches @ricky0123/vad-web's own default getUserMedia constraints —
+// duplicated here (rather than imported) since the library doesn't export
+// them, only its internal default getStream/resumeStream closures.
+const VAD_BASE_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
+  channelCount: 1,
+  echoCancellation: true,
+  autoGainControl: true,
+  noiseSuppression: true,
+};
+
+async function getVadMicStream(): Promise<MediaStream> {
+  const audio = await getPreferredMicConstraints(VAD_BASE_AUDIO_CONSTRAINTS);
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio });
+  } catch (error) {
+    if (!isOverconstrainedError(error)) throw error;
+    return navigator.mediaDevices.getUserMedia({
+      audio: VAD_BASE_AUDIO_CONSTRAINTS,
+    });
+  }
+}
 
 export interface UseVADReturn {
   isInitialized: boolean;
@@ -128,6 +154,8 @@ export function useVAD(callbacks?: VADCallbacks): UseVADReturn {
           submitUserSpeechOnPause: true,
           baseAssetPath: VAD_CONFIG.BASE_ASSET_PATH,
           onnxWASMBasePath: VAD_CONFIG.ONNX_WASM_BASE_PATH,
+          getStream: getVadMicStream,
+          resumeStream: getVadMicStream,
         });
 
         vadRef.current = vad;

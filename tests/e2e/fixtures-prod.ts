@@ -110,15 +110,42 @@ function cleanupElectronStore(): void {
   }
 }
 
+// See fixtures-dev.ts's electronApp fixture for why this is 'test'-scoped
+// with manual per-file caching rather than Playwright's built-in 'worker'
+// scope (which, with workers:1, would share one app across every spec file).
+let cachedApp: any = null;
+let cachedFile: string | null = null;
+
+async function closeCachedApp(): Promise<void> {
+  if (!cachedApp) return;
+  const app = cachedApp;
+  cachedApp = null;
+  cachedFile = null;
+  try {
+    await app.close();
+  } catch (e) {
+    console.error(
+      '[fixtures-prod] app.close() failed (app may have crashed):',
+      e,
+    );
+  }
+}
+
+process.once('beforeExit', () => {
+  void closeCachedApp();
+});
+
 export const test = base.extend<ElectronFixtures>({
   electronApp: [
-    async ({}, use) => {
-      const app = await launchElectronApp({ NODE_ENV: 'production' });
-
-      await use(app);
-      await app.close();
+    async ({}, use, testInfo) => {
+      if (cachedFile !== testInfo.file) {
+        await closeCachedApp();
+        cachedApp = await launchElectronApp({ NODE_ENV: 'production' });
+        cachedFile = testInfo.file;
+      }
+      await use(cachedApp);
     },
-    { scope: 'worker' },
+    { scope: 'test', timeout: 30_000 },
   ] as any,
 
   page: async ({ electronApp }, use) => {

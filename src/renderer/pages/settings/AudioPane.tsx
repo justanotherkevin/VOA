@@ -1,6 +1,5 @@
 import {
   ChevronDown,
-  Info,
   Mic,
   SlidersHorizontal,
   Speaker,
@@ -9,24 +8,30 @@ import {
   Wind,
 } from 'lucide-react';
 import { SettingSwitch } from '@/renderer/components/settings/SettingSwitch';
+import type { AudioInputDevice } from '@/renderer/hooks/useAudioDevices';
 import { ComingSoon, PaneHeader, SectionLabel, SettingRow } from './shared';
 
 interface AudioPrefs {
   micGain: number;
   noiseSuppression: boolean;
   labelSpeakers: boolean;
+  selectedMicDeviceId?: string;
 }
 
 export function AudioPane({
-  systemAudioEnabled,
-  updateRecordingPref,
+  systemAudioSupported,
   audioPrefs,
   updateAudioPref,
+  microphones,
+  defaultOutputLabel,
+  labelsAvailable,
 }: {
-  systemAudioEnabled: boolean;
-  updateRecordingPref: (key: string, value: unknown) => Promise<void>;
+  systemAudioSupported: boolean;
   audioPrefs: AudioPrefs;
   updateAudioPref: (key: string, value: unknown) => Promise<void>;
+  microphones: AudioInputDevice[];
+  defaultOutputLabel: string | null;
+  labelsAvailable: boolean;
 }) {
   return (
     <div className="s-pane" data-testid="settings-pane-audio">
@@ -40,46 +45,72 @@ export function AudioPane({
         <div className="s-card-rows">
           <SettingRow
             icon={Speaker}
-            title="Capture system audio"
-            description="Record your mic and the audio from your speakers."
+            title="Meeting capture"
+            description={
+              systemAudioSupported
+                ? 'Meetings record your mic and the audio from your speakers.'
+                : "Meeting recording requires macOS 14 Sonoma or later — this machine isn't supported. Dictation still works."
+            }
             actions={
-              <SettingSwitch
-                checked={systemAudioEnabled}
-                onChange={(v) => updateRecordingPref('systemAudioEnabled', v)}
-                accent
-              />
+              systemAudioSupported ? (
+                <span className="s-pill s-pill-good">
+                  <span className="s-pdot" />
+                  Supported
+                </span>
+              ) : (
+                <span className="s-pill s-pill-danger">
+                  <span className="s-pdot" />
+                  Not supported
+                </span>
+              )
             }
           />
-          <ComingSoon>
-            <SettingRow
-              icon={Mic}
-              title="Microphone"
-              actionsGap={6}
-              actions={
+          <SettingRow
+            icon={Mic}
+            title="Microphone"
+            actionsGap={6}
+            description={
+              !labelsAvailable
+                ? 'Grant microphone access to see device names.'
+                : undefined
+            }
+            actions={
+              labelsAvailable ? (
                 <span className="s-select">
-                  MacBook Pro Mic{' '}
+                  <select
+                    value={audioPrefs.selectedMicDeviceId ?? ''}
+                    onChange={(e) =>
+                      updateAudioPref(
+                        'selectedMicDeviceId',
+                        e.target.value || undefined,
+                      )
+                    }
+                    style={{
+                      appearance: 'none',
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'inherit',
+                      font: 'inherit',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="">System default</option>
+                    {microphones.map((mic) => (
+                      <option key={mic.deviceId} value={mic.deviceId}>
+                        {mic.label}
+                      </option>
+                    ))}
+                  </select>
                   <ChevronDown size={13} color="var(--s-text3)" />
                 </span>
-              }
-            />
-          </ComingSoon>
-          <ComingSoon>
-            <SettingRow
-              icon={Volume2}
-              title="System output"
-              actionsGap={6}
-              actions={
-                <span className="s-select">
-                  Studio Display{' '}
-                  <ChevronDown size={13} color="var(--s-text3)" />
-                </span>
-              }
-            />
-          </ComingSoon>
-        </div>
-        <div className="s-note">
-          <Info size={13} />
-          System audio capture requires macOS 14 Sonoma or later.
+              ) : undefined
+            }
+          />
+          <SettingRow
+            icon={Volume2}
+            title="System output"
+            description={defaultOutputLabel ?? undefined}
+          />
         </div>
       </div>
 
