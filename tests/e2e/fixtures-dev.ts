@@ -85,30 +85,62 @@ function cleanupElectronStore(): void {
   }
 }
 
+// electronApp is deliberately scoped narrower than Playwright's built-in
+// 'worker' scope: with workers:1 a worker-scoped app would be shared across
+// every spec file in the run, letting state from one file's mocked audio/
+// sessions bleed into the next (see the notification-visibility.spec.ts
+// afterEach hang investigated when this was worker-scoped). Playwright has
+// no native "per-file" scope, so this fixture is 'test'-scoped and manually
+// caches by testInfo.file — relaunching only when the file changes, not on
+// every individual test.
+let cachedApp: any = null;
+let cachedFile: string | null = null;
+
+async function closeCachedApp(): Promise<void> {
+  if (!cachedApp) return;
+  const app = cachedApp;
+  cachedApp = null;
+  cachedFile = null;
+  try {
+    await app.close();
+  } catch (e) {
+    console.error(
+      '[fixtures-dev] app.close() failed (app may have crashed):',
+      e,
+    );
+  }
+  cleanupElectronStore();
+}
+
+// Best-effort close of the last file's app: there's no "after all tests in
+// this file, and this is the last file" fixture hook, so hang cleanup off
+// the worker process naturally winding down instead.
+process.once('beforeExit', () => {
+  void closeCachedApp();
+});
+
 export const test = base.extend<ElectronFixtures>({
   electronApp: [
-    async ({}, use) => {
-      // Write a clean store before the app launches so it reads no stale data on startup.
-      // This is the only reliable initialization point — the app reads the file on boot,
-      // and the worker-scoped app is shared across all tests in this worker.
-      initializeTestStore();
-      const app = await launchElectronApp({
-        NODE_ENV: 'development',
-        E2E_STORE_NAME: 'audio-to-text-test',
-      });
-
-      await use(app);
-      try {
-        await app.close();
-      } catch (e) {
-        console.error(
-          '[fixtures-dev] app.close() failed (app may have crashed):',
-          e,
-        );
+    async ({}, use, testInfo) => {
+      if (cachedFile !== testInfo.file) {
+        await closeCachedApp();
+        // Write a clean store before the app launches so it reads no stale
+        // data on startup — the app reads the file once, on boot.
+        initializeTestStore();
+        cachedApp = await launchElectronApp({
+          NODE_ENV: 'development',
+          E2E_STORE_NAME: 'audio-to-text-test',
+        });
+        cachedFile = testInfo.file;
       }
-      cleanupElectronStore();
+      await use(cachedApp);
     },
-    { scope: 'worker' },
+    // timeout: fixture setup (which now relaunches Electron on every file
+    // change) runs before a test body's own test.setTimeout() call takes
+    // effect, so it's still bound by playwright.config.ts's 10s default
+    // unless overridden here — a slow relaunch under load was blowing past
+    // that and crashing the worker.
+    { scope: 'test', timeout: 30_000 },
   ] as any,
 
   // auto:true — runs before and after every test without needing to be requested.

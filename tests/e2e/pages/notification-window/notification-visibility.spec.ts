@@ -13,8 +13,8 @@ async function isSessionActive(page: any): Promise<boolean> {
   );
 }
 
-// electronApp is worker-scoped (playwright.config.ts sets workers: 1), so it
-// persists across every spec file in the run, not just this one. Leaving a
+// electronApp is scoped per spec file (see fixtures-dev.ts), but tests
+// within this file still share one instance. Leaving a
 // session started here breaks unrelated tests in other files (e.g. Settings
 // model-swap tests get rejected with "stop recording first" instead of the
 // error they expect) — always stop recording again before the test ends.
