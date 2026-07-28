@@ -40,6 +40,11 @@ test.describe('Dictation Workflow', () => {
   }) => {
     test.setTimeout(20_000);
 
+    // Dictations section is collapsed by default — expand it to see its empty-state line.
+    await mainPage
+      .getByTestId('meeting-list-section-toggle-dictations')
+      .click();
+
     // STEP 1: Confirm the app starts with no dictations (store is seeded clean by fixtures)
     await expect(
       mainPage.locator('text=No dictations yet'),

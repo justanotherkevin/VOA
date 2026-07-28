@@ -36,6 +36,8 @@ describe('MeetingList — row content', () => {
       />,
     );
 
+    fireEvent.click(screen.getByTestId('meeting-list-section-toggle-meetings'));
+
     expect(screen.getByText('Budget Review')).toBeTruthy();
     expect(screen.getByText('21s')).toBeTruthy();
   });
@@ -54,6 +56,8 @@ describe('MeetingList — row content', () => {
       />,
     );
 
+    fireEvent.click(screen.getByTestId('meeting-list-section-toggle-meetings'));
+
     // TagMarquee duplicates the tag list so the CSS loop wraps seamlessly.
     expect(screen.getAllByText('design-review')).toHaveLength(2);
     expect(screen.getAllByText('q3-planning')).toHaveLength(2);
@@ -69,6 +73,8 @@ describe('MeetingList — row content', () => {
         onNewRecording={vi.fn()}
       />,
     );
+
+    fireEvent.click(screen.getByTestId('meeting-list-section-toggle-meetings'));
 
     expect(container.querySelectorAll('.tag-marquee-track').length).toBe(0);
   });
@@ -97,6 +103,9 @@ describe('MeetingList — type grouping', () => {
 
     expect(screen.getByTestId('meeting-list-section-meetings')).toBeTruthy();
     expect(screen.getByTestId('meeting-list-section-dictations')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('meeting-list-section-toggle-meetings'));
+
     expect(screen.getByText('Team Standup')).toBeTruthy();
     // expect(screen.getByText('Grocery list')).toBeTruthy();
   });
@@ -118,6 +127,11 @@ describe('MeetingList — type grouping', () => {
 
     expect(screen.getByTestId('meeting-list-section-meetings')).toBeTruthy();
     expect(screen.getByTestId('meeting-list-section-dictations')).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByTestId('meeting-list-section-toggle-dictations'),
+    );
+
     expect(screen.getByTestId('meeting-list-empty-dictations')).toBeTruthy();
   });
 
@@ -143,6 +157,11 @@ describe('MeetingList — type grouping', () => {
 
     const input = screen.getByTestId('meeting-list-search-input');
     fireEvent.change(input, { target: { value: 'budget' } });
+
+    fireEvent.click(screen.getByTestId('meeting-list-section-toggle-meetings'));
+    fireEvent.click(
+      screen.getByTestId('meeting-list-section-toggle-dictations'),
+    );
 
     expect(screen.getByText('Budget Review')).toBeTruthy();
     expect(screen.queryByText('Grocery list')).toBeNull();
