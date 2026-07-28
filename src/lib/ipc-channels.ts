@@ -77,6 +77,7 @@ export const CHANNELS = {
   SYSTEM_AUDIO: {
     GET_DESKTOP_SOURCE: 'system-audio:get-desktop-source',
     LEVELS: 'system-audio:levels',
+    CAPABILITY: 'system-audio:capability',
   },
   APP_PREFERENCES: {
     GET: 'appPreferences:get',

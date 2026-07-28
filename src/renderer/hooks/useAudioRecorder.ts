@@ -3,6 +3,10 @@ import {
   getSupportedMimeType,
   stopMediaStream,
 } from '@/renderer/utils/RecordingUtils';
+import {
+  getPreferredMicConstraints,
+  isOverconstrainedError,
+} from '@/renderer/utils/MicConstraints';
 import { useVAD } from '@/renderer/hooks/useVAD';
 
 export interface AudioRecorderState {
@@ -67,15 +71,26 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   const requestAudioPermission = useCallback(async (): Promise<void> => {
     if (!streamRef.current) {
-      streamRef.current = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          sampleRate: 16000,
-          channelCount: 1,
-        },
-      });
+      const baseConstraints: MediaTrackConstraints = {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        sampleRate: 16000,
+        channelCount: 1,
+      };
+      const audio = await getPreferredMicConstraints(baseConstraints);
+      try {
+        streamRef.current = await navigator.mediaDevices.getUserMedia({
+          audio,
+        });
+      } catch (error) {
+        if (!isOverconstrainedError(error)) throw error;
+        // Selected device is no longer available (e.g. unplugged) — fall
+        // back to the OS default instead of failing to record.
+        streamRef.current = await navigator.mediaDevices.getUserMedia({
+          audio: baseConstraints,
+        });
+      }
     }
   }, []);
 

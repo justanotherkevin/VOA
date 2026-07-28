@@ -569,14 +569,3 @@ export async function navigateToSettings(
     await page.waitForSelector(`h1:has-text("${pane}")`, { timeout: 5000 });
   }
 }
-/**
- * Find the system audio toggle switch in the Settings > Audio pane.
- * Rendered as a button[role="switch"] in the "Capture system audio" row.
- * Caller must have navigated to the Audio pane before calling this.
- */
-export async function getSystemAudioToggle(page: any) {
-  return page
-    .locator('.s-row')
-    .filter({ hasText: 'Capture system audio' })
-    .locator('button[role="switch"]');
-}

@@ -226,6 +226,8 @@ const electronAPI = {
     ...audioAPI,
     onSystemAudioLevels: (cb: (...args: unknown[]) => void) =>
       subscribe(CHANNELS.SYSTEM_AUDIO.LEVELS, cb),
+    getCapability: (): Promise<boolean> =>
+      ipcRenderer.invoke(CHANNELS.SYSTEM_AUDIO.CAPABILITY),
   },
 
   // ── Transcript History (legacy compat) ────────────────────────────────────

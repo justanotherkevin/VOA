@@ -61,24 +61,26 @@ export function getRecordingActiveForTests(): boolean {
 }
 
 /**
- * Expose the systemAudioEnabled state (getter + setter) so E2E tests can
- * read the current value and override it without a page reload.
+ * Expose the systemAudioSupported capability state (getter + setter) so E2E
+ * tests can read the current value and force it without a page reload — CI
+ * machines aren't macOS 14 Sonoma+, so tests need a way to simulate the
+ * "supported" path without an actual capable machine.
  */
-export function exposeSystemAudioSetterForTests(
+export function exposeSystemAudioCapabilitySetterForTests(
   getter: () => boolean,
-  setter: (enabled: boolean) => void,
+  setter: (supported: boolean) => void,
 ): void {
   if (process.env.NODE_ENV === 'production') return;
   if (typeof window === 'undefined') return;
-  (window as any).__getSystemAudioEnabled = getter;
-  (window as any).__setSystemAudioEnabled = setter;
+  (window as any).__getSystemAudioSupported = getter;
+  (window as any).__setSystemAudioSupported = setter;
 }
 
-export function cleanupSystemAudioSetterForTests(): void {
+export function cleanupSystemAudioCapabilitySetterForTests(): void {
   if (process.env.NODE_ENV === 'production') return;
   if (typeof window === 'undefined') return;
-  delete (window as any).__getSystemAudioEnabled;
-  delete (window as any).__setSystemAudioEnabled;
+  delete (window as any).__getSystemAudioSupported;
+  delete (window as any).__setSystemAudioSupported;
 }
 
 /**

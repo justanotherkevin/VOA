@@ -57,7 +57,6 @@ export interface ModelPreferences {
 }
 
 export interface MeetingPreferences {
-  systemAudioEnabled: boolean;
   autoRecordMode: 'manual' | 'ask' | 'auto' | 'auto-stop';
 }
 
@@ -71,6 +70,7 @@ export interface AudioPreferences {
   micGain: number;
   noiseSuppression: boolean;
   labelSpeakers: boolean;
+  selectedMicDeviceId?: string;
 }
 
 export interface UIPreferences {
@@ -126,7 +126,6 @@ export const DEFAULT_MODEL_PREFERENCES: ModelPreferences = {
 };
 
 export const DEFAULT_MEETING_PREFERENCES: MeetingPreferences = {
-  systemAudioEnabled: false,
   autoRecordMode: 'manual',
 };
 
