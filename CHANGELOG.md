@@ -8,6 +8,13 @@ All notable changes to VOA are documented here.
 
 ### Added
 
+- **Onboarding now actually runs on first launch, and downloads both AI models before letting you in.** The `/onboarding` route already existed but nothing ever navigated to it and no completion flag was stored, so new users never saw it.
+  - A new `onboardingCompleted` preference (`src/main/store/schema.ts` + `preferences.ts`, `onboarding:getCompleted`/`setCompleted` IPC) is written when the user leaves onboarding; `App.tsx` picks the router's initial route from it. Under `E2E_TEST` the getter reports `true` unless `E2E_ONBOARDING=true`, so existing e2e specs don't boot into the flow.
+  - A new **Models** step (Permissions → Models → See It Work) shows two progress bars: the built-in Qwen2.5 1.5B GGUF summarization model and Whisper Base. Continue is disabled until both finish, and each bar retries independently so a failed download never leaves only a dead button.
+  - Whisper Base is downloaded via the existing `modelPreferences:update` path, so it also becomes the selected transcription model for new installs (previously Tiny). Progress is aggregated across files, since transformers.js reports per file rather than overall.
+  - Bars start in a "Checking…" state rather than at `0%`, which otherwise made an already-downloaded model look like it was downloading from scratch.
+  - Onboarding continues to use the built-in embedded LLM — it does not ask users to install LM Studio.
+- **Added a dev-only "Onboarding flow" entry to the sidebar's Development group**, so the flow stays reachable for testing once it has been completed.
 - **Added a configurable dictation shortcut (default `F2`)**, separate from the existing recording-toggle shortcut. Pressing it starts/stops a capture forced to `type: 'dictation'` (skipping meeting-app detection) and, on completion, pastes the transcribed text into the active window. Rebindable from Settings → Shortcuts via the existing `ShortcutConfigDialog.tsx`, now generalized to configure either binding.
 - **Split `src/main/store.ts` into `src/main/store/`** (`schema.ts`, `instance.ts`, `migrations.ts`, `meetings.ts`, `preferences.ts`, `dismissed-meetings.ts`, `legacy.ts`) for clearer per-concern ownership; `store.ts` is now a barrel re-export and the only import surface (`@/main/store`) — no behavior change.
 - **Rebuilt the transcript's "Gutter" tag style on shadcn's Message component.** `TranscriptTagRenderer.tsx`'s `GutterView` now composes `Message`/`MessageAvatar`/`MessageContent` (`src/renderer/components/message.tsx`) with `Bubble`/`BubbleContent` (`bubble.tsx`) and `Avatar`/`AvatarFallback` (`avatar.tsx`), matching ui.shadcn.com/docs/components/base/message, instead of a hand-rolled flex/inline-style gutter column.
