@@ -194,6 +194,13 @@ const electronAPI = {
     },
   },
 
+  // ── Onboarding ───────────────────────────────────────────────────────────
+  onboarding: {
+    getCompleted: () => ipcRenderer.invoke(CHANNELS.ONBOARDING.GET_COMPLETED),
+    setCompleted: (completed: boolean) =>
+      ipcRenderer.invoke(CHANNELS.ONBOARDING.SET_COMPLETED, completed),
+  },
+
   // ── Calendar ─────────────────────────────────────────────────────────────
   calendar: {
     getPreferences: () => ipcRenderer.invoke(CHANNELS.CALENDAR.GET_PREFERENCES),

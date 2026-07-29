@@ -232,6 +232,12 @@ export function attachGlobalElectronMock() {
       toggle: vi.fn(() => {}),
     },
 
+    // ── Onboarding ────────────────────────────────────────────────────────────
+    onboarding: {
+      getCompleted: vi.fn(async () => true),
+      setCompleted: vi.fn(async () => ({ success: true })),
+    },
+
     // ── Calendar ──────────────────────────────────────────────────────────────
     calendar: {
       getPreferences: vi.fn(async () => ({ feedUrl: '' })),

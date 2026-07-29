@@ -14,6 +14,8 @@ import {
   saveLMStudioPreferences,
   getSummarizerProvider,
   saveSummarizerProvider,
+  getOnboardingCompleted,
+  saveOnboardingCompleted,
   type AppPreferences,
   type AudioPreferences,
   type UIPreferences,
@@ -370,6 +372,32 @@ export function registerSettingsHandlers() {
       return { success: false, message: String(error) };
     }
   });
+
+  // Onboarding first-run flag. E2E runs boot with a fresh store, so without
+  // this override every existing spec would land in the onboarding flow;
+  // a spec that wants to exercise onboarding sets E2E_ONBOARDING=true.
+  ipcMain.handle(CHANNELS.ONBOARDING.GET_COMPLETED, async () => {
+    if (
+      process.env.E2E_TEST === 'true' &&
+      process.env.E2E_ONBOARDING !== 'true'
+    ) {
+      return true;
+    }
+    return getOnboardingCompleted();
+  });
+
+  ipcMain.handle(
+    CHANNELS.ONBOARDING.SET_COMPLETED,
+    async (_event, completed: boolean) => {
+      try {
+        saveOnboardingCompleted(completed);
+        return { success: true };
+      } catch (error) {
+        logError('[IPC] Error saving onboarding completed flag:', error);
+        return { success: false, message: String(error) };
+      }
+    },
+  );
 
   // Summarizer Provider
   ipcMain.handle(CHANNELS.SUMMARIZER_PROVIDER.GET, async () => {
