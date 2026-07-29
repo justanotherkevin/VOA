@@ -110,6 +110,10 @@ export const CHANNELS = {
     DELETE: 'builtinLlm:delete',
     DOWNLOAD_PROGRESS: 'builtinLlm:downloadProgress',
   },
+  ONBOARDING: {
+    GET_COMPLETED: 'onboarding:getCompleted',
+    SET_COMPLETED: 'onboarding:setCompleted',
+  },
   SUMMARIZER_PROVIDER: {
     GET: 'summarizerProvider:get',
     SET: 'summarizerProvider:set',

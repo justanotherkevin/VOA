@@ -116,6 +116,7 @@ export interface StoreSchema {
   calendarPreferences?: StoredCalendarPreferences;
   transcriptHistory?: StoredTranscript[];
   dismissedMeetingKeys?: string[];
+  onboardingCompleted?: boolean;
 }
 
 export const DEFAULT_SHORTCUTS: ShortcutPreferences = {

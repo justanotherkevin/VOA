@@ -11,6 +11,7 @@ import {
   type LucideIcon,
   LockKeyhole,
   Mic,
+  Rocket,
   Settings as SettingsIcon,
   Settings2,
   ShieldCheck,
@@ -390,6 +391,16 @@ export default function Sidebar({
                           Hide notification
                         </button>
                       </div>
+                    </DevSubgroup>
+                    <DevSubgroup label="Onboarding flow" icon={Rocket}>
+                      <button
+                        type="button"
+                        data-testid="dev-open-onboarding"
+                        onClick={() => navigate('/onboarding')}
+                        className="w-full rounded-md border border-sidebar-border px-2 py-1 text-left text-xs text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      >
+                        Open onboarding
+                      </button>
                     </DevSubgroup>
                   </div>
                 </SidebarGroupContent>

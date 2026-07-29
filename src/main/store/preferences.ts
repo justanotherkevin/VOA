@@ -140,6 +140,16 @@ export function saveSummarizerProvider(provider: SummarizerProviderType): void {
   getStore()?.set('summarizerProvider', provider);
 }
 
+// ─── Onboarding ───────────────────────────────────────────────────────────────
+
+export function getOnboardingCompleted(): boolean {
+  return getStore()?.get('onboardingCompleted') ?? false;
+}
+
+export function saveOnboardingCompleted(completed: boolean): void {
+  getStore()?.set('onboardingCompleted', completed);
+}
+
 // ─── Calendar Preferences ─────────────────────────────────────────────────────
 
 export function getCalendarPreferences(): CalendarPreferences {
