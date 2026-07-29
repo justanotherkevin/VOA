@@ -115,6 +115,11 @@ process.parentPort.on('message', async ({ data: msg }: { data: any }) => {
         task: subtask,
         return_timestamps: true,
         force_full_sequences: false,
+        // Guards against Whisper's decoding-loop hallucination (a phrase
+        // repeating verbatim); see docs/whisper-onnxruntime-crash.md's sibling
+        // issue #20 for the whisper.cpp migration that adds more of these.
+        repetition_penalty: 1.3,
+        no_repeat_ngram_size: 3,
       });
       process.parentPort.postMessage({
         type: 'log',
