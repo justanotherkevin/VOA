@@ -146,7 +146,7 @@ you're never mid-migration with a broken app.
    instead of LM Studio/Ollama HTTP" _without_ touching Electron at all (see 3a below), or you can
    do the full Tauri rewrite. Confirm which one is actually the goal before committing to either.
 
-   **3a. Embedded local-LLM path only (no Electron/Tauri change):**
+   [DONE](https://github.com/justanotherkevin/VOA/pull/21) **3a. Embedded local-LLM path only (no Electron/Tauri change):**
    - Replace the LM Studio/Ollama HTTP cl ient in `structured-summarizer.ts` with a Node
      `child_process`/`utilityProcess`-spawned llama.cpp binary (e.g. via `node-llama-cpp`, which
      wraps `llama.cpp` with prebuilt bindings much like `llama-cpp-2` does for Rust) or a small
