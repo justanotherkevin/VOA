@@ -79,6 +79,19 @@ export default function Settings() {
   } | null>(null);
   const [lmStudioTesting, setLmStudioTesting] = useState(false);
 
+  const [summarizerProvider, setSummarizerProvider] = useState<
+    'lmstudio' | 'ollama' | 'builtin'
+  >('builtin');
+  const [builtinStatus, setBuiltinStatus] = useState<{
+    downloaded: boolean;
+    path: string;
+  } | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<{
+    downloadedBytes: number;
+    totalBytes: number;
+  } | null>(null);
+  const [isDownloadingBuiltin, setIsDownloadingBuiltin] = useState(false);
+
   const [calendarPrefs, setCalendarPrefs] = useState({ feedUrl: '' });
   const [calendarTestResult, setCalendarTestResult] = useState<{
     success: boolean;
@@ -136,11 +149,27 @@ export default function Settings() {
         if (lmPrefs) setLmStudioPrefs((prev) => ({ ...prev, ...lmPrefs }));
         const calPrefs = await window.electronAPI.calendar.getPreferences();
         if (calPrefs) setCalendarPrefs((prev) => ({ ...prev, ...calPrefs }));
+
+        const provider = await window.electronAPI.summarizerProvider.get();
+        if (provider) setSummarizerProvider(provider);
+        const status = await window.electronAPI.builtinLlm.getStatus();
+        if (status) setBuiltinStatus(status);
       } catch (error) {
         console.error('Failed to load settings:', error);
       }
     };
     loadAllPrefs();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.electronAPI.builtinLlm.on.downloadProgress(
+      (progress: unknown) => {
+        setDownloadProgress(
+          progress as { downloadedBytes: number; totalBytes: number },
+        );
+      },
+    );
+    return unsubscribe;
   }, []);
 
   async function updateRecordingPref(key: string, value: unknown) {
@@ -241,6 +270,48 @@ export default function Settings() {
     } finally {
       setLmStudioTesting(false);
     }
+  }
+
+  async function handleSelectProvider(
+    provider: 'lmstudio' | 'ollama' | 'builtin',
+  ) {
+    const previous = summarizerProvider;
+    setSummarizerProvider(provider);
+    const result = await window.electronAPI.summarizerProvider.set(provider);
+    if (!result?.success) {
+      setSummarizerProvider(previous);
+      toast.error(result?.message || 'Failed to update AI provider');
+    }
+  }
+
+  async function handleDownloadBuiltin() {
+    setIsDownloadingBuiltin(true);
+    setDownloadProgress(null);
+    try {
+      const result = await window.electronAPI.builtinLlm.download();
+      if (!result?.success) {
+        toast.error(result?.message || 'Failed to download built-in model');
+      }
+      const status = await window.electronAPI.builtinLlm.getStatus();
+      if (status) setBuiltinStatus(status);
+    } finally {
+      setIsDownloadingBuiltin(false);
+      setDownloadProgress(null);
+    }
+  }
+
+  async function handleCancelDownload() {
+    await window.electronAPI.builtinLlm.cancelDownload();
+  }
+
+  async function handleDeleteBuiltin() {
+    if (!window.confirm('Delete the built-in AI model?')) return;
+    const result = await window.electronAPI.builtinLlm.delete();
+    if (!result?.success) {
+      toast.error(result?.message || 'Failed to delete built-in model');
+    }
+    const status = await window.electronAPI.builtinLlm.getStatus();
+    if (status) setBuiltinStatus(status);
   }
 
   async function handleCalendarFeedUrlChange(value: string) {
@@ -349,6 +420,14 @@ export default function Settings() {
               handleClearAllCachedModels={handleClearAllCachedModels}
               cachePaths={cachePaths}
               formatBytes={formatBytes}
+              summarizerProvider={summarizerProvider}
+              handleSelectProvider={handleSelectProvider}
+              builtinStatus={builtinStatus}
+              downloadProgress={downloadProgress}
+              isDownloadingBuiltin={isDownloadingBuiltin}
+              handleDownloadBuiltin={handleDownloadBuiltin}
+              handleCancelDownload={handleCancelDownload}
+              handleDeleteBuiltin={handleDeleteBuiltin}
             />
           )}
 

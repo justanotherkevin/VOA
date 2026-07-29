@@ -103,4 +103,15 @@ export const CHANNELS = {
     DECLINE_MATCH: 'calendar:decline-match',
     SELECT_MATCH: 'calendar:select-match',
   },
+  BUILTIN_LLM: {
+    GET_STATUS: 'builtinLlm:getStatus',
+    DOWNLOAD: 'builtinLlm:download',
+    CANCEL_DOWNLOAD: 'builtinLlm:cancelDownload',
+    DELETE: 'builtinLlm:delete',
+    DOWNLOAD_PROGRESS: 'builtinLlm:downloadProgress',
+  },
+  SUMMARIZER_PROVIDER: {
+    GET: 'summarizerProvider:get',
+    SET: 'summarizerProvider:set',
+  },
 } as const;

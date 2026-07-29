@@ -1,6 +1,10 @@
 import structuredSummarizerService, {
   checkConnection,
 } from '@/main/pipeline/structured-summarizer';
+import { SummarizerProviderFactory } from '@/main/pipeline/summarizer-provider';
+import llamaSummarizer, {
+  BUILTIN_MODEL_PATH,
+} from '@/main/pipeline/llama-summarizer';
 import {
   updateMeeting,
   getMeetingById,
@@ -48,6 +52,15 @@ function getConnectivityNotification(baseUrl: string): {
   };
 }
 
+function getBuiltinNotReadyNotification(): { title: string; message: string } {
+  return {
+    title: 'Built-in model not ready',
+    // No downloader yet (later phase) — for now "not ready" only ever
+    // means "not yet initialized in this session".
+    message: 'The built-in summarization model has not finished loading yet.',
+  };
+}
+
 class EnrichmentService {
   private async getStructuredSummary(
     text: string,
@@ -70,7 +83,7 @@ class EnrichmentService {
     meetingId: string,
     text: string,
     type: 'meeting' | 'dictation',
-    baseUrl: string,
+    providerLabel: string,
   ): Promise<void> {
     const result = await this.getStructuredSummary(text, type);
     log('[EnrichmentService] Result:', JSON.stringify(result));
@@ -95,9 +108,8 @@ class EnrichmentService {
         updated.summaryStatus,
       );
       if (!result) {
-        const provider = getProviderName(baseUrl);
         showNotification({
-          title: `Invalid response from ${provider}`,
+          title: `Invalid response from ${providerLabel}`,
           message:
             'The model returned an unexpected format. Check that your model supports JSON output.',
           duration: 6000,
@@ -109,6 +121,34 @@ class EnrichmentService {
   async triggerEnrichment(meetingId: string): Promise<void> {
     const meeting = getMeetingById(meetingId);
     if (!meeting?.transcript) return;
+
+    const provider = SummarizerProviderFactory.resolve();
+
+    if (provider === 'builtin') {
+      // No downloader yet (later phase) — initialize() legitimately fails
+      // today since BUILTIN_MODEL_PATH points nowhere real. That failure is
+      // what "not ready" means; readiness isn't knowable without actually
+      // attempting the load (getModelInfo().isInitialized never flips true
+      // on its own — nothing else calls initialize()).
+      try {
+        await llamaSummarizer.initialize(BUILTIN_MODEL_PATH);
+      } catch (error) {
+        log('[EnrichmentService] Builtin summarizer not ready:', error);
+        const updated = updateMeeting(meetingId, { summaryStatus: 'failed' });
+        if (updated) {
+          getMainWindow()?.webContents.send(CHANNELS.MEETINGS.SAVED, updated);
+        }
+        const { title, message } = getBuiltinNotReadyNotification();
+        showNotification({ title, message, duration: 6000 });
+        return;
+      }
+      return this.enrichMeeting(
+        meetingId,
+        meeting.transcript,
+        meeting.type,
+        'the built-in model',
+      );
+    }
 
     const { baseUrl } = getLMStudioPreferences();
     const reachable = await checkConnection(baseUrl);
@@ -127,7 +167,7 @@ class EnrichmentService {
       meetingId,
       meeting.transcript,
       meeting.type,
-      baseUrl,
+      getProviderName(baseUrl),
     );
   }
 }

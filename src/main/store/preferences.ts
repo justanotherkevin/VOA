@@ -10,6 +10,7 @@ import {
   UIPreferences,
   LMStudioPreferences,
   CalendarPreferences,
+  SummarizerProviderType,
   DEFAULT_SHORTCUTS,
   DEFAULT_MODEL_PREFERENCES,
   DEFAULT_MEETING_PREFERENCES,
@@ -19,6 +20,7 @@ import {
   DEFAULT_LM_STUDIO_PREFERENCES,
   DEFAULT_CALENDAR_PREFERENCES,
   DEFAULT_STORED_CALENDAR_PREFERENCES,
+  DEFAULT_SUMMARIZER_PROVIDER,
 } from './schema';
 
 // ─── Shortcuts ────────────────────────────────────────────────────────────────
@@ -126,6 +128,16 @@ export function saveLMStudioPreferences(
   const current =
     store?.get('lmStudioPreferences') ?? DEFAULT_LM_STUDIO_PREFERENCES;
   store?.set('lmStudioPreferences', { ...current, ...prefs });
+}
+
+// ─── Summarizer Provider ──────────────────────────────────────────────────────
+
+export function getSummarizerProvider(): SummarizerProviderType {
+  return getStore()?.get('summarizerProvider') ?? DEFAULT_SUMMARIZER_PROVIDER;
+}
+
+export function saveSummarizerProvider(provider: SummarizerProviderType): void {
+  getStore()?.set('summarizerProvider', provider);
 }
 
 // ─── Calendar Preferences ─────────────────────────────────────────────────────

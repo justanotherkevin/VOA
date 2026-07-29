@@ -45,6 +45,8 @@ interface CachedModel {
   path: string;
 }
 
+type SummarizerProvider = 'lmstudio' | 'ollama' | 'builtin';
+
 export function TranscriptionPane({
   modelPrefs,
   updateModelPref,
@@ -63,6 +65,14 @@ export function TranscriptionPane({
   handleClearAllCachedModels,
   cachePaths,
   formatBytes,
+  summarizerProvider,
+  handleSelectProvider,
+  builtinStatus,
+  downloadProgress,
+  isDownloadingBuiltin,
+  handleDownloadBuiltin,
+  handleCancelDownload,
+  handleDeleteBuiltin,
 }: {
   modelPrefs: ModelPrefs;
   updateModelPref: (key: string, value: unknown) => Promise<void>;
@@ -84,6 +94,14 @@ export function TranscriptionPane({
   handleClearAllCachedModels: () => Promise<void>;
   cachePaths: string | null;
   formatBytes: (bytes: number) => string;
+  summarizerProvider: SummarizerProvider;
+  handleSelectProvider: (provider: SummarizerProvider) => Promise<void>;
+  builtinStatus: { downloaded: boolean; path: string } | null;
+  downloadProgress: { downloadedBytes: number; totalBytes: number } | null;
+  isDownloadingBuiltin: boolean;
+  handleDownloadBuiltin: () => Promise<void>;
+  handleCancelDownload: () => Promise<void>;
+  handleDeleteBuiltin: () => Promise<void>;
 }) {
   return (
     <div className="s-pane" data-testid="settings-pane-transcription">
@@ -220,10 +238,15 @@ export function TranscriptionPane({
           <SettingRow
             icon={Globe}
             title="Provider"
-            description="Preset or enter a custom URL below"
+            description={
+              summarizerProvider === 'builtin'
+                ? 'Runs fully on-device, no external server required'
+                : 'Preset or enter a custom URL below'
+            }
             actions={
               <SegmentedControl
                 options={[
+                  { label: 'Built-in', value: 'builtin' },
                   { label: 'LM Studio', value: 'lmstudio' },
                   {
                     label: 'Ollama',
@@ -232,102 +255,134 @@ export function TranscriptionPane({
                     tooltip: 'Coming soon',
                   },
                 ]}
-                value={
-                  lmStudioPrefs.baseUrl === 'http://localhost:11434'
-                    ? 'ollama'
-                    : 'lmstudio'
-                }
-                onChange={(v) =>
-                  handleLmStudioPrefChange(
-                    'baseUrl',
-                    v === 'ollama'
-                      ? 'http://localhost:11434'
-                      : 'http://localhost:1234',
-                  )
-                }
+                value={summarizerProvider}
+                onChange={(v) => handleSelectProvider(v as SummarizerProvider)}
               />
             }
           />
-          <SettingRow
-            icon={ArrowUpRight}
-            title="Base URL"
-            actions={
-              <input
-                value={lmStudioPrefs.baseUrl}
-                onChange={(e) => {
-                  setLmStudioPrefs((prev) => ({
-                    ...prev,
-                    baseUrl: e.target.value,
-                  }));
-                  setLmStudioTestResult(null);
-                }}
-                onBlur={saveLmStudioPrefs}
-                style={{
-                  width: 210,
-                  background: 'var(--s-field)',
-                  border: '0.5px solid var(--s-field-line)',
-                  borderRadius: 7,
-                  padding: '4px 9px',
-                  fontSize: 12.5,
-                  color: 'var(--s-text)',
-                  fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
-                  outline: 'none',
-                }}
-              />
-            }
-          />
-          <SettingRow
-            icon={Cpu}
-            title="Model"
-            description="Leave empty to use loaded model"
-            actions={
-              <input
-                value={lmStudioPrefs.model}
-                onChange={(e) =>
-                  setLmStudioPrefs((prev) => ({
-                    ...prev,
-                    model: e.target.value,
-                  }))
-                }
-                onBlur={saveLmStudioPrefs}
-                placeholder="e.g. qwen2.5-1.5b-instruct"
-                style={{
-                  width: 210,
-                  background: 'var(--s-field)',
-                  border: '0.5px solid var(--s-field-line)',
-                  borderRadius: 7,
-                  padding: '4px 9px',
-                  fontSize: 12.5,
-                  color: 'var(--s-text)',
-                  fontFamily: 'inherit',
-                  outline: 'none',
-                }}
-              />
-            }
-          />
-          <div className="s-row">
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {lmStudioTestResult !== null &&
-                (lmStudioTestResult.ok ? (
+
+          {summarizerProvider === 'builtin' ? (
+            <div className="s-row">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {builtinStatus?.downloaded ? (
                   <span className="s-pill s-pill-good">
                     <span className="s-pdot" />
-                    {`Connected — ${lmStudioTestResult.models?.length ?? 0} model${(lmStudioTestResult.models?.length ?? 0) !== 1 ? 's' : ''} available`}
+                    Ready
+                  </span>
+                ) : isDownloadingBuiltin ? (
+                  <span style={{ fontSize: 12.5, color: 'var(--s-text2)' }}>
+                    {downloadProgress && downloadProgress.totalBytes > 0
+                      ? `Downloading… ${Math.round((downloadProgress.downloadedBytes / downloadProgress.totalBytes) * 100)}%`
+                      : 'Downloading…'}
                   </span>
                 ) : (
-                  <span className="s-pill s-pill-danger">
-                    <span className="s-pdot" />
-                    Unreachable — is LM Studio running?
+                  <span style={{ fontSize: 12.5, color: 'var(--s-text2)' }}>
+                    ~1.1GB, downloads once
                   </span>
-                ))}
+                )}
+              </div>
+              {builtinStatus?.downloaded ? (
+                <button
+                  className="s-btn s-btn-danger"
+                  onClick={handleDeleteBuiltin}
+                >
+                  Delete
+                </button>
+              ) : isDownloadingBuiltin ? (
+                <button className="s-btn" onClick={handleCancelDownload}>
+                  Cancel
+                </button>
+              ) : (
+                <button className="s-btn" onClick={handleDownloadBuiltin}>
+                  <Download size={13} />
+                  Download
+                </button>
+              )}
             </div>
-            <button
-              className="s-btn"
-              onClick={handleTestLmStudio}
-              disabled={lmStudioTesting}
-            >
-              {lmStudioTesting ? 'Testing…' : 'Test Connection'}
-            </button>
-          </div>
+          ) : (
+            <>
+              <SettingRow
+                icon={ArrowUpRight}
+                title="Base URL"
+                actions={
+                  <input
+                    value={lmStudioPrefs.baseUrl}
+                    onChange={(e) => {
+                      setLmStudioPrefs((prev) => ({
+                        ...prev,
+                        baseUrl: e.target.value,
+                      }));
+                      setLmStudioTestResult(null);
+                    }}
+                    onBlur={saveLmStudioPrefs}
+                    style={{
+                      width: 210,
+                      background: 'var(--s-field)',
+                      border: '0.5px solid var(--s-field-line)',
+                      borderRadius: 7,
+                      padding: '4px 9px',
+                      fontSize: 12.5,
+                      color: 'var(--s-text)',
+                      fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+                      outline: 'none',
+                    }}
+                  />
+                }
+              />
+              <SettingRow
+                icon={Cpu}
+                title="Model"
+                description="Leave empty to use loaded model"
+                actions={
+                  <input
+                    value={lmStudioPrefs.model}
+                    onChange={(e) =>
+                      setLmStudioPrefs((prev) => ({
+                        ...prev,
+                        model: e.target.value,
+                      }))
+                    }
+                    onBlur={saveLmStudioPrefs}
+                    placeholder="e.g. qwen2.5-1.5b-instruct"
+                    style={{
+                      width: 210,
+                      background: 'var(--s-field)',
+                      border: '0.5px solid var(--s-field-line)',
+                      borderRadius: 7,
+                      padding: '4px 9px',
+                      fontSize: 12.5,
+                      color: 'var(--s-text)',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                    }}
+                  />
+                }
+              />
+              <div className="s-row">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {lmStudioTestResult !== null &&
+                    (lmStudioTestResult.ok ? (
+                      <span className="s-pill s-pill-good">
+                        <span className="s-pdot" />
+                        {`Connected — ${lmStudioTestResult.models?.length ?? 0} model${(lmStudioTestResult.models?.length ?? 0) !== 1 ? 's' : ''} available`}
+                      </span>
+                    ) : (
+                      <span className="s-pill s-pill-danger">
+                        <span className="s-pdot" />
+                        Unreachable — is LM Studio running?
+                      </span>
+                    ))}
+                </div>
+                <button
+                  className="s-btn"
+                  onClick={handleTestLmStudio}
+                  disabled={lmStudioTesting}
+                >
+                  {lmStudioTesting ? 'Testing…' : 'Test Connection'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

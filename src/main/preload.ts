@@ -174,6 +174,26 @@ const electronAPI = {
       ipcRenderer.invoke(CHANNELS.LM_STUDIO.TEST, baseUrl),
   },
 
+  // ── Summarizer Provider ────────────────────────────────────────────────────
+  summarizerProvider: {
+    get: () => ipcRenderer.invoke(CHANNELS.SUMMARIZER_PROVIDER.GET),
+    set: (provider: 'lmstudio' | 'ollama' | 'builtin') =>
+      ipcRenderer.invoke(CHANNELS.SUMMARIZER_PROVIDER.SET, provider),
+  },
+
+  // ── Builtin (embedded GGUF) LLM ─────────────────────────────────────────────
+  builtinLlm: {
+    getStatus: () => ipcRenderer.invoke(CHANNELS.BUILTIN_LLM.GET_STATUS),
+    download: () => ipcRenderer.invoke(CHANNELS.BUILTIN_LLM.DOWNLOAD),
+    cancelDownload: () =>
+      ipcRenderer.invoke(CHANNELS.BUILTIN_LLM.CANCEL_DOWNLOAD),
+    delete: () => ipcRenderer.invoke(CHANNELS.BUILTIN_LLM.DELETE),
+    on: {
+      downloadProgress: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.BUILTIN_LLM.DOWNLOAD_PROGRESS, cb),
+    },
+  },
+
   // ── Calendar ─────────────────────────────────────────────────────────────
   calendar: {
     getPreferences: () => ipcRenderer.invoke(CHANNELS.CALENDAR.GET_PREFERENCES),

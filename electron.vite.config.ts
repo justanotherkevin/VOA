@@ -30,6 +30,12 @@ export default defineConfig({
             __dirname,
             'src/main/pipeline/whisper-process.ts',
           ),
+          // Built-in-LLM (node-llama-cpp) summarization also runs in its own
+          // utilityProcess child — see llama-summarizer.ts.
+          'llama-process': path.resolve(
+            __dirname,
+            'src/main/pipeline/llama-process.ts',
+          ),
         },
       },
     },

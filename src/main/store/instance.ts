@@ -29,6 +29,7 @@ export async function initializeStore() {
       meetings: [],
       meetingsMigrated: false,
       recordingTypeMigrated: false,
+      summarizerProviderMigrated: false,
       shortcuts: DEFAULT_SHORTCUTS,
       modelPreferences: DEFAULT_MODEL_PREFERENCES,
       meetingPreferences: DEFAULT_MEETING_PREFERENCES,

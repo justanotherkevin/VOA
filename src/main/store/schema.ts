@@ -85,6 +85,10 @@ export interface LMStudioPreferences {
   model: string;
 }
 
+// 'builtin' runs summarization on-device via node-llama-cpp (see
+// pipeline/llama-summarizer.ts) and is the default for new installs.
+export type SummarizerProviderType = 'lmstudio' | 'ollama' | 'builtin';
+
 export interface CalendarPreferences {
   feedUrl: string;
 }
@@ -100,6 +104,7 @@ export interface StoreSchema {
   meetings: Recording[];
   meetingsMigrated: boolean;
   recordingTypeMigrated: boolean;
+  summarizerProviderMigrated: boolean;
   shortcuts?: ShortcutPreferences;
   modelPreferences?: ModelPreferences;
   meetingPreferences?: MeetingPreferences;
@@ -107,6 +112,7 @@ export interface StoreSchema {
   audioPreferences?: AudioPreferences;
   uiPreferences?: UIPreferences;
   lmStudioPreferences?: LMStudioPreferences;
+  summarizerProvider?: SummarizerProviderType;
   calendarPreferences?: StoredCalendarPreferences;
   transcriptHistory?: StoredTranscript[];
   dismissedMeetingKeys?: string[];
@@ -152,6 +158,8 @@ export const DEFAULT_LM_STUDIO_PREFERENCES: LMStudioPreferences = {
   baseUrl: 'http://localhost:1234',
   model: '',
 };
+
+export const DEFAULT_SUMMARIZER_PROVIDER: SummarizerProviderType = 'builtin';
 
 export const DEFAULT_CALENDAR_PREFERENCES: CalendarPreferences = {
   feedUrl: '',

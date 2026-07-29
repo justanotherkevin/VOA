@@ -70,8 +70,10 @@ audio-transformer/
 │   │   │   ├── asr-factory.ts           ← Factory: creates Whisper or Parakeet
 │   │   │   ├── whisper-transcriber.ts   ← Whisper ONNX implementation
 │   │   │   ├── text-cleaner.ts          ← Cleans raw transcription artifacts
-│   │   │   ├── summarizer.ts            ← Optional text summarization
-│   │   │   └── style-transfer.ts        ← Optional writing style matching
+│   │   │   ├── structured-summarizer.ts ← Structured meeting summarization (LM Studio/Ollama HTTP or embedded builtin)
+│   │   │   ├── llama-summarizer.ts      ← Embedded on-device summarization proxy (see docs/embedded-llm-migration.md)
+│   │   │   ├── llama-process.ts         ← utilityProcess child running the embedded model
+│   │   │   └── summarizer-provider.ts   ← Resolves active summarization backend (lmstudio/ollama/builtin)
 │   │   │
 │   │   ├── ipcWrapper/                  ← Preload-side wrappers (used by preload.ts)
 │   │   │   └── audioCapture.ts          ← desktopCapturer API for system audio
@@ -342,7 +344,7 @@ useRecordingFlow (renderer)
                 ▼ IPC invoke
         TranscriberService.transcribe() (main)
           → Whisper/Parakeet ONNX inference
-          → text-cleaner → style-transfer
+          → text-cleaner
           → session buffer appended (not saved yet)
           → webContents.send('transcriber:complete', segmentText)
                 │

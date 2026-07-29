@@ -12,10 +12,13 @@ import {
   saveUIPreferences,
   getLMStudioPreferences,
   saveLMStudioPreferences,
+  getSummarizerProvider,
+  saveSummarizerProvider,
   type AppPreferences,
   type AudioPreferences,
   type UIPreferences,
   type LMStudioPreferences,
+  type SummarizerProviderType,
 } from '../store';
 import {
   listCachedModels,
@@ -23,6 +26,13 @@ import {
   clearAllCache,
   getCachePaths,
 } from '../model-cache';
+import {
+  isModelDownloaded,
+  getModelPath,
+  downloadModel,
+  cancelDownload,
+  deleteModel as deleteGgufModel,
+} from '../gguf-model-cache';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { error as logError, info } from 'electron-log';
 import transcriberService from '../services/transcriber';
@@ -318,6 +328,62 @@ export function registerSettingsHandlers() {
         return { success: true };
       } catch (error) {
         logError('[IPC] Error updating ASR type:', error);
+        return { success: false, message: String(error) };
+      }
+    },
+  );
+
+  // Builtin (embedded GGUF) LLM model cache
+  ipcMain.handle(CHANNELS.BUILTIN_LLM.GET_STATUS, async () => {
+    return { downloaded: isModelDownloaded(), path: getModelPath() };
+  });
+
+  ipcMain.handle(CHANNELS.BUILTIN_LLM.DOWNLOAD, async () => {
+    try {
+      await downloadModel((downloadedBytes, totalBytes) => {
+        getMainWindow()?.webContents.send(
+          CHANNELS.BUILTIN_LLM.DOWNLOAD_PROGRESS,
+          { downloadedBytes, totalBytes },
+        );
+      });
+      return { success: true };
+    } catch (error) {
+      logError('[IPC] Error downloading builtin LLM model:', error);
+      return { success: false, message: String(error) };
+    }
+  });
+
+  ipcMain.handle(CHANNELS.BUILTIN_LLM.CANCEL_DOWNLOAD, async () => {
+    cancelDownload();
+    return { success: true };
+  });
+
+  ipcMain.handle(CHANNELS.BUILTIN_LLM.DELETE, async () => {
+    try {
+      const success = await deleteGgufModel();
+      return {
+        success,
+        message: success ? 'Model deleted successfully' : 'Model not found',
+      };
+    } catch (error) {
+      logError('[IPC] Error deleting builtin LLM model:', error);
+      return { success: false, message: String(error) };
+    }
+  });
+
+  // Summarizer Provider
+  ipcMain.handle(CHANNELS.SUMMARIZER_PROVIDER.GET, async () => {
+    return getSummarizerProvider();
+  });
+
+  ipcMain.handle(
+    CHANNELS.SUMMARIZER_PROVIDER.SET,
+    async (_event, provider: SummarizerProviderType) => {
+      try {
+        saveSummarizerProvider(provider);
+        return { success: true };
+      } catch (error) {
+        logError('[IPC] Error saving summarizer provider:', error);
         return { success: false, message: String(error) };
       }
     },

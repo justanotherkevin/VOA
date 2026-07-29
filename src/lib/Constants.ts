@@ -205,10 +205,18 @@ export const CACHED_MODEL_META: Record<
   string,
   { subtitle: string; description: string }
 > = {
+  // Stale: describes a deleted on-device ONNX summarizer attempt
+  // (onnx-community/Qwen2.5-1.5B-Instruct, ~900MB), not the GGUF model below.
+  // Left as-is — not part of this phase's scope.
   'Qwen2.5-1.5B-Instruct': {
     subtitle: 'AI summaries · ~900 MB',
     description:
       "Alibaba's Qwen 2.5 1.5B runs fully on-device to generate structured summaries, decisions, topics, and action items after each meeting.",
+  },
+  'Qwen2.5-1.5B-Instruct-GGUF': {
+    subtitle: 'AI summaries (builtin) · ~1.1 GB',
+    description:
+      "Alibaba's Qwen 2.5 1.5B Instruct, Q4_K_M GGUF quantization, Apache-2.0 licensed. Runs fully on-device via llama.cpp/Metal to generate structured summaries, decisions, topics, and action items after each meeting.",
   },
   'distilbart-cnn-6-6': {
     subtitle: 'for text summary',
