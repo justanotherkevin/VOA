@@ -31,14 +31,15 @@ The pipeline contains **stateless, functional transformations** that know nothin
 
 ### Modules
 
-| Module | Purpose | Input | Output |
-|--------|---------|-------|--------|
-| **`whisper-transcriber.ts`** | Xenova Whisper ASR | audio samples (Float32Array) | transcription chunks + final result |
-| **`asr-factory.ts`** | ASR instantiation | model config (name, quantization) | `AsrTranscriber` instance |
-| **`summarizer.ts`** | DistilBART summarization | transcript text | summary text |
-| **`style-transfer.ts`** | FLAN-T5 text transformation | transcript + style mode | transformed text |
-| **`text-cleaner.ts`** | Disfluency removal | transcript text | cleaned text |
-| **`types.ts`** | Interface definitions | — | `AsrTranscriber`, `TranscriptionResult` |
+| Module                         | Purpose                                                                                                                                      | Input                                                 | Output                                  |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | --------------------------------------- |
+| **`whisper-transcriber.ts`**   | Xenova Whisper ASR                                                                                                                           | audio samples (Float32Array)                          | transcription chunks + final result     |
+| **`asr-factory.ts`**           | ASR instantiation                                                                                                                            | model config (name, quantization)                     | `AsrTranscriber` instance               |
+| **`structured-summarizer.ts`** | Structured meeting summarization (LM Studio/Ollama HTTP by default, or the embedded `LlamaSummarizer` when the `builtin` provider is active) | transcript text                                       | `StructuredSummaryResult`               |
+| **`llama-summarizer.ts`**      | Embedded on-device summarization inference (see `docs/embedded-llm-migration.md`)                                                            | a fully-formed prompt string                          | raw model output text                   |
+| **`summarizer-provider.ts`**   | Summarizer backend resolution                                                                                                                | — (reads the store's `summarizerProvider` preference) | `'lmstudio' \| 'ollama' \| 'builtin'`   |
+| **`text-cleaner.ts`**          | Disfluency removal                                                                                                                           | transcript text                                       | cleaned text                            |
+| **`types.ts`**                 | Interface definitions                                                                                                                        | —                                                     | `AsrTranscriber`, `TranscriptionResult` |
 
 ### Example: Transcriber Lifecycle
 
@@ -49,15 +50,18 @@ class WhisperTranscriber {
 
   async initialize(model: string, quantized: boolean): Promise<void> {
     // Lazy init: load model on first use
-    this.transcriber = await pipeline(
-      'automatic-speech-recognition',
-      { model, quantize: quantized }
-    );
+    this.transcriber = await pipeline('automatic-speech-recognition', {
+      model,
+      quantize: quantized,
+    });
   }
 
   async transcribe(audio: Float32Array): Promise<TranscriptionChunk> {
     // Pure transformation: input audio → output text
-    const result = await this.transcriber!({ raw: true, sampling_rate: 16000 }, audio);
+    const result = await this.transcriber!(
+      { raw: true, sampling_rate: 16000 },
+      audio,
+    );
     return { text: result[0].transcript };
   }
 }
@@ -88,11 +92,11 @@ Services **coordinate business logic and state** across the application. They kn
 
 ### Services
 
-| Service | Purpose | Responsibilities |
-|---------|---------|------------------|
-| **`transcriber.ts`** | ASR pipeline orchestration | Session management (begin/end), segment buffering, model selection, async enrichment (summary, style-transfer), IPC callbacks |
-| **`permissions.ts`** | Permission state tracking | Caches system permissions, emits change events, wraps OS permission APIs |
-| **`meeting-detector.ts`** | Meeting detection polling | Polls active window every 5s, detects meeting entry/exit, emits IPC events, tracks dismissal state |
+| Service                   | Purpose                    | Responsibilities                                                                                                              |
+| ------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **`transcriber.ts`**      | ASR pipeline orchestration | Session management (begin/end), segment buffering, model selection, async enrichment (summary, style-transfer), IPC callbacks |
+| **`permissions.ts`**      | Permission state tracking  | Caches system permissions, emits change events, wraps OS permission APIs                                                      |
+| **`meeting-detector.ts`** | Meeting detection polling  | Polls active window every 5s, detects meeting entry/exit, emits IPC events, tracks dismissal state                            |
 
 ### Example: TranscriberService
 
@@ -112,7 +116,10 @@ export class TranscriberService {
     });
   }
 
-  async transcribe(args: TranscribeArgs, callbacks: TranscriberCallbacks): Promise<void> {
+  async transcribe(
+    args: TranscribeArgs,
+    callbacks: TranscriberCallbacks,
+  ): Promise<void> {
     // Orchestration: delegate to pipeline
     const prefs = getModelPreferences(); // Read preferences from store
 
@@ -126,11 +133,14 @@ export class TranscriberService {
     callbacks.onUpdate(result); // IPC event to renderer
   }
 
-  async endSession(endedAt: number, callbacks: TranscriberCallbacks): Promise<void> {
+  async endSession(
+    endedAt: number,
+    callbacks: TranscriberCallbacks,
+  ): Promise<void> {
     // State management: close session, persist, then enrich asynchronously
     const session = this.sessions.get(endedAt);
     const meeting = await saveMeeting({
-      transcript: session.segments.map(s => s.text).join(' '),
+      transcript: session.segments.map((s) => s.text).join(' '),
       startedAt: session.startedAt,
       summary: null, // pending
     });
@@ -148,7 +158,7 @@ export class TranscriberService {
     // Background work: call pipeline modules without blocking
     const transcript = getMeeting(meetingId).transcript;
 
-    const summary = await summarizerService.summarize(transcript);
+    const summary = await structuredSummarizerService.summarize(transcript);
     // Pipeline called here; pipeline doesn't know about this service or the meeting
 
     updateMeeting(meetingId, { summary });
@@ -169,7 +179,7 @@ The service **orchestrates**, **manages state**, **integrates with store/prefere
 ✅ Transform text (summarize, style-transfer, clean)  
 ✅ Transcribe audio  
 ✅ Export singletons for reuse  
-✅ Own internal state (model cache, initialization promises)  
+✅ Own internal state (model cache, initialization promises)
 
 ### What Pipeline Cannot Do
 
@@ -177,7 +187,7 @@ The service **orchestrates**, **manages state**, **integrates with store/prefere
 ❌ Call IPC (`ipcMain.handle`, `webContents.send`)  
 ❌ Read from the store or preferences  
 ❌ Understand application context (meetings, sessions, users)  
-❌ Call `getMainWindow()` or retrieve window references  
+❌ Call `getMainWindow()` or retrieve window references
 
 ### What Services Can Do
 
@@ -185,13 +195,13 @@ The service **orchestrates**, **manages state**, **integrates with store/prefere
 ✅ Manage state and buffers  
 ✅ Read preferences and store data  
 ✅ Emit IPC events via `webContents.send()`  
-✅ Understand and enforce business logic  
+✅ Understand and enforce business logic
 
 ### What Services Cannot Do
 
 ❌ Duplicate low-level logic already in pipeline  
 ❌ Expose raw IPC handlers (those belong in `ipc/` layer)  
-❌ Manage UI state (that's the renderer's job)  
+❌ Manage UI state (that's the renderer's job)
 
 ---
 
@@ -244,13 +254,13 @@ endSession(endedAt, callbacks) {
 }
 
 async enrichMeetingWithSummary(meetingId, callbacks) {
-  const summary = await summarizerService.summarize(transcript); // Call pipeline
+  const summary = await structuredSummarizerService.summarize(transcript); // Call pipeline
   updateMeeting(meetingId, { summary }); // Update store
   callbacks.onMeetingSaved(getMeeting(meetingId)); // Notify renderer of update
 }
 ```
 
-The pipeline (`summarizerService`) is called, but it doesn't know it's enriching a meeting or that an IPC event will follow. It just transforms text.
+The pipeline (`structuredSummarizerService`) is called, but it doesn't know it's enriching a meeting or that an IPC event will follow. It just transforms text.
 
 ---
 
@@ -267,7 +277,9 @@ The pipeline (`summarizerService`) is called, but it doesn't know it's enriching
 ```typescript
 // src/main/pipeline/sentiment-analyzer.ts
 export async function analyzeSentiment(text: string): Promise<SentimentResult> {
-  const classifier = await pipeline('zero-shot-classification', { model: '...' });
+  const classifier = await pipeline('zero-shot-classification', {
+    model: '...',
+  });
   const result = await classifier(text, ['positive', 'negative', 'neutral']);
   return result;
 }
@@ -285,6 +297,7 @@ const sentiment = await sentimentAnalyzer.analyzeSentiment(transcript);
 **Service + Pipeline change:**
 
 1. **Pipeline:** Create `src/main/pipeline/tagger.ts` (stateless transformer)
+
    ```typescript
    export async function suggestTags(transcript: string): Promise<string[]> {
      // ML model + transformation
@@ -292,6 +305,7 @@ const sentiment = await sentimentAnalyzer.analyzeSentiment(transcript);
    ```
 
 2. **Service:** Add orchestration to `services/transcriber.ts`
+
    ```typescript
    async enrichMeetingWithTags(meetingId: string): Promise<void> {
      const transcript = getMeeting(meetingId).transcript;
@@ -409,13 +423,13 @@ async transcribe(args, callbacks) {
 ### ❌ Mistake 3: Pipeline calls IPC directly
 
 ```typescript
-// src/main/pipeline/summarizer.ts
+// src/main/pipeline/some-transformer.ts
 import { ipcMain } from 'electron'; // ❌ WRONG
 
-export async function summarize(text) {
-  const summary = await model.summarize(text);
-  ipcMain.emit('summary-ready', summary); // ❌ Pipeline triggering IPC
-  return summary;
+export async function transform(text) {
+  const result = await model.run(text);
+  ipcMain.emit('transform-ready', result); // ❌ Pipeline triggering IPC
+  return result;
 }
 ```
 
@@ -423,12 +437,12 @@ export async function summarize(text) {
 
 ```typescript
 // ✅ Pipeline returns; service emits
-export async function summarize(text) {
-  return await model.summarize(text);
+export async function transform(text) {
+  return await model.run(text);
 }
 
 // Service emits
-await callbacks.onSummaryReady(summary);
+await callbacks.onTransformReady(result);
 ```
 
 ---
@@ -436,6 +450,6 @@ await callbacks.onSummaryReady(summary);
 ## References
 
 - **Service implementations:** `src/main/services/transcriber.ts`, `src/main/services/permissions.ts`, `src/main/services/meeting-detector.ts`
-- **Pipeline modules:** `src/main/pipeline/whisper-transcriber.ts`, `src/main/pipeline/summarizer.ts`, `src/main/pipeline/style-transfer.ts`
+- **Pipeline modules:** `src/main/pipeline/whisper-transcriber.ts`, `src/main/pipeline/structured-summarizer.ts`, `src/main/pipeline/llama-summarizer.ts`
 - **IPC layer:** `src/main/ipc/transcriber.ts` — thin router between handlers and services
 - **Test examples:** `src/main/__tests__/transcriberService.test.ts`

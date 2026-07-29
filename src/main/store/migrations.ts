@@ -1,5 +1,10 @@
 import log from 'electron-log';
-import { Recording, StoredTranscript } from './schema';
+import {
+  Recording,
+  StoredTranscript,
+  LMStudioPreferences,
+  DEFAULT_LM_STUDIO_PREFERENCES,
+} from './schema';
 
 export function generateTitle(transcript: string): string {
   if (!transcript || transcript.trim() === '') return 'Untitled Meeting';
@@ -59,5 +64,30 @@ export function runMigrations(store: any) {
       );
     }
     store.set('recordingTypeMigrated', true);
+  }
+
+  if (!store.get('summarizerProviderMigrated')) {
+    // The default summarizer provider flipped from 'lmstudio' to 'builtin'.
+    // Installs that already had LM Studio actively configured (a non-default
+    // baseUrl or a model set) should keep behaving as they did before this
+    // default changed, instead of silently switching to the built-in model.
+    if (!store.get('summarizerProvider')) {
+      const lmStudioPrefs: LMStudioPreferences =
+        store.get('lmStudioPreferences') ?? DEFAULT_LM_STUDIO_PREFERENCES;
+      const looksActivelyConfigured =
+        (lmStudioPrefs.baseUrl &&
+          lmStudioPrefs.baseUrl !== 'http://localhost:1234' &&
+          lmStudioPrefs.baseUrl !== 'http://localhost:11434') ||
+        !!lmStudioPrefs.model;
+
+      if (looksActivelyConfigured) {
+        store.set('summarizerProvider', 'lmstudio');
+        log.info(
+          '[Store] Migrated summarizerProvider → lmstudio (existing active LM Studio config detected)',
+        );
+      }
+    }
+
+    store.set('summarizerProviderMigrated', true);
   }
 }

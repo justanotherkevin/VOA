@@ -5,6 +5,18 @@ import {
   splitIntoChunks,
 } from '../structured-summarizer';
 
+// This suite exercises the LM Studio/Ollama HTTP path specifically (see
+// __tests__/CLAUDE.md) — pin the provider explicitly rather than relying on
+// whatever the store's default happens to be, since that default now
+// resolves to 'builtin' (see store/schema.ts).
+vi.mock('@/main/store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/main/store')>();
+  return {
+    ...actual,
+    getSummarizerProvider: () => 'lmstudio',
+  };
+});
+
 // ── parseStructuredOutput ────────────────────────────────────────────────────
 
 describe('parseStructuredOutput', () => {
@@ -235,7 +247,9 @@ describe('StructuredSummarizerService.summarize()', () => {
     const body = JSON.parse((fetch as any).mock.calls[0][1].body);
     expect(body.messages[0].role).toBe('system');
     expect(body.messages[1].role).toBe('user');
-    expect(body.messages[1].content).toContain('Extract structured information');
+    expect(body.messages[1].content).toContain(
+      'Extract structured information',
+    );
     expect(body.temperature).toBe(0);
   });
 });
@@ -305,7 +319,9 @@ describe('StructuredSummarizerService rolling session methods', () => {
 
     const body = JSON.parse((fetch as any).mock.calls[0][1].body);
     expect(body.messages[0].role).toBe('system');
-    expect(body.messages[1].content).toContain('Extract structured information');
+    expect(body.messages[1].content).toContain(
+      'Extract structured information',
+    );
     expect(body.messages[1].content).not.toContain('Previous summary');
   });
 
@@ -316,7 +332,9 @@ describe('StructuredSummarizerService rolling session methods', () => {
       topics: ['architecture'],
       actionItems: [{ text: 'Write ADR', done: false }],
     };
-    (fetch as any).mockReturnValueOnce(makeOkResponse(JSON.stringify(expected)));
+    (fetch as any).mockReturnValueOnce(
+      makeOkResponse(JSON.stringify(expected)),
+    );
 
     const result = await service.submitChunk('word '.repeat(25));
     expect(result).toEqual(expected);
@@ -368,7 +386,12 @@ describe('StructuredSummarizerService rolling session methods', () => {
   });
 
   it('summarizeChunked() resets session then processes each chunk sequentially', async () => {
-    service.currentSummary = { summary: 'stale', decisions: [], topics: [], actionItems: [] };
+    service.currentSummary = {
+      summary: 'stale',
+      decisions: [],
+      topics: [],
+      actionItems: [],
+    };
 
     const chunkResult = {
       summary: 'Fresh summary',

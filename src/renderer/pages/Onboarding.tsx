@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Mic,
   Zap,
   CheckCircle,
-  XCircle,
   ArrowRight,
   Loader2,
   ExternalLink,
@@ -12,7 +11,7 @@ import {
 import { Button } from '@/renderer/components/button';
 import { usePermissions } from '@/renderer/hooks/usePermissions';
 
-type Step = 'permissions' | 'lmstudio' | 'demo';
+type Step = 'permissions' | 'demo';
 
 const MOCK_TRANSCRIPT = `Kevin: Alright, let's get started. Today's main topic is Q3 priorities — we need to decide whether the export feature or dark mode ships first.
 
@@ -70,7 +69,6 @@ const MOCK_TOPICS = [
 function StepIndicator({ current }: { current: Step }) {
   const steps: { id: Step; label: string }[] = [
     { id: 'permissions', label: 'Permissions' },
-    { id: 'lmstudio', label: 'AI Setup' },
     { id: 'demo', label: 'See It Work' },
   ];
   const currentIndex = steps.findIndex((s) => s.id === current);
@@ -160,114 +158,6 @@ function PermissionsStep({ onNext }: { onNext: () => void }) {
       )}
 
       <Button className="w-full" disabled={!micGranted} onClick={onNext}>
-        Continue
-        <ArrowRight size={15} className="ml-1.5" />
-      </Button>
-    </div>
-  );
-}
-
-function LmStudioStep({ onNext }: { onNext: () => void }) {
-  const [url, setUrl] = useState('http://localhost:1234');
-  const [testing, setTesting] = useState(false);
-  const [result, setResult] = useState<{
-    ok: boolean;
-    message?: string;
-  } | null>(null);
-
-  const handleTest = async () => {
-    setTesting(true);
-    setResult(null);
-    try {
-      const res = await window.electronAPI.lmStudio.testConnection(url);
-      setResult(res ?? { ok: false });
-    } catch {
-      setResult({ ok: false });
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-white mb-2">
-          Connect your AI
-        </h2>
-        <p className="text-white/60">
-          Audio Transformer uses a local AI to generate summaries and action
-          items — your data never leaves your machine.
-        </p>
-      </div>
-
-      <div className="rounded-xl border border-white/10 p-5 space-y-4 bg-white/5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-            <Zap size={18} className="text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-white">LM Studio</p>
-            <p className="text-xs text-white/50">
-              Don't have it?{' '}
-              <button
-                className="text-white/70 underline"
-                onClick={() =>
-                  window.electronAPI.shell.openExternal('https://lmstudio.ai')
-                }
-              >
-                Download at lmstudio.ai
-              </button>
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <label
-            htmlFor="lm-url"
-            className="text-xs text-white/50 mb-1.5 block"
-          >
-            Server URL
-          </label>
-          <input
-            id="lm-url"
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="w-full bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30"
-          />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-white/20  hover:bg-white/10 hover:text-white"
-            onClick={handleTest}
-            disabled={testing}
-          >
-            {testing ? (
-              <Loader2 size={13} className="animate-spin mr-1.5" />
-            ) : null}
-            Test Connection
-          </Button>
-          {result && (
-            <div
-              className={`flex items-center gap-1.5 text-sm ${result.ok ? 'text-green-400' : 'text-red-400'}`}
-            >
-              {result.ok ? <CheckCircle size={14} /> : <XCircle size={14} />}
-              {result.ok ? 'Connected' : 'Could not connect'}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {!result?.ok && (
-        <p className="text-xs text-white/40">
-          Open LM Studio → Local Server tab → Start Server, then test again.
-        </p>
-      )}
-
-      <Button className="w-full" disabled={!result?.ok} onClick={onNext}>
         Continue
         <ArrowRight size={15} className="ml-1.5" />
       </Button>
@@ -406,6 +296,13 @@ function DemoStep() {
 export default function Onboarding() {
   const [step, setStep] = useState<Step>('permissions');
 
+  // Fire-and-forget: kicks off the built-in model download in the
+  // background so it's ready by the time the user finishes onboarding.
+  // Progress/errors surface later in Settings, not here.
+  useEffect(() => {
+    window.electronAPI.builtinLlm.download().catch(() => {});
+  }, []);
+
   return (
     <div className="flex bg-[#111] items-center justify-center p-8 min-h-screen">
       <div className="w-full max-w-lg">
@@ -417,9 +314,8 @@ export default function Onboarding() {
         </div>
 
         {step === 'permissions' && (
-          <PermissionsStep onNext={() => setStep('lmstudio')} />
+          <PermissionsStep onNext={() => setStep('demo')} />
         )}
-        {step === 'lmstudio' && <LmStudioStep onNext={() => setStep('demo')} />}
         {step === 'demo' && <DemoStep />}
       </div>
     </div>

@@ -23,6 +23,7 @@ let meetingSavedCallback: ((meeting: any) => void) | null = null;
 let meetingClearedCallback: (() => void) | null = null;
 let meetingDetectedCallback: ((event: any) => void) | null = null;
 let meetingEndedCallback: ((event: any) => void) | null = null;
+let builtinLlmDownloadProgressCallback: ((progress: any) => void) | null = null;
 
 export function attachGlobalElectronMock() {
   // Ensure global.window exists
@@ -194,6 +195,28 @@ export function attachGlobalElectronMock() {
       },
     },
 
+    // ── Summarizer Provider ───────────────────────────────────────────────────
+    summarizerProvider: {
+      get: vi.fn(async () => 'builtin'),
+      set: vi.fn(async () => ({ success: true })),
+    },
+
+    // ── Builtin (embedded GGUF) LLM ───────────────────────────────────────────
+    builtinLlm: {
+      getStatus: vi.fn(async () => ({ downloaded: false, path: '' })),
+      download: vi.fn(async () => ({ success: true })),
+      cancelDownload: vi.fn(async () => ({ success: true })),
+      delete: vi.fn(async () => ({ success: true })),
+      on: {
+        downloadProgress: vi.fn((cb: (progress: any) => void) => {
+          builtinLlmDownloadProgressCallback = cb;
+          return () => {
+            builtinLlmDownloadProgressCallback = null;
+          };
+        }),
+      },
+    },
+
     // ── Permissions ──────────────────────────────────────────────────────────
     permissions: {
       check: vi.fn(async () => ({
@@ -271,6 +294,7 @@ export function detachGlobalElectronMock() {
     meetingClearedCallback = null;
     meetingDetectedCallback = null;
     meetingEndedCallback = null;
+    builtinLlmDownloadProgressCallback = null;
   }
 }
 
@@ -295,6 +319,7 @@ export function resetElectronMockCallbacks() {
   meetingClearedCallback = null;
   meetingDetectedCallback = null;
   meetingEndedCallback = null;
+  builtinLlmDownloadProgressCallback = null;
 }
 
 export function triggerRecordingToggle() {

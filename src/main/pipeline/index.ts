@@ -9,6 +9,14 @@ export {
 } from './types';
 export { default as whisperTranscriber } from './whisper-transcriber';
 export {
+  default as llamaSummarizer,
+  BUILTIN_MODEL_PATH,
+} from './llama-summarizer';
+export {
+  SummarizerProviderFactory,
+  type SummarizerProviderType,
+} from './summarizer-provider';
+export {
   CalendarProviderFactory,
   type CalendarProviderType,
   type CalendarProviderConfig,

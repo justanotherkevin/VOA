@@ -1,4 +1,8 @@
 import { getLMStudioPreferences } from '@/main/store';
+import { SummarizerProviderFactory } from '@/main/pipeline/summarizer-provider';
+import llamaSummarizer, {
+  BUILTIN_MODEL_PATH,
+} from '@/main/pipeline/llama-summarizer';
 
 export async function checkConnection(baseUrl: string): Promise<boolean> {
   try {
@@ -139,16 +143,37 @@ async function callLMStudio(
   messages: { role: string; content: string }[],
 ): Promise<string | null> {
   const { baseUrl, model } = getLMStudioPreferences();
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, temperature: 0 }),
-  });
+  const response = await fetch(
+    `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, messages, temperature: 0 }),
+    },
+  );
   if (!response.ok) {
-    throw new Error(`LM Studio returned ${response.status}: ${response.statusText}`);
+    throw new Error(
+      `LM Studio returned ${response.status}: ${response.statusText}`,
+    );
   }
   const data = await response.json();
   return (data.choices?.[0]?.message?.content as string) ?? null;
+}
+
+async function callBuiltin(
+  messages: { role: string; content: string }[],
+): Promise<string | null> {
+  await llamaSummarizer.initialize(BUILTIN_MODEL_PATH);
+  const fullPrompt = messages.map((m) => m.content).join('\n\n');
+  return llamaSummarizer.generate(fullPrompt);
+}
+
+async function callModel(
+  messages: { role: string; content: string }[],
+): Promise<string | null> {
+  return SummarizerProviderFactory.resolve() === 'builtin'
+    ? callBuiltin(messages)
+    : callLMStudio(messages);
 }
 
 export function splitIntoChunks(text: string, maxChunkSize: number): string[] {
@@ -190,7 +215,7 @@ class StructuredSummarizerService {
       return null;
     }
     try {
-      const responseText = await callLMStudio([
+      const responseText = await callModel([
         { role: 'system', content: PROMPT_TEMPLATE },
         {
           role: 'user',
@@ -208,7 +233,9 @@ class StructuredSummarizerService {
     deltaTranscript: string,
   ): Promise<StructuredSummaryResult | null> {
     if (deltaTranscript.length < 100) {
-      console.warn('[StructuredSummarizer] Delta transcript too short, skipping chunk');
+      console.warn(
+        '[StructuredSummarizer] Delta transcript too short, skipping chunk',
+      );
       return this.currentSummary;
     }
 
@@ -230,7 +257,7 @@ class StructuredSummarizerService {
             },
           ];
 
-      const responseText = await callLMStudio(messages);
+      const responseText = await callModel(messages);
       const result = responseText ? parseStructuredOutput(responseText) : null;
       if (result) this.currentSummary = result;
       return result;
