@@ -8,6 +8,7 @@ All notable changes to VOA are documented here.
 
 ### Added
 
+- **The public landing page (`docs/index.html`) now has an email waitlist.** Two Loops.so signup forms (hero and bottom CTA) let visitors get notified when a packaged build ships; each form tags its lead with a distinct `source` value (`voa-landing-hero` / `voa-landing-bottom`) so hero-vs-CTA conversion can be compared in Loops, and both add the contact to a shared mailing list. Inputs have visually-hidden `<label>`s for accessibility.
 - **Meeting titles now use the matched calendar event's plain title instead of a raw `[Meeting] ...` transcript snippet.** `CalendarEventMatch` (`src/main/pipeline/types.ts`) exposes a plain `summary` alongside the time-suffixed `title` used for the calendar-match picker; `TranscriberService.persistMeeting()` resolves the title as: confirmed calendar match's summary → `"Meeting with Alice"` / `"...Alice and Bob"` / `"...Alice, Bob, and N others"` (`formatParticipantsTitle()` in `src/main/store/migrations.ts`) when participants exist but there's no match → `"Untitled Meeting"`. Dictations are unaffected and keep the transcript-derived title.
   - Added first-letter participant avatars (stable per-participant hashed colors, `src/renderer/utils/AvatarUtils.ts`) to the sidebar meeting list row and the meeting detail key-facts panel, replacing the old "Participants: N" text fact.
 - **Onboarding now actually runs on first launch, and downloads both AI models before letting you in.** The `/onboarding` route already existed but nothing ever navigated to it and no completion flag was stored, so new users never saw it.
@@ -80,6 +81,8 @@ All notable changes to VOA are documented here.
 
 ### Changed
 
+- **Recolored the landing page (`docs/index.html`) from the Material blue/indigo palette to a warm parchment/ink scheme**, and switched the heading font from Inter to Figtree, both inspired by meetily.ai's design tokens (extracted from their live CSS, not guessed).
+- **Expanded `README.md`** with a repo layout table, a testing command reference, a "Before you open a PR" checklist, and a "Known limitations" section, aimed at getting new contributors from clone to open PR without extra back-and-forth.
 - **Re-enabled Base as a selectable Whisper model** — repeated manual switching between Tiny/Base in the real app didn't reproduce the native crash Small/Medium hit reliably. A version-bump experiment (`onnxruntime-node` 1.14.0 → 1.24.1) to fix the crash outright made things worse and was reverted; see `docs/whisper-onnxruntime-crash.md`.
 - **Reorganized Settings-related e2e specs** under `tests/e2e/pages/settings/`, added an `@e2e/*` path alias (`tsconfig.json`) for absolute imports, deduplicated a `pollUntil` helper that had been copied into three separate spec files into `tests/e2e/utils/common.helpers.ts`, and removed dead code left over from removed system-audio test scenarios.
 - **`model-switch-toast.spec.ts`'s failing-swap test now asserts on the actual error toast** (Sonner's `data-sonner-toast[data-type="error"]`) instead of only the underlying `transcriber:error` event, and waits out the app-launch model preload race before triggering its own failing update. Also removed a fully commented-out rolling-summary test from `dictation-meeting-flow.spec.ts` and the debug-only `debug-prefs.spec.ts` (no assertions, console-log only).
