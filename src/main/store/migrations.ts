@@ -12,6 +12,20 @@ export function generateTitle(transcript: string): string {
   return words.slice(0, 8).join(' ') + (words.length > 8 ? '...' : '');
 }
 
+// Fallback title for a meeting with no confirmed calendar match, built from
+// its resolved participant list. Caller guarantees participants.length > 0.
+export function formatParticipantsTitle(participants: string[]): string {
+  if (participants.length === 1) return `Meeting with ${participants[0]}`;
+  if (participants.length === 2) {
+    return `Meeting with ${participants[0]} and ${participants[1]}`;
+  }
+  if (participants.length === 3) {
+    return `Meeting with ${participants[0]}, ${participants[1]}, and ${participants[2]}`;
+  }
+  const others = participants.length - 2;
+  return `Meeting with ${participants[0]}, ${participants[1]}, and ${others} others`;
+}
+
 export function normalizeRecording(m: any): Recording {
   const summary = m.summary ?? '';
   const summaryStatus = m.summaryStatus ?? 'ready';

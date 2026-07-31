@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Mic, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 import type { Recording } from '@/renderer/hooks/useMeetings';
 import {
   formatMeetingDate,
@@ -21,6 +21,16 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from '@/renderer/components/collapsible';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+} from '@/renderer/components/avatar';
+import {
+  getParticipantInitial,
+  getParticipantColorClass,
+} from '@/renderer/utils/AvatarUtils';
 
 interface MeetingListProps {
   meetings: Recording[];
@@ -113,17 +123,6 @@ export function MeetingList({
           selectedId={selectedId}
           onSelect={onSelect}
         />
-      </div>
-
-      {/* New Recording button */}
-      <div className="px-1 pt-3 mt-2 border-t border-sidebar-border">
-        <button
-          onClick={onNewRecording}
-          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium py-2 px-3 rounded-lg transition-colors"
-        >
-          <Mic size={14} />
-          New Recording
-        </button>
       </div>
     </div>
   );
@@ -248,6 +247,9 @@ function MeetingRow({
           </ItemHeader>
           <ItemFooter className="basis-auto justify-start gap-2">
             <TagMarquee tags={meeting.topics} />
+            {meeting.type === 'meeting' && meeting.participants.length > 0 && (
+              <ParticipantAvatars participants={meeting.participants} />
+            )}
             {duration && (
               <span className="text-xs text-sidebar-foreground/60 shrink-0 tabular-nums">
                 {duration}
@@ -257,6 +259,24 @@ function MeetingRow({
         </ItemContent>
       </button>
     </Item>
+  );
+}
+
+function ParticipantAvatars({ participants }: { participants: string[] }) {
+  const shown = participants.slice(0, 3);
+  const overflow = participants.length - shown.length;
+
+  return (
+    <AvatarGroup className="shrink-0" data-testid="meeting-row-avatars">
+      {shown.map((p, i) => (
+        <Avatar key={i} size="sm" title={p}>
+          <AvatarFallback className={getParticipantColorClass(p)}>
+            {getParticipantInitial(p)}
+          </AvatarFallback>
+        </Avatar>
+      ))}
+      {overflow > 0 && <AvatarGroupCount>+{overflow}</AvatarGroupCount>}
+    </AvatarGroup>
   );
 }
 

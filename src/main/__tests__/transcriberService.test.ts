@@ -24,6 +24,9 @@ vi.mock('@/main/store', () => ({
   updateMeeting: vi.fn((id: string, patch: any) => ({ id, ...patch })),
   getModelPreferences: vi.fn(() => ({ asrType: 'whisper' })),
   generateTitle: vi.fn((text: string) => text.split(' ').slice(0, 8).join(' ')),
+  formatParticipantsTitle: vi.fn((participants: string[]) =>
+    `Meeting with ${participants.join(', ')}`,
+  ),
   getMeetingById: vi.fn(() => null),
   // Consumed by beginSession()'s calendar-match lookup; returning no feedUrl
   // makes it a no-op by default (individual tests override as needed).
@@ -269,13 +272,15 @@ describe('TranscriberService - Helper Methods', () => {
     const matches = [
       {
         id: 'best',
-        title: 'Best Overlap',
+        title: 'Best Overlap — 2:00 PM',
+        summary: 'Best Overlap',
         overlapMs: 1000,
         participants: [{ name: 'Alice', email: 'alice@example.com' }],
       },
       {
         id: 'other',
-        title: 'Other Match',
+        title: 'Other Match — 3:00 PM',
+        summary: 'Other Match',
         overlapMs: 500,
         participants: [{ name: null, email: 'bob@example.com' }],
       },
@@ -346,6 +351,105 @@ describe('TranscriberService - Helper Methods', () => {
 
       expect(saveMeeting).toHaveBeenCalledWith(
         expect.objectContaining({ participants: ['Alice'] }),
+      );
+    });
+  });
+
+  describe('meeting title resolution', () => {
+    afterEach(() => {
+      const service = transcriberService as any;
+      service.calendarMatches = [];
+      service.calendarMatchDecision = 'pending';
+    });
+
+    it('uses the confirmed calendar match\'s plain summary as the title', async () => {
+      const { saveMeeting } = await import('@/main/store');
+      const service = transcriberService as any;
+      service.calendarMatches = [
+        {
+          id: 'evt-1',
+          title: 'Weekly Sync — 2:00 PM',
+          summary: 'Weekly Sync',
+          overlapMs: 1000,
+          participants: [{ name: 'Alice', email: 'alice@example.com' }],
+        },
+      ];
+      service.calendarMatchDecision = 'pending';
+
+      await service.persistMeeting(
+        'test text',
+        [],
+        1000,
+        2000,
+        mockCallbacks,
+        'mic',
+        'meeting',
+      );
+
+      expect(saveMeeting).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Weekly Sync' }),
+      );
+    });
+
+    it('falls back to "Untitled Meeting" when there is no match and no participants', async () => {
+      const { saveMeeting } = await import('@/main/store');
+      const service = transcriberService as any;
+      service.calendarMatches = [];
+      service.calendarMatchDecision = 'pending';
+
+      await service.persistMeeting(
+        'test text',
+        [],
+        1000,
+        2000,
+        mockCallbacks,
+        'mic',
+        'meeting',
+      );
+
+      expect(saveMeeting).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Untitled Meeting' }),
+      );
+    });
+
+    it('dictations keep the transcript-derived title regardless of any pending calendar match', async () => {
+      const { saveMeeting } = await import('@/main/store');
+      const service = transcriberService as any;
+      service.calendarMatches = [
+        {
+          id: 'evt-1',
+          title: 'Weekly Sync — 2:00 PM',
+          summary: 'Weekly Sync',
+          overlapMs: 1000,
+          participants: [{ name: 'Alice', email: 'alice@example.com' }],
+        },
+      ];
+      service.calendarMatchDecision = 'pending';
+
+      await service.persistMeeting(
+        'test text',
+        [],
+        1000,
+        2000,
+        mockCallbacks,
+        'mic',
+        'dictation',
+      );
+
+      expect(saveMeeting).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'test text' }),
+      );
+    });
+
+    // resolveMeetingTitle's participants-only branch (calendar match absent
+    // or declined, but participants present) is not reachable through any
+    // current code path — participants are only ever populated from a
+    // confirmed calendar match. This is defensive/future-proofing (e.g. for
+    // a possible manual-participant-entry feature), tested directly here.
+    it('resolveMeetingTitle falls back to "Meeting with ..." given participants but no match', () => {
+      const service = transcriberService as any;
+      expect(service.resolveMeetingTitle(null, ['Alice', 'Bob'])).toBe(
+        'Meeting with Alice, Bob',
       );
     });
   });
