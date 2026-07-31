@@ -4,7 +4,7 @@
 | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | <video src="https://github.com/user-attachments/assets/563177b7-e329-40ed-bd36-76ffc375a7b9" autoplay loop muted playsinline></video> | ![Available LLM models](docs/screenshots/smart-summary.png) |
 
-**VOA** is a macOS desktop app that turns any meeting or call into structured notes — summary, key decisions, and action items — automatically, using local AI. Press a hotkey from any app, speak, and get a searchable transcript with an LLM-generated structured summary. Transcription runs fully on-device via Whisper; structured summaries use LM Studio. No cloud, no API keys, your audio never leaves your machine.
+**VOA** is a macOS desktop app that turns any meeting or call into structured notes — summary, key decisions, and action items — automatically, using local AI. Press a hotkey from any app, speak, and get a searchable transcript with an LLM-generated structured summary. Transcription runs fully on-device via Whisper; structured summaries run on a built-in, on-device LLM by default (LM Studio or Ollama also supported, if you'd rather bring your own model). No cloud, no API keys, your audio never leaves your machine.
 
 ![Electron](https://img.shields.io/badge/Electron-2B2E3A?logo=electron&logoColor=9FEAF9)
 ![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
@@ -16,7 +16,7 @@
 
 ## Why VOA
 
-Most meeting recorders give you a raw transcript and stop there, or they send your audio to a cloud LLM to extract action items. VOA uses [Whisper](https://github.com/openai/whisper) for on-device speech-to-text and [LM Studio](https://lmstudio.ai) for structured extraction. Every meeting ends with a summary, a decisions list, tagged topics, and concrete action items, generated entirely on your Mac.
+Most meeting recorders give you a raw transcript and stop there, or they send your audio to a cloud LLM to extract action items. VOA uses [Whisper](https://github.com/openai/whisper) for on-device speech-to-text and a bundled, on-device LLM (Qwen2.5-1.5B, GGUF) for structured extraction — no external server to install or run. Prefer to bring your own model instead? [LM Studio](https://lmstudio.ai) and [Ollama](https://ollama.com) are supported as alternatives. Every meeting ends with a summary, a decisions list, tagged topics, and concrete action items, generated entirely on your Mac.
 
 The local approach is also the privacy answer: no cloud subscription, no bot joining your call, no API keys, no audio saved and ever leaving your machine. It works with any app — Zoom, Teams, Google Meet, phone calls, in-person conversations, or your own voice memos.
 
@@ -25,11 +25,14 @@ The local approach is also the privacy answer: no cloud subscription, no bot joi
 ## Features
 
 - **Global hotkey capture** — start and stop recording from any app (configurable shortcut, default `Cmd+Shift+Space`; see [Shortcuts](#shortcuts))
+- **Dictation mode** — a separate hotkey (default `F2`) transcribes and pastes directly into the active window, skipping meeting detection entirely
 - **On-device Whisper transcription** — runs locally via `@xenova/transformers` + ONNX Runtime; no cloud
 - **Voice Activity Detection** — automatically segments speech from silence using `@ricky0123/vad-web`
 - **Smart meeting detection** — detects active calls in Zoom, Teams, Google Meet, and Slack via Accessibility API
-- **AI summaries with rolling context** — for long meetings, the transcript is processed in chunks and the summary is updated incrementally; bring your own model via LM Studio or Ollama
-- **Meetings and monologues** — distinguishes group calls from solo voice capture
+- **Built-in on-device AI summaries with rolling context** — for long meetings, the transcript is processed in chunks and the summary is updated incrementally; the bundled model runs locally with no setup, or bring your own via LM Studio or Ollama
+- **Calendar-aware meeting matching** — link a private ICS feed and VOA automatically attaches matched calendar events (and attendees) to recordings
+- **Meetings and dictations** — distinguishes group calls from solo voice capture, kept in separate sidebar sections
+- **Guided first-run onboarding** — walks through permissions and downloads both AI models before you start recording
 - **Privacy-first** — all audio processing stays on your Mac; no telemetry, no account required
 
 ---
@@ -47,21 +50,22 @@ Both shortcuts are global (work from any app) and configurable in Settings.
 
 ## AI Stack
 
-| Purpose              | Model / Tool                                | Notes                                                           |
-| -------------------- | ------------------------------------------- | --------------------------------------------------------------- |
-| Speech-to-text       | OpenAI Whisper (via `@xenova/transformers`) | Runs in Node.js via ONNX Runtime; downloaded and cached locally |
-| Structured summaries | Any instruct model via LM Studio or Ollama  | Local OpenAI-compatible inference server; bring your own model  |
+| Purpose              | Model / Tool                                          | Notes                                                           |
+| -------------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
+| Speech-to-text       | OpenAI Whisper (via `@xenova/transformers`)           | Runs in Node.js via ONNX Runtime; downloaded and cached locally |
+| Structured summaries | Qwen2.5-1.5B-Instruct GGUF (built-in) — default       | Runs on-device via `node-llama-cpp`; no external server needed  |
+| Structured summaries | Any instruct model via LM Studio or Ollama — optional | Local OpenAI-compatible inference server; bring your own model  |
 
 ### Whisper model options
 
-| Model  | Size    | Speed    | Accuracy |
-| ------ | ------- | -------- | -------- |
-| Tiny   | ~75 MB  | ⚡⚡⚡⚡ | ★★☆☆     |
-| Base   | ~142 MB | ⚡⚡⚡   | ★★★☆     |
-| Small  | ~466 MB | ⚡⚡     | ★★★★     |
-| Medium | ~1.5 GB | ⚡       | ★★★★     |
+| Model  | Size    | Speed    | Accuracy | Status                                                |
+| ------ | ------- | -------- | -------- | ----------------------------------------------------- |
+| Tiny   | ~75 MB  | ⚡⚡⚡⚡ | ★★☆☆     | Available                                             |
+| Base   | ~142 MB | ⚡⚡⚡   | ★★★☆     | Available (default, downloaded during onboarding)     |
+| Small  | ~466 MB | ⚡⚡     | ★★★★     | Currently disabled — native crash under investigation |
+| Medium | ~1.5 GB | ⚡       | ★★★★     | Currently disabled — native crash under investigation |
 
-English-only variants available for each model (faster, smaller).
+English-only variants available for each enabled model (faster, smaller).
 
 ---
 
@@ -75,7 +79,7 @@ sequenceDiagram
     participant VAD as VAD (useVAD)
     participant IPC as IPC Bridge
     participant Transcriber as TranscriberService
-    participant LMStudio as LM Studio
+    participant Summarizer as Summarizer (built-in / LM Studio / Ollama)
 
     User->>Main: Press hotkey (any app)
     Main->>Renderer: recording:toggle
@@ -98,12 +102,12 @@ sequenceDiagram
     User->>Renderer: Click "Meeting details"
     Renderer->>IPC: meetings:enrich(meetingId)
     IPC->>Transcriber: triggerEnrichment()
-    Transcriber->>LMStudio: POST /v1/chat/completions
-    LMStudio-->>Transcriber: structured JSON (summary + decisions + action items)
+    Transcriber->>Summarizer: generate structured summary
+    Summarizer-->>Transcriber: structured JSON (summary + decisions + action items)
     Transcriber-->>Renderer: meeting:updated (summaryStatus: ready)
 ```
 
-The main process registers a global shortcut and handles all AI inference. The renderer manages audio capture via Web Audio API + VAD, streaming raw `Float32Array` segments over IPC. Whisper runs in the Node.js main process via ONNX Runtime. Structured summaries are generated on-demand via a `fetch()` call to an OpenAI-compatible endpoint (`/v1/chat/completions`) — LM Studio and Ollama both work. Nothing runs automatically after recording ends. If the inference server is unreachable when you click "Meeting details", VOA fails fast with a system notification and marks the meeting as failed — no silent errors, and you can retry at any time once a server is running. The transcript is always preserved.
+The main process registers a global shortcut and handles all AI inference. The renderer manages audio capture via Web Audio API + VAD, streaming raw `Float32Array` segments over IPC. Whisper runs in a dedicated `utilityProcess` via ONNX Runtime. Structured summaries are generated on-demand, either by the bundled Qwen2.5-1.5B GGUF model running on-device via `node-llama-cpp` (the default), or by a `fetch()` call to an OpenAI-compatible endpoint (`/v1/chat/completions`) if you've switched to LM Studio or Ollama. Nothing runs automatically after recording ends. If a configured external inference server is unreachable when you click "Meeting details", VOA fails fast with a system notification and marks the meeting as failed — no silent errors, and you can retry at any time once a server is running. The transcript is always preserved.
 
 ---
 
@@ -128,7 +132,7 @@ appreciate it. Let me know if this works for you.
 
 Strips filler words and spoken disfluencies ("um", "uh", false starts) from the raw transcript. For clean speech the output is nearly identical; the cleaner mainly targets artifacts introduced by VAD segmentation.
 
-**Stage 3 — LM Studio structured summary** (generated on demand when you click "Meeting details")
+**Stage 3 — structured summary** (generated on demand when you click "Meeting details", by the built-in model or LM Studio/Ollama if configured)
 
 ```json
 {
@@ -159,8 +163,8 @@ The summary, decisions, topics, and action items are rendered in the meeting det
 - macOS 13 (Ventura) or later
 - Apple Silicon or Intel Mac
 - Node.js 18+
-- ~500 MB disk space for the Tiny Whisper model (more for larger models)
-- [LM Studio](https://lmstudio.ai) or [Ollama](https://ollama.com) — required for AI meeting summaries; transcription works without it
+- ~1.3 GB disk space for the default first-run download (Whisper Base + the built-in Qwen2.5-1.5B GGUF summarizer)
+- Optional: [LM Studio](https://lmstudio.ai) or [Ollama](https://ollama.com), if you'd rather use your own model for summaries instead of the built-in one
 
 ### Quick start
 
@@ -171,7 +175,7 @@ npm install
 npm start
 ```
 
-On first run, VOA downloads the selected Whisper model (~75 MB for Tiny). Subsequent launches use the cached model.
+On first run, VOA walks you through permissions, then downloads both the Whisper Base transcription model and the built-in summarization model before letting you record. Subsequent launches use the cached models.
 
 ### Permissions
 
@@ -189,17 +193,17 @@ VOA's built-in permissions screen walks you through granting each one.
 
 ## Tech Stack
 
-| Layer                    | Technology                                       |
-| ------------------------ | ------------------------------------------------ |
-| Desktop shell            | Electron 35                                      |
-| UI                       | React 19, TypeScript, Tailwind CSS v4, shadcn/ui |
-| AI inference (ASR)       | `@xenova/transformers` (Whisper)                 |
-| ONNX Runtime             | `onnxruntime-node` + `onnxruntime-web`           |
-| Structured summaries     | LM Studio / Ollama (local OpenAI-compatible)     |
-| Voice Activity Detection | `@ricky0123/vad-web`                             |
-| Persistent storage       | `electron-store`                                 |
-| Build                    | `electron-vite`, `electron-builder`              |
-| Testing                  | Vitest, Playwright                               |
+| Layer                    | Technology                                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------------------------- |
+| Desktop shell            | Electron 35                                                                                    |
+| UI                       | React 19, TypeScript, Tailwind CSS v4, shadcn/ui                                               |
+| AI inference (ASR)       | `@xenova/transformers` (Whisper)                                                               |
+| ONNX Runtime             | `onnxruntime-node` + `onnxruntime-web`                                                         |
+| AI inference (summaries) | `node-llama-cpp` (built-in Qwen2.5-1.5B GGUF), or LM Studio / Ollama (local OpenAI-compatible) |
+| Voice Activity Detection | `@ricky0123/vad-web`                                                                           |
+| Persistent storage       | `electron-store`                                                                               |
+| Build                    | `electron-vite`, `electron-builder`                                                            |
+| Testing                  | Vitest, Playwright                                                                             |
 
 ---
 
@@ -223,7 +227,7 @@ A second edge case: when the user stops recording mid-speech via hotkey, the 500
 </details>
 
 <details>
-<summary><strong>RCA-2: Why we moved off on-device ONNX for structured summaries</strong> — Qwen2.5 ONNX crashes and JSON reliability drove the migration to LM Studio</summary>
+<summary><strong>RCA-2: Why the first on-device attempt (ONNX) for structured summaries was abandoned</strong> — Qwen2.5 ONNX crashes and JSON reliability drove a temporary migration to LM Studio; a later GGUF-based attempt succeeded and is now the default (see note below)</summary>
 
 Three compounding problems made on-device ONNX inference for structured summaries untenable:
 
@@ -233,7 +237,9 @@ Three compounding problems made on-device ONNX inference for structured summarie
 
 **JSON schema reliability:** Small models (1.5B–3B parameters) cannot reliably follow strict key-name contracts. The model consistently paraphrased field names (`"summarize"` instead of `"summary"`, `"action_items"` instead of `"actionItems"`) despite explicit one-shot examples. This is a known limitation at this parameter count; reliable structured output requires 7B+ models.
 
-**Resolution:** Migrated structured summaries to LM Studio, an OpenAI-compatible local inference server that handles model management, hardware acceleration, and model selection. The app now sends `POST /v1/chat/completions` to `http://localhost:1234` — no bundled model, no ONNX crashes, user picks any 7B+ model they already have. See `docs/lm-studio-migration.md` for the full analysis.
+**Resolution (at the time):** Migrated structured summaries to LM Studio, an OpenAI-compatible local inference server that handles model management, hardware acceleration, and model selection. The app sent `POST /v1/chat/completions` to `http://localhost:1234` — no bundled model, no ONNX crashes, user picks any 7B+ model they already have. See `docs/lm-studio-migration.md` for the full analysis.
+
+**Update:** A later attempt swapped the inference engine — `node-llama-cpp` running a GGUF build of Qwen2.5-1.5B-Instruct instead of ONNX — and hit 100% JSON-schema adherence with no crashes, at ~1.8s/call on Apple Silicon (Metal). This is now bundled as the default "Built-in" summarization provider; LM Studio and Ollama remain available as alternatives for anyone who prefers to bring their own model. See `docs/embedded-llm-migration.md` for the full writeup.
 
 </details>
 
