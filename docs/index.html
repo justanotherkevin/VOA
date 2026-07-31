@@ -3,16 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>VOA | Meeting Transcriber</title>
+    <title>VOA | On-Device Meeting Transcriber & Summarizer for Mac</title>
     <meta
-      content="Privacy-first meeting transcriber for Mac. No cloud, no account, no internet required."
+      content="VOA transcribes meetings and writes the summary right on your Mac, with AI built in. No cloud, no account, no internet required after setup."
       name="description"
     />
     <!-- Open Graph -->
-    <meta property="og:title" content="VOA | Meeting Transcriber" />
+    <meta
+      property="og:title"
+      content="VOA | On-Device Meeting Transcriber & Summarizer for Mac"
+    />
     <meta
       property="og:description"
-      content="Privacy-first meeting transcriber for Mac. No cloud, no account, no internet required."
+      content="VOA transcribes meetings and writes the summary right on your Mac, with AI built in. No cloud, no account, no internet required after setup."
     />
     <meta
       property="og:image"
@@ -24,10 +27,13 @@
     <meta property="og:type" content="website" />
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="VOA | Meeting Transcriber" />
+    <meta
+      name="twitter:title"
+      content="VOA | On-Device Meeting Transcriber & Summarizer for Mac"
+    />
     <meta
       name="twitter:description"
-      content="Privacy-first meeting transcriber for Mac. No cloud, no account, no internet required."
+      content="VOA transcribes meetings and writes the summary right on your Mac, with AI built in. No cloud, no account, no internet required after setup."
     />
     <meta
       name="twitter:image"
@@ -35,7 +41,7 @@
     />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400&display=swap"
       rel="stylesheet"
     />
     <link
@@ -48,57 +54,57 @@
         theme: {
           extend: {
             colors: {
-              'on-primary-fixed': '#001a41',
+              'on-primary-fixed': '#0a2540',
               'on-primary': '#ffffff',
-              'primary-fixed-dim': '#adc6ff',
+              'primary-fixed-dim': '#a8c5f0',
               'on-tertiary-fixed-variant': '#7c2e00',
-              'surface-container': '#ededf2',
-              'outline-variant': '#c1c6d7',
-              'surface-bright': '#f9f9fe',
+              'surface-container': '#efece8',
+              'outline-variant': '#e5e1d7',
+              'surface-bright': '#fcfcfa',
               'error-container': '#ffdad6',
               'on-tertiary-fixed': '#351000',
               'on-secondary': '#ffffff',
               'on-tertiary': '#ffffff',
               'on-error-container': '#93000a',
-              background: '#f9f9fe',
-              'surface-dim': '#d9dade',
-              'on-tertiary-container': '#fffbff',
-              'on-primary-container': '#fefcff',
-              'on-surface-variant': '#414755',
-              'surface-container-highest': '#e2e2e7',
-              'on-secondary-fixed-variant': '#3631b4',
-              'on-background': '#1a1c1f',
-              'on-surface': '#1a1c1f',
-              'inverse-on-surface': '#f0f0f5',
-              'surface-glass': 'rgba(255, 255, 255, 0.7)',
-              'primary-fixed': '#d8e2ff',
-              'on-secondary-fixed': '#0c006a',
-              'secondary-container': '#6664e4',
-              surface: '#f9f9fe',
+              background: '#f7f6f3',
+              'surface-dim': '#e5dcc9',
+              'on-tertiary-container': '#fff7ed',
+              'on-primary-container': '#ffffff',
+              'on-surface-variant': '#635d57',
+              'surface-container-highest': '#e5dcc9',
+              'on-secondary-fixed-variant': '#6b4f1f',
+              'on-background': '#17110d',
+              'on-surface': '#17110d',
+              'inverse-on-surface': '#f7f6f3',
+              'surface-glass': 'rgba(247, 246, 243, 0.7)',
+              'primary-fixed': '#dce5f9',
+              'on-secondary-fixed': '#3a2e18',
+              'secondary-container': '#b5762e',
+              surface: '#f7f6f3',
               error: '#ba1a1a',
-              primary: '#0058bc',
+              primary: '#0055ae',
               'success-green': '#34C759',
-              'surface-tint': '#005bc1',
-              'on-secondary-container': '#fffbff',
-              'secondary-fixed-dim': '#c2c1ff',
-              'primary-container': '#0070eb',
+              'surface-tint': '#0055ae',
+              'on-secondary-container': '#ffffff',
+              'secondary-fixed-dim': '#d9c9a8',
+              'primary-container': '#2b7fff',
               tertiary: '#9e3d00',
-              secondary: '#4c4aca',
-              'on-primary-fixed-variant': '#004493',
+              secondary: '#8a6d3b',
+              'on-primary-fixed-variant': '#0055ae',
               'on-error': '#ffffff',
               'surface-container-lowest': '#ffffff',
-              'inverse-surface': '#2e3034',
+              'inverse-surface': '#17110d',
               'tertiary-fixed': '#ffdbcc',
-              'text-secondary': '#636366',
+              'text-secondary': '#635d57',
               'tertiary-container': '#c64f00',
-              'surface-container-low': '#f3f3f8',
-              outline: '#717786',
+              'surface-container-low': '#f2f0ec',
+              outline: '#8a8177',
               'tertiary-fixed-dim': '#ffb595',
-              'inverse-primary': '#adc6ff',
-              'surface-container-high': '#e8e8ed',
-              'surface-variant': '#e2e2e7',
-              'border-subtle': 'rgba(0, 0, 0, 0.1)',
-              'secondary-fixed': '#e2dfff',
+              'inverse-primary': '#a8c5f0',
+              'surface-container-high': '#e5e1d7',
+              'surface-variant': '#f1ebde',
+              'border-subtle': 'rgba(23, 17, 13, 0.1)',
+              'secondary-fixed': '#f1ebde',
             },
             borderRadius: {
               DEFAULT: '0.25rem',
@@ -116,10 +122,10 @@
             fontFamily: {
               'body-lg': ['Inter'],
               'label-md': ['Inter'],
-              'display-lg': ['Inter'],
+              'display-lg': ['Figtree', 'sans-serif'],
               'body-md': ['Inter'],
-              'headline-xl': ['Inter'],
-              'headline-lg': ['Inter'],
+              'headline-xl': ['Figtree', 'sans-serif'],
+              'headline-lg': ['Figtree', 'sans-serif'],
               'code-sm': ['JetBrains Mono'],
             },
             fontSize: {
@@ -133,9 +139,9 @@
                 },
               ],
               'display-lg': [
-                '48px',
+                '52px',
                 {
-                  lineHeight: '56px',
+                  lineHeight: '58px',
                   letterSpacing: '-0.02em',
                   fontWeight: '700',
                 },
@@ -166,7 +172,7 @@
         -webkit-backdrop-filter: blur(20px);
       }
       .soft-shadow {
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 30px -10px rgba(23, 17, 13, 0.06);
       }
       .reveal-on-scroll {
         opacity: 0;
@@ -196,7 +202,7 @@
       }
       .card-hover:hover {
         transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 20px 40px -15px rgba(23, 17, 13, 0.12);
       }
       .stagger-reveal > * {
         opacity: 0;
@@ -237,8 +243,7 @@
               >graphic_eq</span
             >
           </div>
-          <span
-            class="text-headline-lg font-headline-lg font-bold text-on-surface"
+          <span class="text-headline-lg font-headline-lg text-on-surface"
             >VOA</span
           >
         </div>
@@ -264,8 +269,8 @@
             href="https://github.com/justanotherkevin/voa"
             class="hidden md:flex items-center gap-2 bg-primary text-on-primary px-5 py-2 rounded-full font-label-md hover:bg-primary-container transition-all active:scale-95 duration-100 shadow-md hover:shadow-lg"
           >
-            <span class="material-symbols-outlined text-[16px]">download</span>
-            Download for Mac
+            <span class="material-symbols-outlined text-[16px]">code</span>
+            View Source on GitHub
           </a>
         </div>
       </div>
@@ -280,14 +285,6 @@
           class="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"
         >
           <div class="relative z-10">
-            <div
-              class="inline-flex items-center gap-2 px-3 py-1 bg-primary-fixed text-on-primary-fixed rounded-full mb-6"
-            >
-              <span class="font-label-md">Open source &middot;</span>
-              <span class="material-symbols-outlined text-[14px]"
-                >auto_awesome</span
-              >
-            </div>
             <h1
               class="font-display-lg text-display-lg text-on-surface mb-6 leading-tight"
             >
@@ -297,16 +294,17 @@
             <p
               class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-lg"
             >
-              Meeting transcribes in real time. Bring your own LLM writes for
-              summary. Nothing leaves your machine.
+              VOA transcribes your meetings and writes the summary, both using
+              AI that ships with the app and runs right on your Mac. Nothing
+              ever leaves your machine.
             </p>
             <div class="flex flex-col sm:flex-row gap-4">
               <a
                 href="https://github.com/justanotherkevin/voa"
                 class="bg-primary text-on-primary px-8 py-4 rounded-full font-headline-lg text-body-lg flex items-center justify-center gap-2 hover:bg-primary-container transition-all active:scale-95 shadow-lg hover:shadow-xl"
               >
-                <span class="material-symbols-outlined">download</span>
-                Download VOA for macOS
+                <span class="material-symbols-outlined">terminal</span>
+                Build VOA from Source
               </a>
               <a
                 href="https://github.com/justanotherkevin/voa"
@@ -317,8 +315,43 @@
               </a>
             </div>
             <p class="mt-4 font-label-md text-on-surface-variant opacity-60">
-              No account needed &middot; Works offline after setup
+              No account needed &middot; Source-only for now, no packaged
+              download yet &middot; Needs macOS Sonoma 14+ for meetings, Ventura
+              13+ for dictation
             </p>
+            <div class="mt-8 max-w-md">
+              <p class="font-body-md text-on-surface-variant mb-3">
+                Not ready to build from source? Get an email when there's a
+                packaged download.
+              </p>
+              <form
+                action="https://app.loops.so/api/newsletter-form/cms7gp3ad0p7q0j05hnnyhnog"
+                method="POST"
+                class="flex flex-col sm:flex-row gap-3"
+              >
+                <label for="hero-email" class="sr-only">Email address</label>
+                <input
+                  id="hero-email"
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="you@example.com"
+                  class="flex-1 px-5 py-3 rounded-full border border-subtle font-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <input type="hidden" name="source" value="voa-landing-hero" />
+                <input
+                  type="hidden"
+                  name="mailingLists"
+                  value="cms9873xr1xer0jyyafoobv86"
+                />
+                <button
+                  type="submit"
+                  class="bg-primary text-on-primary px-6 py-3 rounded-full font-headline-lg text-body-md hover:bg-primary-container transition-all active:scale-95 shadow-md hover:shadow-lg whitespace-nowrap"
+                >
+                  Notify me
+                </button>
+              </form>
+            </div>
           </div>
           <div class="relative">
             <div
@@ -363,12 +396,12 @@
               >
                 1
               </div>
-              <h3 class="font-headline-lg text-body-lg font-bold mb-2">
-                Hit F1 from any app
+              <h3 class="font-headline-lg text-body-lg mb-2">
+                Hit Cmd+Shift+Space from any app
               </h3>
               <p class="font-body-md text-on-surface-variant">
                 VOA starts listening in any context. Zoom, your browser, the
-                terminal. The same key starts and stops recording.
+                terminal. The same shortcut starts and stops recording.
               </p>
             </div>
             <div class="flex flex-col items-center text-center p-6">
@@ -377,12 +410,10 @@
               >
                 2
               </div>
-              <h3 class="font-headline-lg text-body-lg font-bold mb-2">
-                Speak normally
-              </h3>
+              <h3 class="font-headline-lg text-body-lg mb-2">Speak normally</h3>
               <p class="font-body-md text-on-surface-variant">
-                VOA detect silence on speech then perform transcription without
-                interuption
+                VOA notices when you pause and transcribes what you've said as
+                you go, so there's no waiting once the meeting ends.
               </p>
             </div>
             <div class="flex flex-col items-center text-center p-6">
@@ -391,12 +422,12 @@
               >
                 3
               </div>
-              <h3 class="font-headline-lg text-body-lg font-bold mb-2">
+              <h3 class="font-headline-lg text-body-lg mb-2">
                 Get your transcript
               </h3>
               <p class="font-body-md text-on-surface-variant">
-                Your transcript saves on your machine. Connect your own AI model
-                to unlock VOA's full power.
+                Your transcript and summary are both saved right on your Mac,
+                ready whenever you need them.
               </p>
             </div>
           </div>
@@ -431,16 +462,17 @@
                   One key, from anywhere
                 </h3>
                 <p class="font-body-md text-on-surface-variant max-w-md">
-                  F1 starts and stops recording regardless of which app is
-                  focused. Works in Zoom, Google Meet, your browser, or a
+                  Cmd+Shift+Space starts and stops recording regardless of which
+                  app is focused. Works in Zoom, Google Meet, your browser, or a
                   terminal window.
                 </p>
               </div>
               <div
                 class="mt-8 bg-surface-container rounded-lg p-4 font-code-sm border border-subtle"
               >
-                <span class="text-primary font-bold">fn</span> +
-                <span class="text-primary font-bold">F1</span> to record
+                <span class="text-primary font-bold">Cmd</span> +
+                <span class="text-primary font-bold">Shift</span> +
+                <span class="text-primary font-bold">Space</span> to record
               </div>
             </div>
             <!-- Feature 2 -->
@@ -458,9 +490,9 @@
                 Runs on your machine
               </h3>
               <p class="font-body-md text-on-surface-variant">
-                Whisper AI handles transcription. Connect your own instruct
-                model handles summaries. Both run on your machine and never send
-                a byte outside your Mac.
+                Whisper AI handles transcription, and a summarization model
+                built into the app writes the summary. Both run on your machine
+                and never send a byte outside your Mac.
               </p>
             </div>
             <!-- Feature 3 -->
@@ -547,6 +579,26 @@
                   "
                 />
               </div>
+            </div>
+            <!-- Feature 5 -->
+            <div
+              class="md:col-span-3 glass p-card-padding rounded-xl border border-subtle flex flex-col min-h-[200px] card-hover reveal-on-scroll"
+            >
+              <div
+                class="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6"
+              >
+                <span class="material-symbols-outlined text-[24px]"
+                  >keyboard_voice</span
+                >
+              </div>
+              <h3 class="font-headline-lg text-headline-lg mb-2">
+                Dictate into any app
+              </h3>
+              <p class="font-body-md text-on-surface-variant">
+                A separate shortcut turns on dictation mode: VOA types what you
+                say straight into whatever window you're working in, no meeting
+                required.
+              </p>
             </div>
           </div>
         </div>
@@ -768,8 +820,8 @@
                   Zero Data Exposure
                 </h4>
                 <p class="font-body-md text-on-surface-variant">
-                  Your audio processes in memory and never writes outside your
-                  Mac.
+                  Your audio is transcribed as you speak and never saved to a
+                  file. Only the text is kept, right on your own Mac.
                 </p>
               </div>
             </div>
@@ -793,7 +845,7 @@
                   <span class="material-symbols-outlined">verified_user</span>
                 </div>
                 <div>
-                  <h5 class="font-headline-lg text-body-lg font-bold mb-1">
+                  <h5 class="font-headline-lg text-body-lg mb-1">
                     No telemetry
                   </h5>
                   <p class="font-body-md text-on-surface-variant">
@@ -807,12 +859,13 @@
                   <span class="material-symbols-outlined">cloud_off</span>
                 </div>
                 <div>
-                  <h5 class="font-headline-lg text-body-lg font-bold mb-1">
+                  <h5 class="font-headline-lg text-body-lg mb-1">
                     Works off-line
                   </h5>
                   <p class="font-body-md text-on-surface-variant">
-                    Transcribe with no internet connection after the first model
-                    download. Useful in secure facilities or on a plane.
+                    VOA needs an internet connection once, the first time you
+                    open it, to download its AI models. After that, transcribe
+                    and summarize with no internet at all.
                   </p>
                 </div>
               </div>
@@ -821,7 +874,7 @@
                   <span class="material-symbols-outlined">lock_open</span>
                 </div>
                 <div>
-                  <h5 class="font-headline-lg text-body-lg font-bold mb-1">
+                  <h5 class="font-headline-lg text-body-lg mb-1">
                     Read the code
                   </h5>
                   <p class="font-body-md text-on-surface-variant">
@@ -846,14 +899,15 @@
           <p
             class="font-body-lg text-body-lg text-white/70 mb-8 max-w-xl mx-auto"
           >
-            Free, open source, and runs on your Mac.
+            Free, open source, and runs on your Mac. Source-only for now,
+            meeting recording needs macOS Sonoma 14 or later.
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href="https://github.com/justanotherkevin/voa"
               class="bg-white text-primary px-8 py-4 rounded-full font-headline-lg text-body-lg flex items-center justify-center gap-2 hover:bg-primary-fixed transition-all active:scale-95 shadow-lg"
             >
-              <span class="material-symbols-outlined">download</span>
+              <span class="material-symbols-outlined">terminal</span>
               Build from Source
             </a>
             <a
@@ -863,6 +917,39 @@
               <span class="material-symbols-outlined text-[18px]">star</span>
               Star on GitHub
             </a>
+          </div>
+          <div class="mt-10 max-w-md mx-auto">
+            <p class="font-body-md text-white/70 mb-3">
+              Not ready to build from source? Get an email when there's a
+              packaged download.
+            </p>
+            <form
+              action="https://app.loops.so/api/newsletter-form/cms7gp3ad0p7q0j05hnnyhnog"
+              method="POST"
+              class="flex flex-col sm:flex-row gap-3"
+            >
+              <label for="cta-email" class="sr-only">Email address</label>
+              <input
+                id="cta-email"
+                type="email"
+                name="email"
+                required
+                placeholder="you@example.com"
+                class="flex-1 px-5 py-3 rounded-full font-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-white"
+              />
+              <input type="hidden" name="source" value="voa-landing-bottom" />
+              <input
+                type="hidden"
+                name="mailingLists"
+                value="cms9873xr1xer0jyyafoobv86"
+              />
+              <button
+                type="submit"
+                class="bg-white text-primary px-6 py-3 rounded-full font-headline-lg text-body-md hover:bg-primary-fixed transition-all active:scale-95 shadow-lg whitespace-nowrap"
+              >
+                Notify me
+              </button>
+            </form>
           </div>
         </div>
       </section>
@@ -882,8 +969,7 @@
                 >graphic_eq</span
               >
             </div>
-            <span
-              class="text-headline-lg font-headline-lg font-bold text-on-surface"
+            <span class="text-headline-lg font-headline-lg text-on-surface"
               >VOA</span
             >
           </div>
@@ -895,7 +981,7 @@
             <a
               href="https://github.com/justanotherkevin"
               class="hover:text-primary transition-colors"
-              >Kevin Hu</a
+              >justanotherkevin</a
             >
           </p>
         </div>
@@ -909,7 +995,7 @@
                 <a
                   class="hover:text-primary transition-colors"
                   href="https://github.com/justanotherkevin/voa"
-                  >Download</a
+                  >Source Code</a
                 >
               </li>
               <li>

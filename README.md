@@ -31,7 +31,10 @@ The local approach is also the privacy answer: no cloud subscription, no bot joi
 - **Smart meeting detection** — detects active calls in Zoom, Teams, Google Meet, and Slack via Accessibility API
 - **Built-in on-device AI summaries with rolling context** — for long meetings, the transcript is processed in chunks and the summary is updated incrementally; the bundled model runs locally with no setup, or bring your own via LM Studio or Ollama
 - **Calendar-aware meeting matching** — link a private ICS feed and VOA automatically attaches matched calendar events (and attendees) to recordings
-- **Meetings and dictations** — distinguishes group calls from solo voice capture, kept in separate sidebar sections
+- **Microphone device picker** — choose a specific input device in Settings → Audio, with automatic fallback to the system default if the selected device becomes unavailable
+- **System audio capture** — auto-detected rather than a manual toggle; requires macOS 14 Sonoma or later. Meeting sessions require system-audio support to start; dictation does not
+- **Meetings and dictations** — distinguishes group calls from solo voice capture, kept in separate, collapsible sidebar sections built on shadcn/ui
+- **Tabbed meeting detail view** — Overview, Transcript, and Participants tabs, with a key-facts summary (date, duration, audio source, participant count, open action items) at the top
 - **Guided first-run onboarding** — walks through permissions and downloads both AI models before you start recording
 - **Privacy-first** — all audio processing stays on your Mac; no telemetry, no account required
 
@@ -161,9 +164,10 @@ The summary, decisions, topics, and action items are rendered in the meeting det
 ### Requirements
 
 - macOS 13 (Ventura) or later
+- **macOS 14 (Sonoma) or later is required for system-audio capture, and therefore for meeting recording.** Dictation mode works on macOS 13.
 - Apple Silicon or Intel Mac
-- Node.js 18+
-- ~1.3 GB disk space for the default first-run download (Whisper Base + the built-in Qwen2.5-1.5B GGUF summarizer)
+- Node.js 18+ recommended; the repo has no `engines` field or `.nvmrc` pinning this
+- ~1.2 GB disk space for the default first-run download (Whisper Base + the built-in Qwen2.5-1.5B GGUF summarizer: about 1.04 GB for the summarizer plus about 142 MB for Whisper Base)
 - Optional: [LM Studio](https://lmstudio.ai) or [Ollama](https://ollama.com), if you'd rather use your own model for summaries instead of the built-in one
 
 ### Quick start
@@ -188,6 +192,16 @@ VOA requires three macOS permissions to function:
 | Screen Recording | Capture system audio from speakers  |
 
 VOA's built-in permissions screen walks you through granting each one.
+
+---
+
+## Known limitations
+
+- **Whisper Small and Medium are disabled** due to a confirmed native `onnxruntime-node` crash. Re-enabling them is blocked on a future `whisper.cpp` migration, not on retrying process isolation, which has already been tried. See [`docs/whisper-onnxruntime-crash.md`](docs/whisper-onnxruntime-crash.md) for the investigation.
+- **Auto-paste after transcription is currently disabled.** The mechanism is intact but off at a single gate (`shouldPasteText()` in `src/main/util.ts`).
+- **A recording started before VAD finishes loading can produce a duplicate, full-audio transcription.** This is a known, diagnosed bug that is not yet fixed.
+- **No signed or notarized release binary exists yet.** You need to build from source.
+- **macOS only.** There is no Windows or Linux support.
 
 ---
 
@@ -247,7 +261,63 @@ Three compounding problems made on-device ONNX inference for structured summarie
 
 ## Contributing
 
-Issues and pull requests are welcome. For major changes, open an issue first to discuss what you'd like to change.
+Issues and pull requests are welcome, from small documentation fixes to new features. This section is meant to get you from clone to open PR without having to ask.
+
+### Getting set up
+
+```bash
+git clone https://github.com/justanotherkevin/voa.git
+cd voa
+npm install
+npm start
+```
+
+`npm install` runs `postinstall`, which calls `electron-builder install-app-deps` so native modules (Whisper's ONNX runtime, `node-llama-cpp`) get rebuilt for your Electron version automatically. First launch walks through onboarding and downloads about 1.2 GB of models (Whisper Base plus the built-in Qwen2.5-1.5B GGUF summarizer); subsequent launches use the cache.
+
+### Repo layout
+
+| Path            | What's there                                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/`     | Electron main process, split into `pipeline/` and `services/`; see `docs/PIPELINE-SERVICES-ARCHITECTURE.md` for which one to use               |
+| `src/renderer/` | React UI                                                                                                                                       |
+| `tests/e2e/`    | Playwright specs against the real built app; page-specific specs live under `tests/e2e/pages/<page>/`, shared helpers under `tests/e2e/utils/` |
+| `docs/`         | Architecture and investigation write-ups (see below)                                                                                           |
+| `CLAUDE.md`     | Working conventions for this repo, worth reading whether or not you use an AI coding tool                                                      |
+
+### Running tests
+
+| Command                 | What it covers                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `npm run test:backend`  | Vitest over `src/main/**`, with Electron mocked                                            |
+| `npm run test:frontend` | Vitest over the renderer                                                                   |
+| `npm test`              | Both of the above                                                                          |
+| `npm run test:e2e`      | Playwright driving the real built Electron app; requires `npm run build` first             |
+| `npm run test:asr`      | Long-running accuracy harness against cached Whisper models, not part of the default suite |
+
+If your change touches `src/main/`, run `npm run build` followed by `npm run test:e2e` before opening a PR. Bare Vitest/Node runs mock Electron and cannot surface main-process bugs such as `utilityProcess` crashes or `BrowserWindow` behavior.
+
+### Before you open a PR
+
+- Run `npm run lint` and `npm test`. There are no GitHub Actions workflows in this repo, so these checks are not run automatically on a pull request; run them locally before pushing.
+- Add or update tests next to the code you changed.
+- Add an entry to `CHANGELOG.md` under `[Unreleased]`, matching the existing style.
+- Keep the PR focused on one concern; split unrelated changes into separate PRs.
+
+### Suggesting a change
+
+Issues are welcome for bug reports, ideas, and design feedback. Opening an issue first is encouraged for large or architectural changes, but not required. Small PRs, such as documentation fixes, typo corrections, or added test coverage, are welcome without any prior discussion. See `.github/ISSUE_TEMPLATE/` for the available templates.
+
+### Where to read first
+
+- [`docs/APP-ARCHITECTURE.md`](docs/APP-ARCHITECTURE.md) — overall app structure.
+- [`docs/PIPELINE-SERVICES-ARCHITECTURE.md`](docs/PIPELINE-SERVICES-ARCHITECTURE.md) — the pipeline vs. services layering convention and when to use which.
+- [`docs/electron-app-guide.md`](docs/electron-app-guide.md) — Electron main/preload/renderer conventions used here.
+- [`docs/audio-to-text-flow.md`](docs/audio-to-text-flow.md) and [`docs/architecture-diagram.md`](docs/architecture-diagram.md) — the recording, VAD, transcribe, and save flow.
+- [`docs/lm-studio-migration.md`](docs/lm-studio-migration.md) and [`docs/embedded-llm-migration.md`](docs/embedded-llm-migration.md) — why structured summarization moved from LM Studio to a built-in on-device model.
+- [`docs/whisper-onnxruntime-crash.md`](docs/whisper-onnxruntime-crash.md) — why Small and Medium Whisper models are currently disabled.
+- [`docs/meetily-comparison.md`](docs/meetily-comparison.md) and [`docs/v2-meeting-lifecycle.md`](docs/v2-meeting-lifecycle.md) — comparison notes and a draft (not approved) v2 planning doc.
+
+`CLAUDE.md` at the repo root holds the working conventions this codebase follows day to day; it applies whether you're using an AI coding tool or not.
 
 ---
 
