@@ -259,6 +259,30 @@ describe('Overview section', () => {
   });
 });
 
+// ── Key facts participant avatars ─────────────────────────────────────────────
+
+describe('Key facts participants', () => {
+  it('renders an avatar group when participants are present', () => {
+    render(
+      <MeetingDetail
+        meeting={{ ...BASE_MEETING, participants: ['Alice', 'Bob'] }}
+      />,
+    );
+
+    expect(
+      screen.getByTestId('key-fact-participants-avatars'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders an em dash placeholder when there are no participants', () => {
+    render(<MeetingDetail meeting={{ ...BASE_MEETING, participants: [] }} />);
+
+    expect(
+      screen.queryByTestId('key-fact-participants-avatars'),
+    ).not.toBeInTheDocument();
+  });
+});
+
 // ── Empty meeting placeholder ─────────────────────────────────────────────────
 
 describe('null meeting', () => {

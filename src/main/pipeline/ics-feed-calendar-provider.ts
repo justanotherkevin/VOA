@@ -62,12 +62,14 @@ const TIME_LABEL_FORMAT = new Intl.DateTimeFormat(undefined, {
   minute: '2-digit',
 });
 
+function extractSummary(event: VEvent): string {
+  return typeof event.summary === 'string' ? event.summary : 'Untitled event';
+}
+
 // Includes a short start-time label so near-duplicate event titles (e.g. a
 // recurring "1:1" at two different times) are still distinguishable in the
 // notification's Select when multiple events match.
-function formatMatchTitle(event: VEvent): string {
-  const summary =
-    typeof event.summary === 'string' ? event.summary : 'Untitled event';
+function formatMatchTitle(summary: string, event: VEvent): string {
   return `${summary} — ${TIME_LABEL_FORMAT.format(event.start)}`;
 }
 
@@ -86,9 +88,11 @@ export class IcsFeedCalendarProvider implements CalendarProvider {
       const overlap = overlapMs(eventStart, eventEnd, atTime);
       if (overlap <= 0) continue;
 
+      const summary = extractSummary(value);
       matches.push({
         id: value.uid,
-        title: formatMatchTitle(value),
+        title: formatMatchTitle(summary, value),
+        summary,
         participants: normalizeAttendees(value.attendee).map(
           toCalendarParticipant,
         ),

@@ -6,6 +6,7 @@ import {
   getModelPreferences,
   getCalendarPreferences,
   generateTitle,
+  formatParticipantsTitle,
   type ModelPreferences,
 } from '@/main/store';
 import { stripNonSpeechTags } from '@/main/pipeline/text-cleaner';
@@ -184,20 +185,41 @@ class TranscriberService {
   // interacted with the notification: a single match auto-confirms, and
   // multiple matches default to the best time-overlap (calendarMatches is
   // already sorted descending by overlap, so [0] is that default).
-  private resolveCalendarParticipants(type: 'meeting' | 'dictation'): string[] {
+  private resolveChosenCalendarMatch(
+    type: 'meeting' | 'dictation',
+  ): CalendarEventMatch | null {
     if (
       type !== 'meeting' ||
       this.calendarMatches.length === 0 ||
       this.calendarMatchDecision === 'declined'
     ) {
-      return [];
+      return null;
     }
 
-    const chosen =
+    return (
       this.calendarMatches.find((m) => m.id === this.calendarMatchDecision) ??
-      this.calendarMatches[0];
+      this.calendarMatches[0]
+    );
+  }
 
-    return chosen.participants.map((p) => p.name ?? p.email ?? 'Unknown');
+  private resolveCalendarParticipants(type: 'meeting' | 'dictation'): string[] {
+    const chosen = this.resolveChosenCalendarMatch(type);
+    return chosen
+      ? chosen.participants.map((p) => p.name ?? p.email ?? 'Unknown')
+      : [];
+  }
+
+  // Title fallback chain for meeting-type recordings: confirmed calendar
+  // event's plain title, else "Meeting with ..." from participants, else
+  // 'Untitled Meeting'. Dictations don't go through this — they keep
+  // generateTitle(transcript).
+  private resolveMeetingTitle(
+    chosenMatch: CalendarEventMatch | null,
+    participants: string[],
+  ): string {
+    if (chosenMatch) return chosenMatch.summary;
+    if (participants.length > 0) return formatParticipantsTitle(participants);
+    return 'Untitled Meeting';
   }
 
   async endSession(
@@ -435,8 +457,14 @@ class TranscriberService {
   ): Promise<void> {
     try {
       const durationMs = endedAt - startedAt;
-      const title = generateTitle(outputText);
-      const participants = this.resolveCalendarParticipants(type);
+      const chosenMatch = this.resolveChosenCalendarMatch(type);
+      const participants = chosenMatch
+        ? chosenMatch.participants.map((p) => p.name ?? p.email ?? 'Unknown')
+        : [];
+      const title =
+        type === 'meeting'
+          ? this.resolveMeetingTitle(chosenMatch, participants)
+          : generateTitle(outputText);
 
       // TODO: generate a lightweight plain-text summary here using
       // Xenova/distilbart-xsum-6-6 or Xenova/t5-small (<500 MB, fast) and

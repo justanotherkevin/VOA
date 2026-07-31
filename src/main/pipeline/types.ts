@@ -47,6 +47,10 @@ export interface CalendarParticipant {
 export interface CalendarEventMatch {
   id: string;
   title: string;
+  // Plain event summary (no time-disambiguation suffix) — used as the
+  // Recording title, as opposed to `title` which is display-formatted for
+  // the calendar-match picker notification.
+  summary: string;
   participants: CalendarParticipant[];
   overlapMs: number;
 }

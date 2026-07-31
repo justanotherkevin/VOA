@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runMigrations } from '../migrations';
+import { runMigrations, formatParticipantsTitle } from '../migrations';
 
 // Minimal in-memory stand-in for the `electron-store` instance `runMigrations`
 // receives — the function only ever calls `.get`/`.set` on it.
@@ -93,5 +93,29 @@ describe('runMigrations — summarizerProvider migration', () => {
     runMigrations(store);
 
     expect(store.get('summarizerProvider')).toBeUndefined();
+  });
+});
+
+describe('formatParticipantsTitle', () => {
+  it('formats a single participant', () => {
+    expect(formatParticipantsTitle(['Alice'])).toBe('Meeting with Alice');
+  });
+
+  it('formats two participants', () => {
+    expect(formatParticipantsTitle(['Alice', 'Bob'])).toBe(
+      'Meeting with Alice and Bob',
+    );
+  });
+
+  it('formats three participants', () => {
+    expect(formatParticipantsTitle(['Alice', 'Bob', 'Carol'])).toBe(
+      'Meeting with Alice, Bob, and Carol',
+    );
+  });
+
+  it('formats four or more participants with an "and N others" suffix', () => {
+    expect(
+      formatParticipantsTitle(['Alice', 'Bob', 'Carol', 'Dave']),
+    ).toBe('Meeting with Alice, Bob, and 2 others');
   });
 });

@@ -78,6 +78,48 @@ describe('MeetingList — row content', () => {
 
     expect(container.querySelectorAll('.tag-marquee-track').length).toBe(0);
   });
+
+  it('renders a participant avatar group when a meeting has participants', () => {
+    const meeting = makeMeeting({ participants: ['Alice', 'Bob'] });
+    render(
+      <MeetingList
+        meetings={[meeting]}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onNewRecording={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('meeting-list-section-toggle-meetings'));
+
+    expect(screen.getByTestId('meeting-row-avatars')).toBeTruthy();
+    expect(screen.getByText('A')).toBeTruthy();
+    expect(screen.getByText('B')).toBeTruthy();
+  });
+
+  it('renders no avatar group for a meeting with no participants, or for a dictation', () => {
+    const meeting = makeMeeting({ participants: [] });
+    const dictation = makeMeeting({
+      id: 'd1',
+      type: 'dictation',
+      participants: [],
+    });
+    render(
+      <MeetingList
+        meetings={[meeting, dictation]}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onNewRecording={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('meeting-list-section-toggle-meetings'));
+    fireEvent.click(
+      screen.getByTestId('meeting-list-section-toggle-dictations'),
+    );
+
+    expect(screen.queryByTestId('meeting-row-avatars')).toBeNull();
+  });
 });
 
 describe('MeetingList — type grouping', () => {
