@@ -133,7 +133,7 @@ app
     await initializeStore();
     // On macOS, the icon property in BrowserWindow is ignored for the dock — it only affects Windows (taskbar) and Linux. The dock icon on macOS must be set explicitly via app.dock.setIcon().
     if (process.platform === 'darwin') {
-      app.dock.setIcon(getAssetPath('icons/64x64.png'));
+      app.dock.setIcon(getAssetPath('icon.png'));
     }
 
     const electronProbe: OsPermissionProbe = {

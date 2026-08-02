@@ -1,5 +1,7 @@
 # VOA
 
+_Offline meeting transcription and AI summaries for macOS. On-device Whisper speech to text, local LLM action items, no cloud and no account._
+
 | On boarding                                                                                                                           | Structured Data Preview                                     |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | <video src="https://github.com/user-attachments/assets/563177b7-e329-40ed-bd36-76ffc375a7b9" autoplay loop muted playsinline></video> | ![Available LLM models](docs/screenshots/smart-summary.png) |

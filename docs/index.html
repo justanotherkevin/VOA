@@ -3,19 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>VOA | On-Device Meeting Transcriber & Summarizer for Mac</title>
+    <title>VOA | Offline Meeting Transcription & AI Summaries for Mac</title>
     <meta
-      content="VOA transcribes meetings and writes the summary right on your Mac, with AI built in. No cloud, no account, no internet required after setup."
+      content="VOA is a free, open source Mac app that transcribes meetings and writes AI summaries fully on-device. No cloud, no account, no internet needed after setup."
       name="description"
     />
+    <link rel="canonical" href="https://justanotherkevin.github.io/VOA/" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="theme-color" content="#0055ae" />
     <!-- Open Graph -->
     <meta
       property="og:title"
-      content="VOA | On-Device Meeting Transcriber & Summarizer for Mac"
+      content="VOA | Offline Meeting Transcription & AI Summaries for Mac"
     />
     <meta
       property="og:description"
-      content="VOA transcribes meetings and writes the summary right on your Mac, with AI built in. No cloud, no account, no internet required after setup."
+      content="VOA is a free, open source Mac app that transcribes meetings and writes AI summaries fully on-device. No cloud, no account, no internet needed after setup."
     />
     <meta
       property="og:image"
@@ -29,17 +32,50 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="VOA | On-Device Meeting Transcriber & Summarizer for Mac"
+      content="VOA | Offline Meeting Transcription & AI Summaries for Mac"
     />
     <meta
       name="twitter:description"
-      content="VOA transcribes meetings and writes the summary right on your Mac, with AI built in. No cloud, no account, no internet required after setup."
+      content="VOA is a free, open source Mac app that transcribes meetings and writes AI summaries fully on-device. No cloud, no account, no internet needed after setup."
     />
     <meta
       name="twitter:image"
       content="https://justanotherkevin.github.io/VOA/screenshots/og-preview.png"
     />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "VOA",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "macOS 13.0 or later",
+        "description": "VOA is a free, open source Mac app that transcribes meetings and writes AI summaries fully on-device. No cloud, no account, no internet needed after setup.",
+        "url": "https://justanotherkevin.github.io/VOA/",
+        "image": "https://justanotherkevin.github.io/VOA/screenshots/og-preview.png",
+        "license": "https://opensource.org/licenses/MIT",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Kevin Hu",
+          "url": "https://github.com/justanotherkevin"
+        },
+        "codeRepository": "https://github.com/justanotherkevin/voa",
+        "featureList": [
+          "On-device Whisper speech to text",
+          "AI meeting summaries and action items",
+          "Global hotkey dictation",
+          "Works offline with no account"
+        ]
+      }
+    </script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400&display=swap"
       rel="stylesheet"
@@ -288,8 +324,9 @@
             <h1
               class="font-display-lg text-display-lg text-on-surface mb-6 leading-tight"
             >
-              Meeting transcript, summary, action items.<br />
-              <span class="text-primary italic">without wifi</span>.
+              Offline meeting transcription for Mac.<br />
+              Transcript, summary, action items.<br />
+              <span class="text-primary italic">No cloud, no account.</span>
             </h1>
             <p
               class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-lg"
@@ -365,6 +402,7 @@
                 loop
                 muted
                 playsinline
+                preload="metadata"
                 class="w-full h-auto rounded-lg"
               >
                 <source
@@ -569,7 +607,9 @@
               >
                 <img
                   src="screenshots/smart-summary.png"
-                  alt="Whisper model selection"
+                  alt="VOA meeting summary showing key decisions, topics, and action items"
+                  loading="lazy"
+                  decoding="async"
                   class="rounded"
                   style="
                     object-fit: cover;
