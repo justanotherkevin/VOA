@@ -223,16 +223,13 @@ export default function Sidebar({
       <SidebarHeader>
         <div className="flex items-center gap-2 px-1 py-1">
           <div className="relative shrink-0" title={label}>
-            <img src={appIcon} alt="App icon" className="w-8 h-8 rounded-lg" />
+            <img src={appIcon} alt="App icon" className="w-6 h-6" />
             <span
               className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-sidebar ${color} ${
                 pulse ? 'animate-pulse' : ''
               }`}
             />
           </div>
-          <span className="text-sm font-medium truncate group-data-[collapsible=icon]:hidden">
-            {label}
-          </span>
         </div>
       </SidebarHeader>
 
