@@ -42,6 +42,7 @@ npm-debug.log.*
 # Claude
 /.paul
 /docs/notes.md
+/docs/superpowers
 
 # Local scratch files
 /feature-tracker.html
