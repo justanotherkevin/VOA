@@ -189,7 +189,7 @@ export function useRecordingFlow({
 
   const handleToggleDictation = useCallback(
     () =>
-      handleToggleCapture({ forceType: 'dictation', pasteOnComplete: true }),
+      handleToggleCapture({ forceType: 'dictation', pasteOnComplete: false }),
     [handleToggleCapture],
   );
 
