@@ -162,6 +162,13 @@ const electronAPI = {
       update: (prefs: Record<string, unknown>) =>
         ipcRenderer.invoke(CHANNELS.UI_PREFERENCES.UPDATE, prefs),
     },
+    paste: {
+      get: () => ipcRenderer.invoke(CHANNELS.PASTE_PREFERENCES.GET),
+      update: (prefs: Record<string, unknown>) =>
+        ipcRenderer.invoke(CHANNELS.PASTE_PREFERENCES.UPDATE, prefs),
+      listRunningApps: (): Promise<string[]> =>
+        ipcRenderer.invoke(CHANNELS.SYSTEM.LIST_RUNNING_APPS),
+    },
   },
 
   // ── LM Studio ────────────────────────────────────────────────────────────
