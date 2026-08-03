@@ -24,8 +24,8 @@ vi.mock('@/main/store', () => ({
   updateMeeting: vi.fn((id: string, patch: any) => ({ id, ...patch })),
   getModelPreferences: vi.fn(() => ({ asrType: 'whisper' })),
   generateTitle: vi.fn((text: string) => text.split(' ').slice(0, 8).join(' ')),
-  formatParticipantsTitle: vi.fn((participants: string[]) =>
-    `Meeting with ${participants.join(', ')}`,
+  formatParticipantsTitle: vi.fn(
+    (participants: string[]) => `Meeting with ${participants.join(', ')}`,
   ),
   getMeetingById: vi.fn(() => null),
   // Consumed by beginSession()'s calendar-match lookup; returning no feedUrl
@@ -68,6 +68,11 @@ vi.mock('@/main/pipeline', () => ({
     initialize: vi.fn(),
     transcribe: vi.fn(),
     dispose: vi.fn(),
+    getModelInfo: vi.fn(() => ({
+      model: null,
+      quantized: null,
+      isInitialized: false,
+    })),
   },
   CalendarProviderFactory: {
     createProvider: (...args: any[]) => mockCreateCalendarProvider(...args),
@@ -362,7 +367,7 @@ describe('TranscriberService - Helper Methods', () => {
       service.calendarMatchDecision = 'pending';
     });
 
-    it('uses the confirmed calendar match\'s plain summary as the title', async () => {
+    it("uses the confirmed calendar match's plain summary as the title", async () => {
       const { saveMeeting } = await import('@/main/store');
       const service = transcriberService as any;
       service.calendarMatches = [

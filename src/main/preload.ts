@@ -53,8 +53,7 @@ const electronAPI = {
       }),
     endSession: (endedAt: number) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_END, { endedAt }),
-    initiate: (payload?: unknown) =>
-      ipcRenderer.send(CHANNELS.TRANSCRIBER.INITIATE, payload),
+    getModelStatus: () => ipcRenderer.invoke(CHANNELS.TRANSCRIBER.MODEL_STATUS),
     on: {
       update: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.TRANSCRIBER.UPDATE, cb),
@@ -62,8 +61,8 @@ const electronAPI = {
         subscribe(CHANNELS.TRANSCRIBER.PROGRESS, cb),
       processing: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.TRANSCRIBER.PROCESSING, cb),
-      initiate: (cb: (...args: unknown[]) => void) =>
-        subscribe(CHANNELS.TRANSCRIBER.INITIATE, cb),
+      modelStatusChanged: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.TRANSCRIBER.MODEL_STATUS_CHANGED, cb),
       ready: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.TRANSCRIBER.READY, cb),
       done: (cb: (...args: unknown[]) => void) =>

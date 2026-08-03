@@ -10,6 +10,7 @@ import { useEffect, useState, useRef } from 'react';
 type NotificationState =
   | 'idle'
   | 'in-meeting'
+  | 'loading'
   | 'recording'
   | 'recording-stopped'
   | 'processing'

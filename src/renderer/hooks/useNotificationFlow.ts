@@ -18,6 +18,17 @@ export function useNotificationFlow() {
     [],
   );
 
+  const showLoading = useCallback(
+    (label: 'Recording' | 'Dictation' = 'Recording'): void => {
+      window.electronAPI.notifications.updateState({
+        state: 'loading',
+        title: `Starting ${label}…`,
+        message: 'Loading model…',
+      });
+    },
+    [],
+  );
+
   const showRecordingStopped = useCallback(
     (label: 'Recording' | 'Dictation' = 'Recording'): void => {
       window.electronAPI.notifications.updateState({
@@ -83,6 +94,7 @@ export function useNotificationFlow() {
 
   return {
     showRecordingStart,
+    showLoading,
     showRecordingStopped,
     showProcessing,
     showDone,

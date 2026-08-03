@@ -207,6 +207,26 @@ describe('Notification Component', () => {
     });
   });
 
+  describe('loading state', () => {
+    it('renders the loading row with title/message', async () => {
+      render(<Notification />);
+
+      act(() => {
+        triggerNotificationShow({
+          title: 'Starting Recording…',
+          message: 'Loading model…',
+          state: 'loading',
+        });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('notification-loading')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Starting Recording…')).toBeInTheDocument();
+      expect(screen.getByText('Loading model…')).toBeInTheDocument();
+    });
+  });
+
   describe('calendar match pill', () => {
     it('always renders a Select — pre-selected for a single match — with no decline button', async () => {
       render(<Notification />);

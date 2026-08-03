@@ -57,6 +57,11 @@ vi.mock('@/main/pipeline', () => ({
     initialize: vi.fn(),
     transcribe: vi.fn(async () => ({ text: 'transcribed text', chunks: [] })),
     dispose: vi.fn(),
+    getModelInfo: vi.fn(() => ({
+      model: null,
+      quantized: null,
+      isInitialized: false,
+    })),
   },
 }));
 

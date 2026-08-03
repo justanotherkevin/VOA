@@ -50,7 +50,6 @@ export interface TranscriberData {
 export interface Transcriber {
   restTranscript: () => void;
   isBusy: boolean;
-  isModelLoading: boolean;
   progressItems: ProgressItem[];
   start: (audioBlob: Blob, startedAt?: number, endedAt?: number) => void;
   output?: TranscriberData;
@@ -61,16 +60,10 @@ export function useTranscriber(): Transcriber {
     undefined,
   );
   const [isBusy, setIsBusy] = useState(false);
-  const [isModelLoading, setIsModelLoading] = useState(false);
 
   const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
 
   useEffect(() => {
-    // progress_callback fires very frequently during model load — only
-    // update the toast on a meaningful percentage change so it doesn't
-    // re-render on every tick.
-    let lastToastProgress = -1;
-
     const unsubscribers = setupTranscriberListeners({
       onProgress: (message: any) => {
         setProgressItems((prev) =>
@@ -81,14 +74,6 @@ export function useTranscriber(): Transcriber {
             return item;
           }),
         );
-
-        const progress = Math.floor((message as any)?.progress ?? 0);
-        if (progress >= lastToastProgress + 10) {
-          lastToastProgress = progress;
-          toast.loading(`Loading model… ${progress}%`, {
-            id: MODEL_LOAD_TOAST_ID,
-          });
-        }
       },
       onUpdate: (data: TranscriberData) => {
         setTranscript(data);
@@ -96,16 +81,6 @@ export function useTranscriber(): Transcriber {
       onComplete: (data: TranscriberData) => {
         setTranscript(data);
         setIsBusy(false);
-      },
-      onInitiate: (message: any) => {
-        setIsModelLoading(true);
-        setProgressItems((prev) => [...prev, message as ProgressItem]);
-        lastToastProgress = -1;
-        toast.loading('Loading model…', { id: MODEL_LOAD_TOAST_ID });
-      },
-      onReady: () => {
-        setIsModelLoading(false);
-        toast.success('Model ready', { id: MODEL_LOAD_TOAST_ID });
       },
       onError: (message: any) => {
         setIsBusy(false);
@@ -171,7 +146,6 @@ export function useTranscriber(): Transcriber {
   const transcriber = {
     restTranscript,
     isBusy,
-    isModelLoading,
     progressItems,
     start: postRequest,
     output: transcript,

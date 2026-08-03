@@ -1,5 +1,6 @@
 import React from 'react';
-import Sidebar, { type AppStatus } from '@/renderer/components/ui/Sidebar';
+import Sidebar from '@/renderer/components/ui/Sidebar';
+import type { AppStatus } from '@/renderer/hooks/useRecordingFlow';
 import { SidebarProvider, SidebarTrigger } from '@/renderer/components/sidebar';
 
 interface MainLayoutProps {

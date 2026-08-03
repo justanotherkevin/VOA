@@ -46,6 +46,12 @@ function StateIcon({ state }: { state: NotificationData['state'] }) {
           <Mic className="w-3.5 h-3.5" />
         </div>
       );
+    case 'loading':
+      return (
+        <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0 bg-yellow-400/20 text-yellow-400">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        </div>
+      );
     case 'recording-stopped':
       return (
         <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0 bg-amber-400/20 text-amber-400">

@@ -38,6 +38,12 @@ export default function AIModel({ transcriber }: AIModelProps) {
   const [activeTab, setActiveTab] = useState<'recommended' | 'downloaded'>(
     'recommended',
   );
+  // This component is confirmed dead/unrendered (see
+  // tests/e2e/pages/settings/model-switch-toast.spec.ts's comment) —
+  // `isModelLoading` used to come from `transcriber`, which no longer
+  // tracks model-load state (moved to `useModelStatus`). Kept as a
+  // hardcoded `false` purely so this unreachable file still type-checks.
+  const isModelLoading = false;
 
   // Sync selectedModel and asrType with preferences when they load
   React.useEffect(() => {
@@ -245,32 +251,31 @@ export default function AIModel({ transcriber }: AIModelProps) {
                 ? getModelDisplayName(preferences.selectedModel)
                 : 'Loading...'}
             </span>
-            {transcriber.isModelLoading ? (
+            {isModelLoading ? (
               <span className="text-yellow-600 ml-2">⏳ Loading...</span>
             ) : (
               <span className="text-green-600 ml-2">✓ Ready</span>
             )}
           </p>
 
-          {transcriber.isModelLoading &&
-            transcriber.progressItems.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {transcriber.progressItems.map((item) => (
-                  <div key={item.file} className="text-sm">
-                    <div className="flex justify-between text-gray-600 mb-1">
-                      <span>{item.name}</span>
-                      <span>{Math.round(item.progress)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${item.progress}%` }}
-                      />
-                    </div>
+          {isModelLoading && transcriber.progressItems.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {transcriber.progressItems.map((item) => (
+                <div key={item.file} className="text-sm">
+                  <div className="flex justify-between text-gray-600 mb-1">
+                    <span>{item.name}</span>
+                    <span>{Math.round(item.progress)}%</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      style={{ width: `${item.progress}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mb-6 pb-6 border-b border-gray-200">
@@ -293,7 +298,7 @@ export default function AIModel({ transcriber }: AIModelProps) {
                 setSelectedAsrType('whisper');
                 setSaveMessage(null);
               }}
-              disabled={transcriber.isModelLoading || isSavingModel}
+              disabled={isModelLoading || isSavingModel}
             >
               <span className="text-md font-semibold">Whisper</span>
               <span className="text-sm text-gray-500">
@@ -388,9 +393,7 @@ export default function AIModel({ transcriber }: AIModelProps) {
                         size="sm"
                         className="ml-4 flex items-center gap-2"
                         disabled={
-                          isDownloaded ||
-                          transcriber.isModelLoading ||
-                          isSavingModel
+                          isDownloaded || isModelLoading || isSavingModel
                         }
                       >
                         {isDownloaded ? (
@@ -445,7 +448,7 @@ export default function AIModel({ transcriber }: AIModelProps) {
                   !selectedModel ||
                   (selectedModel === preferences?.selectedModel &&
                     selectedAsrType === preferences?.asrType) ||
-                  transcriber.isModelLoading ||
+                  isModelLoading ||
                   isSavingModel ||
                   isLoadingPreferences
                 }

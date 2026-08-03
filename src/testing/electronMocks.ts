@@ -24,6 +24,7 @@ let meetingClearedCallback: (() => void) | null = null;
 let meetingDetectedCallback: ((event: any) => void) | null = null;
 let meetingEndedCallback: ((event: any) => void) | null = null;
 let builtinLlmDownloadProgressCallback: ((progress: any) => void) | null = null;
+let modelStatusChangedCallback: ((payload: any) => void) | null = null;
 
 export function attachGlobalElectronMock() {
   // Ensure global.window exists
@@ -35,7 +36,11 @@ export function attachGlobalElectronMock() {
       start: vi.fn(async () => {}),
       startSession: vi.fn(async () => {}),
       endSession: vi.fn(async () => {}),
-      initiate: vi.fn(),
+      getModelStatus: vi.fn(async () => ({
+        status: 'idle',
+        model: null,
+        quantized: null,
+      })),
       on: {
         update: vi.fn((cb: (m: any) => void) => {
           updateCallback = cb;
@@ -45,7 +50,12 @@ export function attachGlobalElectronMock() {
         }),
         progress: vi.fn(() => () => {}),
         processing: vi.fn(() => () => {}),
-        initiate: vi.fn(() => () => {}),
+        modelStatusChanged: vi.fn((cb: (payload: any) => void) => {
+          modelStatusChangedCallback = cb;
+          return () => {
+            modelStatusChangedCallback = null;
+          };
+        }),
         ready: vi.fn(() => () => {}),
         done: vi.fn(() => () => {}),
         error: vi.fn(() => () => {}),
@@ -301,6 +311,7 @@ export function detachGlobalElectronMock() {
     meetingDetectedCallback = null;
     meetingEndedCallback = null;
     builtinLlmDownloadProgressCallback = null;
+    modelStatusChangedCallback = null;
   }
 }
 
@@ -326,6 +337,20 @@ export function resetElectronMockCallbacks() {
   meetingDetectedCallback = null;
   meetingEndedCallback = null;
   builtinLlmDownloadProgressCallback = null;
+  modelStatusChangedCallback = null;
+}
+
+export function triggerModelStatusChanged(payload: {
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  model?: string | null;
+  quantized?: boolean | null;
+  message?: string;
+}) {
+  modelStatusChangedCallback?.({
+    model: null,
+    quantized: null,
+    ...payload,
+  });
 }
 
 export function triggerRecordingToggle() {

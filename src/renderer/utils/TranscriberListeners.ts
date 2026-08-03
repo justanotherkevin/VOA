@@ -9,7 +9,6 @@ interface TranscriberCallbacks {
   onProgress?: (message: any) => void;
   onUpdate?: (data: TranscriberData) => void;
   onComplete?: (data: TranscriberData) => void;
-  onInitiate?: (message: any) => void;
   onReady?: () => void;
   onError?: (message: any) => void;
   onDone?: (message: any) => void;
@@ -57,13 +56,6 @@ export function setupTranscriberListeners(
           chunks: completeMessage.data.chunks,
         });
       }),
-    );
-  }
-
-  // Initiate listener - model load start
-  if (callbacks.onInitiate) {
-    unsubscribers.push(
-      window.electronAPI.transcriber.on.initiate(callbacks.onInitiate),
     );
   }
 
