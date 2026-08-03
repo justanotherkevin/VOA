@@ -100,6 +100,11 @@ export interface StoredCalendarPreferences {
   encryptedFeedUrl: string;
 }
 
+export interface PastePreferences {
+  enabled: boolean;
+  allowedApps: string[];
+}
+
 export interface StoreSchema {
   meetings: Recording[];
   meetingsMigrated: boolean;
@@ -114,6 +119,7 @@ export interface StoreSchema {
   lmStudioPreferences?: LMStudioPreferences;
   summarizerProvider?: SummarizerProviderType;
   calendarPreferences?: StoredCalendarPreferences;
+  pastePreferences?: PastePreferences;
   transcriptHistory?: StoredTranscript[];
   dismissedMeetingKeys?: string[];
   onboardingCompleted?: boolean;
@@ -168,4 +174,9 @@ export const DEFAULT_CALENDAR_PREFERENCES: CalendarPreferences = {
 
 export const DEFAULT_STORED_CALENDAR_PREFERENCES: StoredCalendarPreferences = {
   encryptedFeedUrl: '',
+};
+
+export const DEFAULT_PASTE_PREFERENCES: PastePreferences = {
+  enabled: false,
+  allowedApps: [],
 };

@@ -10,6 +10,7 @@ import {
   UIPreferences,
   LMStudioPreferences,
   CalendarPreferences,
+  PastePreferences,
   SummarizerProviderType,
   DEFAULT_SHORTCUTS,
   DEFAULT_MODEL_PREFERENCES,
@@ -20,6 +21,7 @@ import {
   DEFAULT_LM_STUDIO_PREFERENCES,
   DEFAULT_CALENDAR_PREFERENCES,
   DEFAULT_STORED_CALENDAR_PREFERENCES,
+  DEFAULT_PASTE_PREFERENCES,
   DEFAULT_SUMMARIZER_PROVIDER,
 } from './schema';
 
@@ -217,4 +219,16 @@ export function saveUIPreferences(prefs: Partial<UIPreferences>): void {
   const store = getStore();
   const current = store?.get('uiPreferences') ?? DEFAULT_UI_PREFERENCES;
   store?.set('uiPreferences', { ...current, ...prefs });
+}
+
+// ─── Paste Preferences ────────────────────────────────────────────────────────
+
+export function getPastePreferences(): PastePreferences {
+  return getStore()?.get('pastePreferences') ?? DEFAULT_PASTE_PREFERENCES;
+}
+
+export function savePastePreferences(prefs: Partial<PastePreferences>): void {
+  const store = getStore();
+  const current = store?.get('pastePreferences') ?? DEFAULT_PASTE_PREFERENCES;
+  store?.set('pastePreferences', { ...current, ...prefs });
 }
