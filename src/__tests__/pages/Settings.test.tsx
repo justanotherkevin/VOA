@@ -98,6 +98,21 @@ describe('Settings Page', () => {
     });
   });
 
+  it('should show the paste-on-complete section in the Transcription pane', async () => {
+    mockActivePane = 'transcription';
+    render(
+      <UIPreferencesProvider>
+        <MemoryRouter>
+          <Settings transcriber={mockTranscriber} />
+        </MemoryRouter>
+      </UIPreferencesProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Paste on Complete')).toBeInTheDocument();
+    });
+  });
+
   it('should show Permissions pane and permission status when active', async () => {
     mockActivePane = 'permissions';
     render(

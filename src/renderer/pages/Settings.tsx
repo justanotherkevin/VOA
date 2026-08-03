@@ -78,6 +78,11 @@ export default function Settings() {
     models?: string[];
   } | null>(null);
   const [lmStudioTesting, setLmStudioTesting] = useState(false);
+  const [pastePrefs, setPastePrefs] = useState<{
+    enabled: boolean;
+    allowedApps: string[];
+  }>({ enabled: false, allowedApps: [] });
+  const [runningApps, setRunningApps] = useState<string[]>([]);
 
   const [summarizerProvider, setSummarizerProvider] = useState<
     'lmstudio' | 'ollama' | 'builtin'
@@ -121,11 +126,12 @@ export default function Settings() {
   useEffect(() => {
     const loadAllPrefs = async () => {
       try {
-        const [recording, app, audio, model] = await Promise.all([
+        const [recording, app, audio, model, paste] = await Promise.all([
           window.electronAPI.settings.recording.get(),
           window.electronAPI.settings.app.get(),
           window.electronAPI.settings.audio.get(),
           window.electronAPI.settings.model.get(),
+          window.electronAPI.settings.paste.get(),
         ]);
 
         if (recording) {
@@ -140,6 +146,12 @@ export default function Settings() {
         if (model) {
           setModelPrefs((prev) => ({ ...prev, ...model }));
         }
+        if (paste) {
+          setPastePrefs((prev) => ({ ...prev, ...paste }));
+        }
+
+        const apps = await window.electronAPI.settings.paste.listRunningApps();
+        if (apps) setRunningApps(apps);
 
         const cacheRes = await window.electronAPI.settings.model.cache.list();
         if (cacheRes?.success) setCachedModels(cacheRes.models);
@@ -188,6 +200,17 @@ export default function Settings() {
     const newPrefs = { ...audioPrefs, [key]: value };
     setAudioPrefs(newPrefs);
     await window.electronAPI.settings.audio.update({ [key]: value });
+  }
+
+  async function updatePastePref(key: 'enabled' | 'allowedApps', value: unknown) {
+    const newPrefs = { ...pastePrefs, [key]: value };
+    setPastePrefs(newPrefs);
+    await window.electronAPI.settings.paste.update({ [key]: value });
+  }
+
+  async function refreshRunningApps() {
+    const apps = await window.electronAPI.settings.paste.listRunningApps();
+    if (apps) setRunningApps(apps);
   }
 
   async function updateModelPref(key: string, value: unknown) {
@@ -428,6 +451,11 @@ export default function Settings() {
               handleDownloadBuiltin={handleDownloadBuiltin}
               handleCancelDownload={handleCancelDownload}
               handleDeleteBuiltin={handleDeleteBuiltin}
+              pastePrefs={pastePrefs}
+              updatePastePref={updatePastePref}
+              runningApps={runningApps}
+              refreshRunningApps={refreshRunningApps}
+              platform={window.electronAPI.platform}
             />
           )}
 

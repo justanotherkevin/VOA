@@ -73,6 +73,11 @@ export function TranscriptionPane({
   handleDownloadBuiltin,
   handleCancelDownload,
   handleDeleteBuiltin,
+  pastePrefs,
+  updatePastePref,
+  runningApps,
+  refreshRunningApps,
+  platform,
 }: {
   modelPrefs: ModelPrefs;
   updateModelPref: (key: string, value: unknown) => Promise<void>;
@@ -102,6 +107,14 @@ export function TranscriptionPane({
   handleDownloadBuiltin: () => Promise<void>;
   handleCancelDownload: () => Promise<void>;
   handleDeleteBuiltin: () => Promise<void>;
+  pastePrefs: { enabled: boolean; allowedApps: string[] };
+  updatePastePref: (
+    key: 'enabled' | 'allowedApps',
+    value: unknown,
+  ) => Promise<void>;
+  runningApps: string[];
+  refreshRunningApps: () => Promise<void>;
+  platform: string;
 }) {
   return (
     <div className="s-pane" data-testid="settings-pane-transcription">
@@ -517,6 +530,60 @@ export function TranscriptionPane({
           </div>
         </ComingSoon>
       </div>
+
+      {platform === 'darwin' && (
+        <div style={{ marginBottom: 22 }}>
+          <SectionLabel>Paste on Complete</SectionLabel>
+          <div className="s-card-rows">
+            <SettingRow
+              title="Paste transcript into active app when dictation completes"
+              description="Only pastes when the focused app is checked below."
+              actions={
+                <SettingSwitch
+                  checked={pastePrefs.enabled}
+                  onChange={(v) => updatePastePref('enabled', v)}
+                />
+              }
+            />
+            {pastePrefs.enabled && (
+              <>
+                <SettingRow
+                  title="Allowed apps"
+                  actions={
+                    <button
+                      className="s-btn"
+                      onClick={() => refreshRunningApps()}
+                    >
+                      Refresh
+                    </button>
+                  }
+                />
+                {Array.from(
+                  new Set([...runningApps, ...pastePrefs.allowedApps]),
+                ).map((appName) => (
+                  <SettingRow
+                    key={appName}
+                    title={appName}
+                    actions={
+                      <SettingSwitch
+                        checked={pastePrefs.allowedApps.includes(appName)}
+                        onChange={(checked) => {
+                          const nextAllowed = checked
+                            ? [...pastePrefs.allowedApps, appName]
+                            : pastePrefs.allowedApps.filter(
+                                (a) => a !== appName,
+                              );
+                          updatePastePref('allowedApps', nextAllowed);
+                        }}
+                      />
+                    }
+                  />
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
