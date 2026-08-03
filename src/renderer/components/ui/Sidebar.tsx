@@ -19,6 +19,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import appIcon from '../../../../assets/icons/64x64.png';
+import type { AppStatus } from '@/renderer/hooks/useRecordingFlow';
 import { useMeetingsContext } from '@/renderer/hooks/useMeetingsContext';
 import { MeetingList } from '@/renderer/components/ui/MeetingList';
 import { useSettingsNavContext } from '@/renderer/hooks/useSettingsNavContext';
@@ -43,15 +44,13 @@ import {
   SidebarMenuItem,
 } from '@/renderer/components/sidebar';
 
-export type AppStatus = 'ready' | 'recording' | 'processing';
-
 const STATUS_CONFIG: Record<
   AppStatus,
   { color: string; pulse: boolean; label: string }
 > = {
-  ready: { color: 'bg-green-500', pulse: false, label: '🟢 Ready' },
+  idle: { color: 'bg-green-500', pulse: false, label: '🟢 Idle' },
   recording: { color: 'bg-red-500', pulse: true, label: '🔴 Recording' },
-  processing: { color: 'bg-yellow-400', pulse: true, label: '🟡 Processing' },
+  loading: { color: 'bg-yellow-400', pulse: true, label: '🟡 Loading' },
 };
 
 const SETTINGS_NAV_ITEMS: Array<{
@@ -190,7 +189,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({
-  status = 'ready',
+  status = 'idle',
   onNewRecording,
 }: SidebarProps) {
   const location = useLocation();

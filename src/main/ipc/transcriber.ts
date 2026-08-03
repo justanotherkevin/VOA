@@ -72,4 +72,8 @@ export function registerTranscriberHandlers() {
     const callbacks = makeCallbacks(event, 'start');
     return transcriberService.transcribe(args ?? {}, callbacks);
   });
+
+  ipcMain.handle(CHANNELS.TRANSCRIBER.MODEL_STATUS, async () => {
+    return transcriberService.getModelStatus();
+  });
 }

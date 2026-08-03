@@ -18,20 +18,17 @@ import Onboarding from '@/renderer/pages/Onboarding';
 import { useAudioRecorder } from '@/renderer/hooks/useAudioRecorder';
 import { useSystemAudioRecorder } from '@/renderer/hooks/useSystemAudioRecorder';
 import { useRecordingFlow } from '@/renderer/hooks/useRecordingFlow';
-import type { AppStatus } from '@/renderer/components/ui/Sidebar';
 import { Toaster } from '@/renderer/components/sonner';
 
 export default function App() {
   const transcriber = useTranscriber();
   const audioRecorder = useAudioRecorder();
   const systemAudioRecorder = useSystemAudioRecorder();
-  useRecordingFlow({ audioRecorder, systemAudioRecorder, transcriber });
-
-  const status: AppStatus = audioRecorder.isRecording
-    ? 'recording'
-    : transcriber.isBusy
-      ? 'processing'
-      : 'ready';
+  const { status } = useRecordingFlow({
+    audioRecorder,
+    systemAudioRecorder,
+    transcriber,
+  });
 
   const handleNewRecording = useCallback(() => {
     window.electronAPI.recordings.toggle();

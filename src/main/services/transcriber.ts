@@ -24,6 +24,15 @@ import {
 import type { Recording } from '@/main/store';
 import { updateNotificationState } from '@/main/notification-window';
 
+export type ModelLoadStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+export interface ModelStatusPayload {
+  status: ModelLoadStatus;
+  model: string | null;
+  quantized: boolean | null;
+  message?: string; // present only when status === 'error'
+}
+
 export interface CompletePayload {
   status: 'complete';
   task: 'automatic-speech-recognition';
@@ -85,6 +94,12 @@ class TranscriberService {
   private calendarMatches: CalendarEventMatch[] = [];
   private calendarMatchDecision: 'pending' | 'declined' | string = 'pending';
   private calendarSessionToken = 0;
+
+  private currentModelStatus: ModelStatusPayload = {
+    status: 'idle',
+    model: null,
+    quantized: null,
+  };
 
   constructor(transcriber: AsrTranscriber = whisperTranscriber) {
     this.transcriber = transcriber;
@@ -326,6 +341,53 @@ class TranscriberService {
     return this.sessionActive ? this.sessionType : null;
   }
 
+  private setModelStatus(payload: ModelStatusPayload): void {
+    this.currentModelStatus = payload;
+    getMainWindow()?.webContents.send(
+      CHANNELS.TRANSCRIBER.MODEL_STATUS_CHANGED,
+      payload,
+    );
+  }
+
+  getModelStatus(): ModelStatusPayload {
+    return this.currentModelStatus;
+  }
+
+  // Wraps this.transcriber.initialize() with MODEL_STATUS_CHANGED broadcasts.
+  // Skips broadcasting entirely when the requested model/quantized key is
+  // already loaded, since initialize() already short-circuits internally for
+  // that case and transcribe() calls this on every VAD segment — without the
+  // short-circuit here, every segment would emit a spurious loading→ready
+  // blip for an already-warm model.
+  private async initializeWithStatus(
+    modelName: string,
+    quantized: boolean,
+    onProgress?: (data: any) => void,
+  ): Promise<void> {
+    const info = this.transcriber.getModelInfo();
+    if (
+      info.isInitialized &&
+      info.model === modelName &&
+      info.quantized === quantized
+    ) {
+      return this.transcriber.initialize(modelName, quantized, onProgress);
+    }
+
+    this.setModelStatus({ status: 'loading', model: modelName, quantized });
+    try {
+      await this.transcriber.initialize(modelName, quantized, onProgress);
+      this.setModelStatus({ status: 'ready', model: modelName, quantized });
+    } catch (error) {
+      this.setModelStatus({
+        status: 'error',
+        model: modelName,
+        quantized,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
   private resolveModelConfig(preferences: ModelPreferences): {
     modelName: string;
     quantized: boolean;
@@ -383,7 +445,7 @@ class TranscriberService {
       log(
         `[TranscriberService] Eagerly loading transcriber... model=${modelName} quantized=${quantized}`,
       );
-      await this.transcriber.initialize(modelName, quantized, onProgress);
+      await this.initializeWithStatus(modelName, quantized, onProgress);
       return { success: true };
     } catch (error) {
       log('[TranscriberService] Eager model load failed:', error);
@@ -642,7 +704,7 @@ class TranscriberService {
         `[TranscriberService] Loading transcriber... model=${modelName} quantized=${quantized}`,
       );
       const initStart = Date.now();
-      await this.transcriber.initialize(modelName, quantized, (data: any) => {
+      await this.initializeWithStatus(modelName, quantized, (data: any) => {
         callbacks.onProgress(data);
       });
       log(

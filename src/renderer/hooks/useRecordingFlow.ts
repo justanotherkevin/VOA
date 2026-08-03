@@ -7,6 +7,7 @@ import type { UseSystemAudioRecorderReturn } from '@/renderer/hooks/useSystemAud
 import { finalizeRecordingAndTranscribe } from '@/renderer/utils/RecordingUtils';
 import { useNotificationFlow } from '@/renderer/hooks/useNotificationFlow';
 import { useMeetingDetector } from '@/renderer/hooks/useMeetingDetector';
+import { useModelStatus } from '@/renderer/hooks/useModelStatus';
 import {
   setupRecordingFlowTestHooks,
   cleanupRecordingFlowTestHooks,
@@ -15,10 +16,16 @@ import {
   cleanupSystemAudioCapabilitySetterForTests,
 } from '@/renderer/testing/TestHooks';
 
+export type AppStatus = 'idle' | 'recording' | 'loading';
+
 interface UseRecordingFlowParams {
   audioRecorder: UseAudioRecorderReturn;
   systemAudioRecorder: UseSystemAudioRecorderReturn;
   transcriber: Transcriber;
+}
+
+interface UseRecordingFlowReturn {
+  status: AppStatus;
 }
 
 /**
@@ -40,10 +47,12 @@ export function useRecordingFlow({
   audioRecorder,
   systemAudioRecorder,
   transcriber,
-}: UseRecordingFlowParams): void {
+}: UseRecordingFlowParams): UseRecordingFlowReturn {
   const transcriberRef = useRef(transcriber);
   const [isRecordingActive, setIsRecordingActive] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [systemAudioSupported, setSystemAudioSupported] = useState(false);
+  const modelStatus = useModelStatus();
   // Tracks whether a session was explicitly started so the done-trigger never
   // misfires on mount or when transcript.output is undefined (VAD-only mode
   // never sets transcriber.isBusy, so we can't rely on that signal).
@@ -75,6 +84,7 @@ export function useRecordingFlow({
   }, []);
   const {
     showRecordingStart,
+    showLoading,
     showRecordingStopped,
     showProcessing,
     showError,
@@ -113,6 +123,7 @@ export function useRecordingFlow({
         }
         showRecordingStopped(label);
         showProcessing();
+        setIsFinalizing(true);
       } else {
         const isDictation = sessionOptions?.forceType === 'dictation';
         // Meeting recordings require system audio (per product decision —
@@ -128,6 +139,14 @@ export function useRecordingFlow({
         const sessionStartedAt = Date.now();
         hasActiveSessionRef.current = true;
         setIsRecordingActive(true);
+        const label = isDictation ? 'Dictation' : 'Recording';
+        // Model may already be warm (no visible loading flash) — only
+        // show the loading notification if it isn't. Audio capture below
+        // starts immediately either way and is never gated on this.
+        const modelAlreadyReady = modelStatus.status === 'ready';
+        if (!modelAlreadyReady) {
+          showLoading(label);
+        }
         await startRecording();
         // Dictation is mic-only by design — never pull in system audio.
         // Capturing (near-)silent system audio here is what produced
@@ -139,7 +158,10 @@ export function useRecordingFlow({
           sessionStartedAt,
           sessionOptions,
         );
-        showRecordingStart(isDictation ? 'Dictation' : 'Recording', {
+        if (!modelAlreadyReady) {
+          await modelStatus.ensureReady();
+        }
+        showRecordingStart(label, {
           isMeeting: !isDictation,
           systemAudioEnabled: !isDictation && systemAudioSupportedRef.current,
         });
@@ -152,8 +174,11 @@ export function useRecordingFlow({
       startSystemRecording,
       stopSystemRecording,
       showRecordingStart,
+      showLoading,
       showRecordingStopped,
       showProcessing,
+      modelStatus.status,
+      modelStatus.ensureReady,
     ],
   );
 
@@ -300,6 +325,7 @@ export function useRecordingFlow({
         cleanup();
         showIdle();
         setIsRecordingActive(false);
+        setIsFinalizing(false);
       })();
 
       return () => {
@@ -314,4 +340,12 @@ export function useRecordingFlow({
     showDone,
     showIdle,
   ]);
+
+  const status: AppStatus = isRecordingActive
+    ? 'recording'
+    : modelStatus.status === 'loading' || isFinalizing
+      ? 'loading'
+      : 'idle';
+
+  return { status };
 }

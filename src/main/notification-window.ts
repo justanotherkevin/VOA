@@ -17,6 +17,7 @@ const FADE_BUFFER_MS = 50; // Buffer after fade animation to ensure UI is ready
 export type NotificationState =
   | 'idle'
   | 'in-meeting'
+  | 'loading'
   | 'recording'
   | 'recording-stopped'
   | 'processing'
