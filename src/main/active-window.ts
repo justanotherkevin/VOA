@@ -36,6 +36,20 @@ return frontAppName & "|||" & windowTitle
 `;
 
 /**
+ * AppleScript to list all foreground (non-background) running apps on macOS,
+ * for the dictation paste allow-list picker in Settings.
+ * Security Note: same execFile-argument-array approach as MAC_SCRIPT above —
+ * not shell-evaluated.
+ */
+const MAC_LIST_APPS_SCRIPT = `
+tell application "System Events"
+    set appNames to name of every process whose background only is false
+end tell
+set AppleScript's text item delimiters to "|||"
+return appNames as text
+`;
+
+/**
  * PowerShell script to get the active window on Windows
  * Security Note: This script is passed as an argument to powershell, not evaluated as a shell command.
  * Using execFile() with argument arrays prevents shell injection attacks by avoiding string interpolation.
@@ -85,6 +99,33 @@ export async function getActiveWindow(): Promise<ActiveWindow | undefined> {
   } catch (error) {
     log.error('Failed to get active window:', error);
     return undefined;
+  }
+}
+
+/**
+ * List the names of all foreground (non-background) running apps.
+ * macOS-only — used to populate the dictation paste allow-list picker.
+ * Resolves to [] on any other platform or if the AppleScript call fails.
+ */
+export async function listRunningApps(): Promise<string[]> {
+  if (platform() !== 'darwin') {
+    return [];
+  }
+
+  try {
+    const { stdout } = await execFileAsync(
+      'osascript',
+      ['-e', MAC_LIST_APPS_SCRIPT],
+      { timeout: 3000 },
+    );
+    const names = stdout
+      .split('|||')
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0);
+    return Array.from(new Set(names));
+  } catch (error) {
+    log.error('Failed to list running apps:', error);
+    return [];
   }
 }
 
