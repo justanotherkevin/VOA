@@ -95,10 +95,7 @@ export function useRecordingFlow({
   } = useNotificationFlow();
 
   const handleToggleCapture = useCallback(
-    async (sessionOptions?: {
-      forceType?: 'dictation';
-      pasteOnComplete?: boolean;
-    }) => {
+    async (sessionOptions?: { forceType?: 'dictation' }) => {
       if (isRecording) {
         // Only the shortcut that matches the active session's type may stop it —
         // otherwise the other shortcut mid-session would stop the wrong capture
@@ -188,8 +185,7 @@ export function useRecordingFlow({
   );
 
   const handleToggleDictation = useCallback(
-    () =>
-      handleToggleCapture({ forceType: 'dictation', pasteOnComplete: false }),
+    () => handleToggleCapture({ forceType: 'dictation' }),
     [handleToggleCapture],
   );
 

@@ -37,7 +37,7 @@ export function setE2eForceMeeting(value: boolean) {
 
 export function registerTranscriberHandlers() {
   ipcMain.handle(CHANNELS.TRANSCRIBER.SESSION_START, async (_event, args) => {
-    const { startedAt, forceType, pasteOnComplete } = args || {};
+    const { startedAt, forceType } = args || {};
     // The recording shortcut and the dictation shortcut are two distinct,
     // explicit user choices — no need to guess intent from the active
     // window. That auto-detection predates the dedicated dictation shortcut
@@ -51,9 +51,7 @@ export function registerTranscriberHandlers() {
       _e2eNextSessionForceMeeting = false;
     }
     log('[transcriber:session-start] type:', type);
-    transcriberService.beginSession(startedAt ?? Date.now(), type, {
-      pasteOnComplete: !!pasteOnComplete,
-    });
+    transcriberService.beginSession(startedAt ?? Date.now(), type);
     startTrayAnimation();
   });
 

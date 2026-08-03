@@ -45,7 +45,7 @@ const electronAPI = {
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.START, options),
     startSession: (
       startedAt: number,
-      options?: { forceType?: 'dictation'; pasteOnComplete?: boolean },
+      options?: { forceType?: 'dictation' },
     ) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_START, {
         startedAt,

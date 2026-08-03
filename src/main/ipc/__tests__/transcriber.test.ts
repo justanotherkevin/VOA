@@ -71,9 +71,7 @@ describe('Transcriber IPC Handlers', () => {
       { sender: {} },
       { startedAt: 123 },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(123, 'meeting', {
-      pasteOnComplete: false,
-    });
+    expect(mockBeginSession).toHaveBeenCalledWith(123, 'meeting');
     expect(mockStartTray).toHaveBeenCalled();
   });
 
@@ -82,9 +80,7 @@ describe('Transcriber IPC Handlers', () => {
     const now = 555;
     vi.spyOn(Date, 'now').mockReturnValue(now);
     await h[CHANNELS.TRANSCRIBER.SESSION_START]({ sender: {} }, {});
-    expect(mockBeginSession).toHaveBeenCalledWith(now, 'meeting', {
-      pasteOnComplete: false,
-    });
+    expect(mockBeginSession).toHaveBeenCalledWith(now, 'meeting');
     vi.spyOn(Date, 'now').mockRestore();
   });
 
@@ -92,11 +88,9 @@ describe('Transcriber IPC Handlers', () => {
     const h = await loadAndRegister();
     await h[CHANNELS.TRANSCRIBER.SESSION_START](
       { sender: {} },
-      { startedAt: 999, forceType: 'dictation', pasteOnComplete: true },
+      { startedAt: 999, forceType: 'dictation' },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(999, 'dictation', {
-      pasteOnComplete: true,
-    });
+    expect(mockBeginSession).toHaveBeenCalledWith(999, 'dictation');
   });
 
   it('SESSION_END calls transcriberService.endSession and stops tray animation', async () => {
@@ -168,9 +162,7 @@ describe('Transcriber IPC Handlers', () => {
       { sender: {} },
       { startedAt: 1, forceType: 'dictation' },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(1, 'meeting', {
-      pasteOnComplete: false,
-    });
+    expect(mockBeginSession).toHaveBeenCalledWith(1, 'meeting');
 
     // Flag is single-use — the next session goes back to honoring forceType.
     mockBeginSession.mockClear();
@@ -178,8 +170,6 @@ describe('Transcriber IPC Handlers', () => {
       { sender: {} },
       { startedAt: 2, forceType: 'dictation' },
     );
-    expect(mockBeginSession).toHaveBeenCalledWith(2, 'dictation', {
-      pasteOnComplete: false,
-    });
+    expect(mockBeginSession).toHaveBeenCalledWith(2, 'dictation');
   });
 });
