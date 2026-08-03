@@ -261,13 +261,15 @@ class TranscriberService {
     const type = this.sessionType;
     this.sessionType = 'dictation';
 
+    const startedAt = this.sessionStartedAt!;
+
     // Snapshot meta for late-segment recovery before clearing state — a
     // trailing segment that's still transcribing when the session ends
     // arrives via recoverLateSegment() below instead of this method, so it
     // needs the session type carried along to still honor dictation paste
     // eligibility (see shouldPasteForSession()).
     this.lastSessionMeta = {
-      startedAt: this.sessionStartedAt!,
+      startedAt,
       endedAt,
       type,
       endedAtMs: Date.now(),
@@ -283,6 +285,7 @@ class TranscriberService {
     this.sessionSegments = [];
     this.sessionChunks = [];
     this.sessionSources = new Set();
+    this.sessionStartedAt = null;
 
     const useBothLabels = sources.has('mic') && sources.has('system');
     const fullText = segments
@@ -310,7 +313,7 @@ class TranscriberService {
       await this.persistMeeting(
         fullText,
         allChunks,
-        this.sessionStartedAt!,
+        startedAt,
         endedAt,
         callbacks,
         audioSource,
@@ -322,7 +325,6 @@ class TranscriberService {
       );
     }
 
-    this.sessionStartedAt = null;
     log(`[TranscriberService] Session ended at endedAt=${endedAt}`);
   }
 

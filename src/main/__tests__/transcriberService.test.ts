@@ -31,6 +31,13 @@ vi.mock('@/main/store', () => ({
   // Consumed by beginSession()'s calendar-match lookup; returning no feedUrl
   // makes it a no-op by default (individual tests override as needed).
   getCalendarPreferences: vi.fn(() => ({ feedUrl: '' })),
+  // Consumed by shouldPasteForSession() on dictation session end — defaults
+  // to paste disabled so endSession tests never hit getActiveWindow().
+  getPastePreferences: vi.fn(() => ({ enabled: false, allowedApps: [] })),
+}));
+
+vi.mock('@/main/active-window', () => ({
+  getActiveWindow: vi.fn(async () => undefined),
 }));
 
 const mockCreateCalendarProvider = vi.fn();

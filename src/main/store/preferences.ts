@@ -223,6 +223,8 @@ export function saveUIPreferences(prefs: Partial<UIPreferences>): void {
 
 // ─── Paste Preferences ────────────────────────────────────────────────────────
 
+const MAX_ALLOWED_APPS = 50;
+
 export function getPastePreferences(): PastePreferences {
   return getStore()?.get('pastePreferences') ?? DEFAULT_PASTE_PREFERENCES;
 }
@@ -230,5 +232,51 @@ export function getPastePreferences(): PastePreferences {
 export function savePastePreferences(prefs: Partial<PastePreferences>): void {
   const store = getStore();
   const current = store?.get('pastePreferences') ?? DEFAULT_PASTE_PREFERENCES;
-  store?.set('pastePreferences', { ...current, ...prefs });
+  const merged = { ...current, ...prefs };
+
+  // Validate the merged result rather than trusting the renderer's payload —
+  // a buggy or compromised renderer could otherwise persist `enabled: 1` or
+  // `allowedApps: "Term"` (which would make `.includes()` do substring
+  // matching). Non-boolean enabled coerces to false (paste stays off); a
+  // non-array allowedApps is replaced with []; duplicates are removed and
+  // the list is capped.
+  const sanitized: PastePreferences = {
+    enabled: merged.enabled,
+    allowedApps: [],
+  };
+
+  if (typeof merged.enabled !== 'boolean') {
+    log.info(
+      `[Store] savePastePreferences: coerced non-boolean enabled=${JSON.stringify(merged.enabled)} to false`,
+    );
+    sanitized.enabled = false;
+  }
+
+  if (!Array.isArray(merged.allowedApps)) {
+    log.info(
+      `[Store] savePastePreferences: replaced invalid allowedApps=${JSON.stringify(merged.allowedApps)} with []`,
+    );
+  } else {
+    const uniqueApps = Array.from(
+      new Set(
+        merged.allowedApps.filter(
+          (app) => typeof app === 'string' && app.trim().length > 0,
+        ),
+      ),
+    );
+    if (uniqueApps.length > MAX_ALLOWED_APPS) {
+      log.info(
+        `[Store] savePastePreferences: truncated allowedApps from ${uniqueApps.length} to ${MAX_ALLOWED_APPS} entries`,
+      );
+      uniqueApps.length = MAX_ALLOWED_APPS;
+    }
+    if (uniqueApps.length !== merged.allowedApps.length) {
+      log.info(
+        `[Store] savePastePreferences: cleaned allowedApps (${merged.allowedApps.length} -> ${uniqueApps.length} entries)`,
+      );
+    }
+    sanitized.allowedApps = uniqueApps;
+  }
+
+  store?.set('pastePreferences', sanitized);
 }

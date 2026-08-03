@@ -28,7 +28,7 @@ describe('listRunningApps', () => {
     mockPlatform = 'darwin';
   });
 
-  it('returns de-duplicated app names on macOS', async () => {
+  it('returns de-duplicated, alphabetically sorted app names on macOS', async () => {
     mockExecFileAsync.mockResolvedValue({
       stdout: 'Terminal|||iTerm2|||Terminal|||Slack',
     });
@@ -36,7 +36,7 @@ describe('listRunningApps', () => {
     const { listRunningApps } = await import('../active-window');
     const result = await listRunningApps();
 
-    expect(result).toEqual(['Terminal', 'iTerm2', 'Slack']);
+    expect(result).toEqual(['iTerm2', 'Slack', 'Terminal']);
   });
 
   it('returns an empty array on non-macOS platforms without calling osascript', async () => {

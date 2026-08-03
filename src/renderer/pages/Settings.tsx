@@ -126,12 +126,17 @@ export default function Settings() {
   useEffect(() => {
     const loadAllPrefs = async () => {
       try {
-        const [recording, app, audio, model, paste] = await Promise.all([
+        // listRunningApps() is an osascript subprocess (up to 3s) — fetch it
+        // in parallel with the other prefs instead of serially after, which
+        // used to block every subsequent fetch (cache paths, LM Studio,
+        // calendar, provider, builtin status) behind it.
+        const [recording, app, audio, model, paste, apps] = await Promise.all([
           window.electronAPI.settings.recording.get(),
           window.electronAPI.settings.app.get(),
           window.electronAPI.settings.audio.get(),
           window.electronAPI.settings.model.get(),
           window.electronAPI.settings.paste.get(),
+          window.electronAPI.settings.paste.listRunningApps(),
         ]);
 
         if (recording) {
@@ -150,7 +155,6 @@ export default function Settings() {
           setPastePrefs((prev) => ({ ...prev, ...paste }));
         }
 
-        const apps = await window.electronAPI.settings.paste.listRunningApps();
         if (apps) setRunningApps(apps);
 
         const cacheRes = await window.electronAPI.settings.model.cache.list();
@@ -202,7 +206,10 @@ export default function Settings() {
     await window.electronAPI.settings.audio.update({ [key]: value });
   }
 
-  async function updatePastePref(key: 'enabled' | 'allowedApps', value: unknown) {
+  async function updatePastePref(
+    key: 'enabled' | 'allowedApps',
+    value: unknown,
+  ) {
     const newPrefs = { ...pastePrefs, [key]: value };
     setPastePrefs(newPrefs);
     await window.electronAPI.settings.paste.update({ [key]: value });

@@ -93,7 +93,9 @@ export async function getActiveWindow(): Promise<ActiveWindow | undefined> {
     } else if (currentPlatform === 'win32') {
       return await getWindowsActiveWindow();
     } else {
-      log.warn(`Active window detection not supported on platform: ${currentPlatform}`);
+      log.warn(
+        `Active window detection not supported on platform: ${currentPlatform}`,
+      );
       return undefined;
     }
   } catch (error) {
@@ -122,7 +124,7 @@ export async function listRunningApps(): Promise<string[]> {
       .split('|||')
       .map((name) => name.trim())
       .filter((name) => name.length > 0);
-    return Array.from(new Set(names));
+    return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
   } catch (error) {
     log.error('Failed to list running apps:', error);
     return [];
@@ -135,7 +137,9 @@ export async function listRunningApps(): Promise<string[]> {
  * Unlike exec(), the script is NOT parsed by the shell, eliminating injection vulnerabilities.
  */
 async function getMacActiveWindow(): Promise<ActiveWindow> {
-  const { stdout } = await execFileAsync('osascript', ['-e', MAC_SCRIPT], { timeout: 3000 });
+  const { stdout } = await execFileAsync('osascript', ['-e', MAC_SCRIPT], {
+    timeout: 3000,
+  });
   const [appName, windowTitle] = stdout.trim().split('|||');
 
   return {
@@ -152,7 +156,11 @@ async function getMacActiveWindow(): Promise<ActiveWindow> {
  * The script is passed as an argument array, not through shell string interpolation.
  */
 async function getWindowsActiveWindow(): Promise<ActiveWindow> {
-  const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', WINDOWS_SCRIPT], { timeout: 3000 });
+  const { stdout } = await execFileAsync(
+    'powershell.exe',
+    ['-NoProfile', '-Command', WINDOWS_SCRIPT],
+    { timeout: 3000 },
+  );
   const [appName, windowTitle] = stdout.trim().split('|||');
 
   return {
@@ -173,7 +181,6 @@ export async function logFocusedWindowInfo(): Promise<void> {
     if (windowInfo) {
       const infoString = `📍 Active Window: [${windowInfo.owner.name}] - "${windowInfo.title}"`;
       log.info(infoString);
-
     } else {
       log.warn('Could not detect active window');
     }
@@ -181,4 +188,3 @@ export async function logFocusedWindowInfo(): Promise<void> {
     log.error('❌ Error logging window info:', error);
   }
 }
-

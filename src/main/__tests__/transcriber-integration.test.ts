@@ -316,9 +316,22 @@ describe('TranscriberService — dual-source merge (mic + system)', () => {
 describe('TranscriberService — dictation paste allow-list', () => {
   const callbacks = createTranscriberCallbacks();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     resetTranscriberSessionState();
+
+    // clearAllMocks() resets call history but NOT mockReturnValue /
+    // mockResolvedValue implementations — without this, a previous test's
+    // enablePasteForApp() leaves the paste mocks enabled for every
+    // subsequent test in this file (including the non-speech filtering
+    // describe block below).
+    const { getPastePreferences } = await import('@/main/store');
+    const { getActiveWindow } = await import('@/main/active-window');
+    (getPastePreferences as any).mockReturnValue({
+      enabled: false,
+      allowedApps: [],
+    });
+    (getActiveWindow as any).mockResolvedValue(undefined);
   });
 
   async function enablePasteForApp(appName: string) {

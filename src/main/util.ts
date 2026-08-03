@@ -27,8 +27,11 @@ export const isDebug =
   process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
 export function shouldPasteText(): boolean {
-  // Auto-paste-on-transcribe is paused for now (caused issues in practice).
-  // Keeping the plumbing intact since specific flows may want to opt back in.
+  // Legacy guard for the old per-segment paste-on-transcribe path, which is
+  // paused (caused issues in practice). Dictation paste no longer consults
+  // this — it's gated by PastePreferences in
+  // TranscriberService.shouldPasteForSession(). Kept disabled and unused by
+  // that flow; only the legacy per-segment call site in transcribe() remains.
   return false;
 }
 
