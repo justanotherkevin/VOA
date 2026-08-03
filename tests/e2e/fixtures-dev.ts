@@ -152,10 +152,15 @@ export const test = base.extend<ElectronFixtures>({
       const waitForStore = async () => {
         const deadline = Date.now() + 10_000;
         while (Date.now() < deadline) {
-          const ready = await electronApp.evaluate(
-            () => !!(global as any).__e2eStore,
-          );
-          if (ready) return;
+          try {
+            const ready = await electronApp.evaluate(
+              () => !!(global as any).__e2eStore,
+            );
+            if (ready) return;
+          } catch {
+            // The app's execution context can be torn down mid-evaluate while
+            // it is still booting after a relaunch — skip and retry.
+          }
           await new Promise((r) => setTimeout(r, 100));
         }
         console.warn(

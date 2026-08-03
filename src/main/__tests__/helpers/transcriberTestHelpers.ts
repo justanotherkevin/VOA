@@ -29,7 +29,6 @@ export function resetTranscriberSessionState(): void {
   svc.sessionChunks = [];
   svc.sessionSources = new Set();
   svc.sessionStartedAt = null;
-  svc.pasteOnComplete = false;
 }
 
 // Silent audio buffer in the plain-array format TranscribeArgs accepts,

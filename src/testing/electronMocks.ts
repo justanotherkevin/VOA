@@ -178,6 +178,11 @@ export function attachGlobalElectronMock() {
         })),
         update: vi.fn(async () => ({ success: true })),
       },
+      paste: {
+        get: vi.fn(async () => ({ enabled: false, allowedApps: [] })),
+        update: vi.fn(async () => ({ success: true })),
+        listRunningApps: vi.fn(async () => []),
+      },
     },
 
     // ── Shell ─────────────────────────────────────────────────────────────────

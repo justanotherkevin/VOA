@@ -45,7 +45,7 @@ const electronAPI = {
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.START, options),
     startSession: (
       startedAt: number,
-      options?: { forceType?: 'dictation'; pasteOnComplete?: boolean },
+      options?: { forceType?: 'dictation' },
     ) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_START, {
         startedAt,
@@ -161,6 +161,13 @@ const electronAPI = {
       get: () => ipcRenderer.invoke(CHANNELS.UI_PREFERENCES.GET),
       update: (prefs: Record<string, unknown>) =>
         ipcRenderer.invoke(CHANNELS.UI_PREFERENCES.UPDATE, prefs),
+    },
+    paste: {
+      get: () => ipcRenderer.invoke(CHANNELS.PASTE_PREFERENCES.GET),
+      update: (prefs: Record<string, unknown>) =>
+        ipcRenderer.invoke(CHANNELS.PASTE_PREFERENCES.UPDATE, prefs),
+      listRunningApps: (): Promise<string[]> =>
+        ipcRenderer.invoke(CHANNELS.SYSTEM.LIST_RUNNING_APPS),
     },
   },
 

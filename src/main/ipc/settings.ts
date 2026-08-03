@@ -16,11 +16,14 @@ import {
   saveSummarizerProvider,
   getOnboardingCompleted,
   saveOnboardingCompleted,
+  getPastePreferences,
+  savePastePreferences,
   type AppPreferences,
   type AudioPreferences,
   type UIPreferences,
   type LMStudioPreferences,
   type SummarizerProviderType,
+  type PastePreferences,
 } from '../store';
 import {
   listCachedModels,
@@ -35,6 +38,7 @@ import {
   cancelDownload,
   deleteModel as deleteGgufModel,
 } from '../gguf-model-cache';
+import { listRunningApps } from '../active-window';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { error as logError, info } from 'electron-log';
 import transcriberService from '../services/transcriber';
@@ -223,6 +227,28 @@ export function registerSettingsHandlers() {
       }
     },
   );
+
+  // Paste Preferences
+  ipcMain.handle(CHANNELS.PASTE_PREFERENCES.GET, async () => {
+    return getPastePreferences();
+  });
+
+  ipcMain.handle(
+    CHANNELS.PASTE_PREFERENCES.UPDATE,
+    async (_event, prefs: Partial<PastePreferences>) => {
+      try {
+        savePastePreferences(prefs);
+        return { success: true };
+      } catch (error) {
+        logError('[IPC] Error updating paste preferences:', error);
+        return { success: false, message: String(error) };
+      }
+    },
+  );
+
+  ipcMain.handle(CHANNELS.SYSTEM.LIST_RUNNING_APPS, async () => {
+    return listRunningApps();
+  });
 
   // Model Cache Paths
   ipcMain.handle(CHANNELS.MODEL.CACHE_PATHS, async () => {

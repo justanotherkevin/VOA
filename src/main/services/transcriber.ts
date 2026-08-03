@@ -5,10 +5,12 @@ import {
   getMeetingById,
   getModelPreferences,
   getCalendarPreferences,
+  getPastePreferences,
   generateTitle,
   formatParticipantsTitle,
   type ModelPreferences,
 } from '@/main/store';
+import { getActiveWindow } from '@/main/active-window';
 import { stripNonSpeechTags } from '@/main/pipeline/text-cleaner';
 import { pasteTextToActiveWindow, shouldPasteText } from '@/main/util';
 import { getMainWindow } from '@/main/state/volatile';
@@ -74,7 +76,6 @@ class TranscriberService {
     endedAt: number;
     type: 'meeting' | 'dictation';
     endedAtMs: number;
-    pasteOnComplete: boolean;
   } | null = null;
   private sessionSegments: Array<{
     text: string;
@@ -84,7 +85,6 @@ class TranscriberService {
   private sessionChunks: any[] = [];
   private sessionStartedAt: number | null = null;
   private sessionSources: Set<'mic' | 'system'> = new Set();
-  private pasteOnComplete = false;
 
   // Proactive calendar match state, resolved at session start (see
   // checkCalendarMatch) and consumed by persistMeeting when the session
@@ -109,7 +109,6 @@ class TranscriberService {
   beginSession(
     startedAt: number,
     type: 'meeting' | 'dictation' = 'dictation',
-    options?: { pasteOnComplete?: boolean },
   ): void {
     this.sessionActive = true;
     this.sessionType = type;
@@ -117,7 +116,6 @@ class TranscriberService {
     this.sessionSegments = [];
     this.sessionChunks = [];
     this.sessionSources = new Set();
-    this.pasteOnComplete = options?.pasteOnComplete ?? false;
 
     this.calendarMatches = [];
     this.calendarMatchDecision = 'pending';
@@ -237,6 +235,20 @@ class TranscriberService {
     return 'Untitled Meeting';
   }
 
+  private async shouldPasteForSession(
+    type: 'meeting' | 'dictation',
+  ): Promise<boolean> {
+    if (type !== 'dictation') return false;
+
+    const prefs = getPastePreferences();
+    if (!prefs.enabled || prefs.allowedApps.length === 0) return false;
+
+    const activeWindow = await getActiveWindow();
+    if (!activeWindow) return false;
+
+    return prefs.allowedApps.includes(activeWindow.owner.name);
+  }
+
   async endSession(
     endedAt: number,
     callbacks: TranscriberCallbacks,
@@ -248,19 +260,19 @@ class TranscriberService {
     this.sessionActive = false;
     const type = this.sessionType;
     this.sessionType = 'dictation';
-    const shouldPasteOnComplete = this.pasteOnComplete;
-    this.pasteOnComplete = false;
+
+    const startedAt = this.sessionStartedAt!;
 
     // Snapshot meta for late-segment recovery before clearing state — a
     // trailing segment that's still transcribing when the session ends
     // arrives via recoverLateSegment() below instead of this method, so it
-    // needs pasteOnComplete carried along to still honor the dictation paste.
+    // needs the session type carried along to still honor dictation paste
+    // eligibility (see shouldPasteForSession()).
     this.lastSessionMeta = {
-      startedAt: this.sessionStartedAt!,
+      startedAt,
       endedAt,
       type,
       endedAtMs: Date.now(),
-      pasteOnComplete: shouldPasteOnComplete,
     };
     this.lastSavedMeetingId = null;
 
@@ -273,6 +285,7 @@ class TranscriberService {
     this.sessionSegments = [];
     this.sessionChunks = [];
     this.sessionSources = new Set();
+    this.sessionStartedAt = null;
 
     const useBothLabels = sources.has('mic') && sources.has('system');
     const fullText = segments
@@ -291,7 +304,7 @@ class TranscriberService {
     else if (sources.has('system')) audioSource = 'system';
 
     if (fullText) {
-      if (shouldPasteOnComplete) {
+      if (await this.shouldPasteForSession(type)) {
         log(
           `[TranscriberService] Pasting combined dictation transcript (${fullText.length} chars) on session end`,
         );
@@ -300,7 +313,7 @@ class TranscriberService {
       await this.persistMeeting(
         fullText,
         allChunks,
-        this.sessionStartedAt!,
+        startedAt,
         endedAt,
         callbacks,
         audioSource,
@@ -312,7 +325,6 @@ class TranscriberService {
       );
     }
 
-    this.sessionStartedAt = null;
     log(`[TranscriberService] Session ended at endedAt=${endedAt}`);
   }
 
@@ -633,9 +645,9 @@ class TranscriberService {
     // Session ended with empty buffer — create the meeting now from this late segment.
     // A dictation session's trailing segment commonly lands here (it was still
     // transcribing when the shortcut's stop press ended the session), so honor
-    // the paste-on-complete intent here too — otherwise dictated text silently
-    // never reaches the clipboard/active window at all.
-    if (meta.pasteOnComplete) {
+    // paste eligibility here too — otherwise dictated text silently never
+    // reaches the clipboard/active window at all.
+    if (await this.shouldPasteForSession(meta.type)) {
       log(
         `[TranscriberService] Pasting late-recovered dictation transcript (${outputText.length} chars)`,
       );

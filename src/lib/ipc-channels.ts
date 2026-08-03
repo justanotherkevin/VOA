@@ -92,6 +92,13 @@ export const CHANNELS = {
     GET: 'uiPreferences:get',
     UPDATE: 'uiPreferences:update',
   },
+  PASTE_PREFERENCES: {
+    GET: 'pastePreferences:get',
+    UPDATE: 'pastePreferences:update',
+  },
+  SYSTEM: {
+    LIST_RUNNING_APPS: 'system:list-running-apps',
+  },
   LM_STUDIO: {
     GET: 'lmStudio:get',
     SET: 'lmStudio:set',
