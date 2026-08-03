@@ -61,3 +61,6 @@ npm-debug.log.*
 
 /graphify-out
 /src/graphify-out
+
+# Subagent-driven-development scratch workspace (ledgers, briefs, review packages)
+/.superpowers/
