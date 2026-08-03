@@ -46,6 +46,12 @@ vi.mock('@/main/store', () => ({
     language: 'auto',
   })),
   generateTitle: vi.fn((text: string) => text.slice(0, 20)),
+  getPastePreferences: vi.fn(() => ({ enabled: false, allowedApps: [] })),
+  getCalendarPreferences: vi.fn(() => ({ feedUrl: '' })),
+}));
+
+vi.mock('@/main/active-window', () => ({
+  getActiveWindow: vi.fn(async () => undefined),
 }));
 
 vi.mock('@/main/state/volatile', () => ({
@@ -121,9 +127,14 @@ async function seedAndEndSession(
   {
     startedAt = 1000,
     endedAt = 2000,
-  }: { startedAt?: number; endedAt?: number } = {},
+    type = 'dictation',
+  }: {
+    startedAt?: number;
+    endedAt?: number;
+    type?: 'meeting' | 'dictation';
+  } = {},
 ) {
-  transcriberService.beginSession(startedAt);
+  transcriberService.beginSession(startedAt, type);
   const svc = transcriberService as any;
   for (const seg of segments) {
     svc.sessionSegments.push(seg);
@@ -302,7 +313,7 @@ describe('TranscriberService — dual-source merge (mic + system)', () => {
   });
 });
 
-describe('TranscriberService — dictation-shortcut paste-on-complete', () => {
+describe('TranscriberService — dictation paste allow-list', () => {
   const callbacks = createTranscriberCallbacks();
 
   beforeEach(() => {
@@ -310,23 +321,32 @@ describe('TranscriberService — dictation-shortcut paste-on-complete', () => {
     resetTranscriberSessionState();
   });
 
+  async function enablePasteForApp(appName: string) {
+    const { getPastePreferences } = await import('@/main/store');
+    const { getActiveWindow } = await import('@/main/active-window');
+    (getPastePreferences as any).mockReturnValue({
+      enabled: true,
+      allowedApps: [appName],
+    });
+    (getActiveWindow as any).mockResolvedValue({
+      title: '',
+      owner: { name: appName },
+    });
+  }
+
   it('still pastes when the trailing segment arrives late (after endSession already ran)', async () => {
     // Regression test: a short dictation utterance whose transcription is
     // still in flight when the stop-shortcut's endSession() fires used to
     // silently lose the paste entirely — the segment took the late-segment
-    // recovery path, which never checked pasteOnComplete.
+    // recovery path, which never checked the paste eligibility.
     const { pasteTextToActiveWindow } = await import('@/main/util');
     const { saveMeeting } = await import('@/main/store');
+    await enablePasteForApp('Terminal');
 
-    transcriberService.beginSession(1000, 'dictation', {
-      pasteOnComplete: true,
-    });
-    // Session ends before the in-flight segment has been pushed — mirrors the
-    // real race where whisper is still transcribing when the shortcut stops.
+    transcriberService.beginSession(1000, 'dictation');
     await transcriberService.endSession(2000, callbacks);
     expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
 
-    // The segment finally resolves and arrives "late".
     await transcriberService.transcribe(
       { audio: SILENT_AUDIO, source: 'mic' },
       callbacks,
@@ -341,10 +361,9 @@ describe('TranscriberService — dictation-shortcut paste-on-complete', () => {
 
   it('does not double-paste when a late segment is appended to an already-saved dictation meeting', async () => {
     const { pasteTextToActiveWindow } = await import('@/main/util');
+    await enablePasteForApp('Terminal');
 
-    transcriberService.beginSession(1000, 'dictation', {
-      pasteOnComplete: true,
-    });
+    transcriberService.beginSession(1000, 'dictation');
     const svc = transcriberService as any;
     svc.sessionSegments.push({
       text: 'first segment',
@@ -368,12 +387,11 @@ describe('TranscriberService — dictation-shortcut paste-on-complete', () => {
     expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
   });
 
-  it('pastes the full combined transcript exactly once at endSession when pasteOnComplete is true', async () => {
+  it('pastes the full combined transcript exactly once at endSession when the active app is allowed', async () => {
     const { pasteTextToActiveWindow } = await import('@/main/util');
+    await enablePasteForApp('Terminal');
 
-    transcriberService.beginSession(1000, 'dictation', {
-      pasteOnComplete: true,
-    });
+    transcriberService.beginSession(1000, 'dictation');
     const svc = transcriberService as any;
     svc.sessionSegments.push(
       { text: 'first segment', startedAt: 1000, source: 'mic' },
@@ -388,35 +406,28 @@ describe('TranscriberService — dictation-shortcut paste-on-complete', () => {
     );
   });
 
-  it('does not paste when pasteOnComplete is false (regular recording-shortcut sessions)', async () => {
+  it('does not paste for a regular recording-shortcut (meeting) session even when paste is enabled', async () => {
     const { pasteTextToActiveWindow } = await import('@/main/util');
+    await enablePasteForApp('Terminal');
 
     await seedAndEndSession(
       [{ text: 'some transcript', startedAt: 1000, source: 'mic' }],
       callbacks,
-      { endedAt: 2000 },
+      { endedAt: 2000, type: 'meeting' },
     );
 
     expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
   });
 
-  it('does not paste an empty transcript even when pasteOnComplete is true', async () => {
+  it('does not paste when the feature is disabled', async () => {
     const { pasteTextToActiveWindow } = await import('@/main/util');
-
-    transcriberService.beginSession(1000, 'dictation', {
-      pasteOnComplete: true,
+    const { getPastePreferences } = await import('@/main/store');
+    (getPastePreferences as any).mockReturnValue({
+      enabled: false,
+      allowedApps: ['Terminal'],
     });
-    await transcriberService.endSession(2000, callbacks);
 
-    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
-  });
-
-  it('resets pasteOnComplete after a session ends so it does not leak into the next session', async () => {
-    const { pasteTextToActiveWindow } = await import('@/main/util');
-
-    transcriberService.beginSession(1000, 'dictation', {
-      pasteOnComplete: true,
-    });
+    transcriberService.beginSession(1000, 'dictation');
     const svc = transcriberService as any;
     svc.sessionSegments.push({
       text: 'dictated text',
@@ -425,16 +436,67 @@ describe('TranscriberService — dictation-shortcut paste-on-complete', () => {
     });
     svc.sessionSources.add('mic');
     await transcriberService.endSession(2000, callbacks);
-    expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
 
-    // A subsequent regular recording-toggle session (no pasteOnComplete) must not paste.
-    await seedAndEndSession(
-      [{ text: 'meeting text', startedAt: 3000, source: 'mic' }],
-      callbacks,
-      { startedAt: 3000, endedAt: 4000 },
-    );
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+  });
 
-    expect(pasteTextToActiveWindow).toHaveBeenCalledTimes(1);
+  it('does not paste when the active app is not on the allow-list', async () => {
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+    const { getPastePreferences } = await import('@/main/store');
+    const { getActiveWindow } = await import('@/main/active-window');
+    (getPastePreferences as any).mockReturnValue({
+      enabled: true,
+      allowedApps: ['Terminal'],
+    });
+    (getActiveWindow as any).mockResolvedValue({
+      title: '',
+      owner: { name: 'Slack' },
+    });
+
+    transcriberService.beginSession(1000, 'dictation');
+    const svc = transcriberService as any;
+    svc.sessionSegments.push({
+      text: 'dictated text',
+      startedAt: 1000,
+      source: 'mic',
+    });
+    svc.sessionSources.add('mic');
+    await transcriberService.endSession(2000, callbacks);
+
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+  });
+
+  it('does not paste when the active window cannot be detected', async () => {
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+    const { getPastePreferences } = await import('@/main/store');
+    const { getActiveWindow } = await import('@/main/active-window');
+    (getPastePreferences as any).mockReturnValue({
+      enabled: true,
+      allowedApps: ['Terminal'],
+    });
+    (getActiveWindow as any).mockResolvedValue(undefined);
+
+    transcriberService.beginSession(1000, 'dictation');
+    const svc = transcriberService as any;
+    svc.sessionSegments.push({
+      text: 'dictated text',
+      startedAt: 1000,
+      source: 'mic',
+    });
+    svc.sessionSources.add('mic');
+    await transcriberService.endSession(2000, callbacks);
+
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+  });
+
+  it('does not paste an empty transcript even when the active app is allowed', async () => {
+    const { pasteTextToActiveWindow } = await import('@/main/util');
+    await enablePasteForApp('Terminal');
+
+    transcriberService.beginSession(1000, 'dictation');
+    await transcriberService.endSession(2000, callbacks);
+
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
   });
 });
 
@@ -452,9 +514,7 @@ describe('TranscriberService — non-speech segment filtering', () => {
     const { saveMeeting } = await import('@/main/store');
     (stripNonSpeechTags as any).mockReturnValueOnce('');
 
-    transcriberService.beginSession(1000, 'dictation', {
-      pasteOnComplete: true,
-    });
+    transcriberService.beginSession(1000, 'dictation');
     await transcriberService.transcribe(
       { audio: SILENT_AUDIO, source: 'system' },
       callbacks,
