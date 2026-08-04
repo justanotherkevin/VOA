@@ -1,11 +1,17 @@
 /**
  * E2E tests for dictation workflow
  *
- * Tests the recording and transcription flow without visible UI:
+ * Tests the recording flow and that the resulting transcript reaches the UI
+ * — plumbing (renderer → IPC → store → UI), not Whisper's transcription
+ * accuracy. That's covered separately by the real-model accuracy harness
+ * (`npm run test:asr`, src/main/__tests__/asr-accuracy.test.ts); this spec
+ * mocks the transcription result (mockTranscript, seed.helpers.ts) with text
+ * captured from a real run of this same audio file, so it doesn't need the
+ * Whisper model loaded at all:
  * 1. Recording starts/stops via hooks (useAudioRecorder + useRecordingFlow)
  * 2. Recording can be triggered via global shortcut
  * 3. Audio is recorded with microphone mock
- * 4. Audio is transcribed
+ * 4. Mocked transcript is returned in place of real Whisper output
  * 5. Transcript appears in history
  *
  * Note: The Recording UI component is intentionally not rendered.
@@ -13,7 +19,7 @@
  * Tests run against the development build via Vite dev server (npm run test:e2e).
  *
  * User presses shortcut → Recording starts → Audio captured → Sent to main process
- * → AI transcription (Xenova Whisper) → Real-time updates → Final transcript stored
+ * → transcription (mocked) → Real-time updates → Final transcript stored
  */
 
 import {
@@ -24,6 +30,16 @@ import { test, expect } from './fixtures';
 import { Page } from '@playwright/test';
 import { mountMockAudioChunks } from './utils/dictation/hardware-mocks';
 import { getVisibleWindows } from './utils/common.helpers';
+import { mockTranscript } from './utils/seed.helpers';
+
+// Captured from a real Whisper run of fairy-tails-story.mp3 — kept verbatim
+// (including its transcription quirks) rather than cleaned up, since this
+// only needs to be realistic plumbing content, not accurate text.
+const MOCK_TRANSCRIPT =
+  'In the ancient land of Aldoria, where skies shimmered and forests ' +
+  'whispered secrets to The Wind lived a dragon named Zephos. Not "the ' +
+  'Bernatoll" downkind but he was gentle wise with eyes like old stars ' +
+  'even in birds fell silent when He passed';
 
 test.describe('Dictation Workflow', () => {
   let mainPage: Page;
@@ -38,8 +54,6 @@ test.describe('Dictation Workflow', () => {
   test('App launches has correct dictation process', async ({
     electronApp,
   }) => {
-    test.setTimeout(20_000);
-
     // Dictations section is collapsed by default — expand it to see its empty-state line.
     await mainPage
       .getByTestId('meeting-list-section-toggle-dictations')
@@ -58,6 +72,10 @@ test.describe('Dictation Workflow', () => {
       notificationPage.locator('text=recording').first(),
       'should show notification window with "Recording" message',
     ).toBeVisible();
+
+    // Substitute a canned transcript for the real Whisper output — must be
+    // set before mountMockAudioChunks triggers transcription below.
+    await mockTranscript(mainPage, MOCK_TRANSCRIPT);
 
     // Mock audio data
     await mountMockAudioChunks(mainPage, 'fairy-tails-story.mp3');
@@ -78,5 +96,9 @@ test.describe('Dictation Workflow', () => {
     await expect(transcript).toContainText('In the ancient land of Aldoria', {
       timeout: 15_000,
     });
+
+    // Restore real transcription so a leaked mock can't affect a later spec
+    // sharing this same Electron process.
+    await mockTranscript(mainPage, null);
   });
 });

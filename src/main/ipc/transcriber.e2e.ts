@@ -62,6 +62,26 @@ export function registerTranscriberE2eHandlers() {
     await transcriberService.endSession(Date.now(), callbacks);
   });
 
+  // Lets a test substitute a canned transcript for the real Whisper output
+  // (or restore real transcription by passing null), so specs that only
+  // assert on transcript plumbing don't need the model loaded. See
+  // transcriberService.setE2eMockTranscript and dictation-flow.spec.ts.
+  ipcMain.handle('transcriber:e2e-mock-transcript', (_event, args) => {
+    const { text } = args as { text: string | null };
+    transcriberService.setE2eMockTranscript(text);
+  });
+
+  // Lets a test dictate the outcome of the next model swap (success or
+  // failure) without a real onnxruntime load or network call — or restore
+  // a real swap by passing null. See
+  // transcriberService.setE2eMockSwapResult and model-switch-toast.spec.ts.
+  ipcMain.handle('transcriber:e2e-mock-swap-result', (_event, args) => {
+    const { result } = args as {
+      result: { success: boolean; message?: string } | null;
+    };
+    transcriberService.setE2eMockSwapResult(result);
+  });
+
   // Inject mock Qwen enrichment results directly into the store, bypassing
   // onnxruntime. Needed because onnxruntime-node@1.21 (bundled inside
   // @huggingface/transformers@3.8) crashes with SIGSEGV on ARM64 when the

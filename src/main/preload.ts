@@ -43,10 +43,7 @@ const electronAPI = {
   transcriber: {
     start: (options?: unknown) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.START, options),
-    startSession: (
-      startedAt: number,
-      options?: { forceType?: 'dictation' },
-    ) =>
+    startSession: (startedAt: number, options?: { forceType?: 'dictation' }) =>
       ipcRenderer.invoke(CHANNELS.TRANSCRIBER.SESSION_START, {
         startedAt,
         ...options,
@@ -283,6 +280,10 @@ if (process.env.E2E_TEST === 'true') {
       ipcRenderer.invoke('transcriber:e2e-transcribe-file', { filePath }),
     mockEnrichMeeting: () =>
       ipcRenderer.invoke('transcriber:e2e-mock-enrich-meeting'),
+    mockTranscript: (text: string | null) =>
+      ipcRenderer.invoke('transcriber:e2e-mock-transcript', { text }),
+    mockSwapResult: (result: { success: boolean; message?: string } | null) =>
+      ipcRenderer.invoke('transcriber:e2e-mock-swap-result', { result }),
     seedMeeting: (data: unknown) =>
       ipcRenderer.invoke('meetings:e2e-seed', data),
     isTranscriberSessionActive: () =>

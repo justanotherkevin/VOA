@@ -130,6 +130,11 @@ export const test = base.extend<ElectronFixtures>({
         cachedApp = await launchElectronApp({
           NODE_ENV: 'development',
           E2E_STORE_NAME: 'audio-to-text-test',
+          // Skips the real Whisper boot preload (main.ts) — see its comment.
+          // Specs that need the real model (e.g. startup-model-load-toast.spec.ts)
+          // launch their own dedicated instance without this fixture and
+          // don't set the flag, so they're unaffected.
+          E2E_SKIP_PRELOAD: 'true',
         });
         cachedFile = testInfo.file;
       }

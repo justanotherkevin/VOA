@@ -1,10 +1,12 @@
 /**
  * E2E tests: Meeting recording and enrichment pipeline
  *
- * Test 1 — Mock enrichment (fast, ~2 min):
+ * Test 1 — Mock transcription + mock enrichment (fast):
  *   Mirrors dictation-flow.spec.ts. Records city-meeting-short.mp3, forces isMeeting,
- *   injects mock Qwen output via __e2eTestAPI.mockEnrichMeeting(), and verifies the
- *   structured summary UI renders (Key Decisions / Topics / Action Items).
+ *   mocks the Whisper transcript (mockTranscript — content is a placeholder, not
+ *   asserted on) and injects mock Qwen output via __e2eTestAPI.mockEnrichMeeting(),
+ *   then verifies the structured summary UI renders (Key Decisions / Topics /
+ *   Action Items). Neither real model is loaded — see tests/e2e/CLAUDE.md's "Scope".
  *
  * Test 2 — Real Qwen enrichment (slow, ~5–15 min on CPU):
  *   Seeds a meeting directly with the transcript from city-meeting-transcript-2.json
@@ -40,8 +42,17 @@ import { getVisibleWindows } from './utils/common.helpers';
 import {
   getMeetings,
   mockEnrichMeeting,
+  mockTranscript,
   seedMeeting,
 } from './utils/seed.helpers';
+
+// Content is never asserted on — mockEnrichMeeting's canned Qwen output is
+// injected unconditionally regardless of transcript text — so this only
+// needs to be non-empty plumbing content, unlike dictation-flow.spec.ts's
+// MOCK_TRANSCRIPT (which the test does assert on).
+const MOCK_TRANSCRIPT =
+  'City council meeting discussing budget allocations, street lighting, ' +
+  'and community safety initiatives.';
 
 const TRANSCRIPT_FILE = resolve(
   __dirname,
@@ -80,8 +91,6 @@ test.describe('Meeting Dictation Flow', () => {
   test('enriches city-meeting with summary, decisions, topics, and action items; MOCK Structure Summary data', async ({
     electronApp,
   }) => {
-    test.setTimeout(120_000); // dominated by Whisper transcription of 90 s audio
-
     // Meetings section is collapsed by default — expand it to see its empty-state line.
     await mainPage.getByTestId('meeting-list-section-toggle-meetings').click();
 
@@ -99,10 +108,14 @@ test.describe('Meeting Dictation Flow', () => {
       'should show notification window with "Recording" message',
     ).toBeVisible({ timeout: 5_000 });
 
+    // Substitute a canned transcript for the real Whisper output — must be
+    // set before mountMockAudioChunks triggers transcription below.
+    await mockTranscript(mainPage, MOCK_TRANSCRIPT);
+
     // STEP 3: Inject meeting audio
     await mountMockAudioChunks(mainPage, 'city-meeting-short.mp3');
 
-    // STEP 4: Stop recording → Whisper transcribes → summaryStatus:'not-started'
+    // STEP 4: Stop recording → transcription (mocked) → summaryStatus:'not-started'
     await stopRecording(mainPage, electronApp);
 
     // STEP 5: Wait for the meeting to appear in the list.
@@ -168,6 +181,10 @@ test.describe('Meeting Dictation Flow', () => {
       meeting.summary.length,
       'mock enrichment should include a non-empty summary',
     ).toBeGreaterThan(0);
+
+    // Restore real transcription so a leaked mock can't affect a later spec
+    // sharing this same Electron process.
+    await mockTranscript(mainPage, null);
   });
 
   test('seeds meeting from transcript JSON and enriches with real Qwen via "Meeting details"', async ({
