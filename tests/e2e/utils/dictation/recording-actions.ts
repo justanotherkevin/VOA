@@ -1,10 +1,33 @@
 import type { Page, ElectronApplication } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { BrowserWindow } from 'electron';
-import { wait } from '../common.helpers';
+import { wait, pollUntil } from '../common.helpers';
 import { forceMeetingNextSession } from '../seed.helpers';
 import * as fs from 'fs';
 import * as path from 'path';
+
+/**
+ * Whether a recording/dictation session is currently active in the main
+ * process — reflects real backend state (transcriberService.isSessionActive()),
+ * not UI animation. Only flips false once endSession() has actually resolved.
+ */
+export async function isSessionActive(page: Page): Promise<boolean> {
+  return page.evaluate(() =>
+    (window as any).__e2eTestAPI.isTranscriberSessionActive(),
+  );
+}
+
+/**
+ * Which type of session (if any) is currently active — lets a caller send
+ * the matching stop toggle (recording vs. dictation) for a leaked session.
+ */
+export async function getSessionType(
+  page: Page,
+): Promise<'meeting' | 'dictation' | null> {
+  return page.evaluate(() =>
+    (window as any).__e2eTestAPI.getTranscriberSessionType(),
+  );
+}
 
 /**
  * Toggle recording using direct IPC event from Main process (E2E only);
@@ -45,14 +68,21 @@ export async function startRecording(
 }
 
 /**
- * Stop recording via Main process interaction
+ * Stop recording via Main process interaction. Waits for the real backend
+ * teardown (transcriberService.endSession() — transcribe, persist, paste
+ * eligibility) to actually finish, not a fixed delay: useRecordingFlow.ts
+ * awaits endSession() itself before showing the "Done" notification state,
+ * and under load that can take longer than a short fixed wait, leaving the
+ * app mid-"Processing"/"Transcribing" when a fixed-wait caller assumed it
+ * was done. 25s matches the real-teardown budget already established by
+ * model-switch-toast.spec.ts's ensureNoActiveRecordingSession.
  */
 export async function stopRecording(
   page: Page,
   electronApp: ElectronApplication,
 ): Promise<void> {
   await toggleRecording(page, electronApp);
-  await wait(500);
+  await pollUntil(async () => !(await isSessionActive(page)), 25_000);
 }
 
 /**
@@ -93,14 +123,15 @@ export async function startDictation(
 }
 
 /**
- * Stop dictation via Main process interaction (dictation shortcut).
+ * Stop dictation via Main process interaction (dictation shortcut). Waits
+ * for the real backend teardown to finish — see stopRecording's comment.
  */
 export async function stopDictation(
   page: Page,
   electronApp: ElectronApplication,
 ): Promise<void> {
   await toggleDictation(page, electronApp);
-  await wait(500);
+  await pollUntil(async () => !(await isSessionActive(page)), 25_000);
 }
 
 /**

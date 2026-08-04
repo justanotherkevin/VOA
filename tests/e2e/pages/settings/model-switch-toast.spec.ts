@@ -5,7 +5,11 @@
 import { test, expect } from '@e2e/fixtures';
 import { navigateToSettings, wait, pollUntil } from '@e2e/utils/common.helpers';
 import { triggerRecordingToggle } from '@e2e/utils/notification.helpers';
-import { toggleDictation } from '@e2e/utils/dictation/recording-actions';
+import {
+  toggleDictation,
+  isSessionActive,
+  getSessionType,
+} from '@e2e/utils/dictation/recording-actions';
 import { mockSwapResult } from '@e2e/utils/seed.helpers';
 import type { ElectronApplication, Page } from '@playwright/test';
 
@@ -49,20 +53,6 @@ async function getTranscriberEvents(
   page: any,
 ): Promise<{ ready: number; error: any[]; progress: number }> {
   return page.evaluate(() => (window as any).__transcriberEvents);
-}
-
-async function isSessionActive(page: any): Promise<boolean> {
-  return page.evaluate(() =>
-    (window as any).__e2eTestAPI.isTranscriberSessionActive(),
-  );
-}
-
-async function getSessionType(
-  page: any,
-): Promise<'meeting' | 'dictation' | null> {
-  return page.evaluate(() =>
-    (window as any).__e2eTestAPI.getTranscriberSessionType(),
-  );
 }
 
 // A recording session left active by an earlier spec (electronApp is
