@@ -65,3 +65,22 @@ npm-debug.log.*
 
 # Subagent-driven-development scratch workspace (ledgers, briefs, review packages)
 /.superpowers/
+# Added by code-review-graph
+.code-review-graph/
+
+# code-review-graph per-tool scaffolding (personal tool config, bakes in local absolute paths)
+/.codebuddy/
+/.cursor/
+/.gemini/
+/.kiro/
+/.qoder/
+/.mcp.json
+/.vscode/mcp.json
+/.cursorrules
+/.windsurfrules
+/AGENTS.md
+/CODEBUDDY.md
+/GEMINI.md
+/QODER.md
+/opencode.jsonc
+/.github/code-review-graph.instruction.md

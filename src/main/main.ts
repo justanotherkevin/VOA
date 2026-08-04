@@ -157,6 +157,13 @@ app
     // lazily on the first transcribe() call. Must not be awaited here —
     // window creation, tray, shortcuts, and IPC registration below must
     // proceed immediately regardless of how long the model takes to load.
+    //
+    // Under E2E_SKIP_PRELOAD, preloadCurrentModel() itself synthesizes a
+    // 'ready' status instead of loading the real model — see its comment.
+    // This call must still always happen (not be skipped here): the
+    // renderer's useRecordingFlow gates recording start on modelStatus
+    // reaching 'ready'/'error', so skipping this entirely would hang every
+    // recording-start action, not just avoid the real load.
     transcriberService
       .preloadCurrentModel((data) => {
         getMainWindow()?.webContents.send(CHANNELS.TRANSCRIBER.PROGRESS, data);

@@ -101,6 +101,15 @@ class TranscriberService {
     quantized: null,
   };
 
+  // E2E-only bypass for transcribeAudio's real Whisper call — see
+  // setE2eMockTranscript. null means "not mocked, run the real model".
+  private e2eMockTranscript: string | null = null;
+
+  // E2E-only bypass for applyModelPreferences's real model swap — see
+  // setE2eMockSwapResult. null means "not mocked, do a real swap".
+  private e2eMockSwapResult: { success: boolean; message?: string } | null =
+    null;
+
   constructor(transcriber: AsrTranscriber = whisperTranscriber) {
     this.transcriber = transcriber;
     this.currentAsrType = 'whisper';
@@ -376,6 +385,15 @@ class TranscriberService {
     quantized: boolean,
     onProgress?: (data: any) => void,
   ): Promise<void> {
+    // transcribe() calls this unconditionally before transcribeAudio() — if
+    // a mock transcript is armed, transcribeAudio() will never touch the
+    // real model anyway, so skip the real (potentially first-ever, i.e.
+    // actually slow) load here too and just report ready.
+    if (this.e2eMockTranscript !== null) {
+      this.setModelStatus({ status: 'ready', model: modelName, quantized });
+      return;
+    }
+
     const info = this.transcriber.getModelInfo();
     if (
       info.isInitialized &&
@@ -443,6 +461,21 @@ class TranscriberService {
       const { modelName, quantized, asrType } =
         this.resolveModelConfig(preferences);
 
+      if (this.e2eMockSwapResult !== null) {
+        const result = this.e2eMockSwapResult;
+        if (result.success) {
+          this.setModelStatus({ status: 'ready', model: modelName, quantized });
+        } else {
+          this.setModelStatus({
+            status: 'error',
+            model: modelName,
+            quantized,
+            message: result.message,
+          });
+        }
+        return result;
+      }
+
       if (asrType !== this.currentAsrType) {
         log(
           `[TranscriberService] ASR type changed, swapping from currentAsrType=${this.currentAsrType} to asrType=${asrType}`,
@@ -472,9 +505,28 @@ class TranscriberService {
   // to be called once at app startup as a fire-and-forget call, so the
   // model is already warm by the time the first recording starts instead of
   // loading lazily on the first transcribe() call.
+  //
+  // Under E2E_SKIP_PRELOAD, synthesizes a 'ready' status instead of actually
+  // loading the model — most E2E specs mock transcription output anyway
+  // (setE2eMockTranscript) and only need modelStatus to reach 'ready' so
+  // useRecordingFlow.ts's ensureReady() gate doesn't block recording start
+  // forever waiting on a real load that never happens. Deliberately does
+  // NOT touch applyModelPreferences itself — the real settings-driven model
+  // swap (Settings > Transcription) must always do a real load regardless
+  // of this flag; see model-switch-toast.spec.ts.
   async preloadCurrentModel(
     onProgress?: (data: any) => void,
   ): Promise<{ success: boolean; message?: string }> {
+    if (
+      process.env.E2E_TEST === 'true' &&
+      process.env.E2E_SKIP_PRELOAD === 'true'
+    ) {
+      const { modelName, quantized } = this.resolveModelConfig(
+        getModelPreferences(),
+      );
+      this.setModelStatus({ status: 'ready', model: modelName, quantized });
+      return { success: true };
+    }
     return this.applyModelPreferences(getModelPreferences(), onProgress);
   }
 
@@ -499,11 +551,34 @@ class TranscriberService {
     }
   }
 
+  // E2E-only: bypasses the real Whisper model so E2E specs that only assert
+  // on transcript-plumbing (renderer → IPC → store → UI), not on Whisper's
+  // actual output, don't need the model loaded at all. Pass null to restore
+  // real transcription. See transcriber.e2e.ts's e2e-mock-transcript handler.
+  setE2eMockTranscript(text: string | null): void {
+    this.e2eMockTranscript = text;
+  }
+
+  // E2E-only: bypasses applyModelPreferences's real model swap (used by both
+  // the settings "save model" handler and preloadCurrentModel) so specs that
+  // only assert on the resulting toast/broadcast/persisted-preference don't
+  // need a real onnxruntime load or (for a deliberately-invalid model name)
+  // a real network call to huggingface.co. Pass null to restore a real swap.
+  // See transcriber.e2e.ts's e2e-mock-swap-result handler.
+  setE2eMockSwapResult(
+    result: { success: boolean; message?: string } | null,
+  ): void {
+    this.e2eMockSwapResult = result;
+  }
+
   private async transcribeAudio(
     audioData: Float32Array,
     subtask: string,
     callbacks: TranscriberCallbacks,
   ): Promise<{ outputText: string; outputChunks: any[] } | null> {
+    if (this.e2eMockTranscript !== null) {
+      return { outputText: this.e2eMockTranscript, outputChunks: [] };
+    }
     try {
       const output = await this.transcriber.transcribe(audioData, subtask);
       if (output === null) {

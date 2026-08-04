@@ -5,7 +5,12 @@
 import { test, expect } from '@e2e/fixtures';
 import { navigateToSettings, wait, pollUntil } from '@e2e/utils/common.helpers';
 import { triggerRecordingToggle } from '@e2e/utils/notification.helpers';
-import { toggleDictation } from '@e2e/utils/dictation/recording-actions';
+import {
+  toggleDictation,
+  isSessionActive,
+  getSessionType,
+} from '@e2e/utils/dictation/recording-actions';
+import { mockSwapResult } from '@e2e/utils/seed.helpers';
 import type { ElectronApplication, Page } from '@playwright/test';
 
 // Sonner (src/renderer/components/sonner.tsx) renders each toast with
@@ -48,20 +53,6 @@ async function getTranscriberEvents(
   page: any,
 ): Promise<{ ready: number; error: any[]; progress: number }> {
   return page.evaluate(() => (window as any).__transcriberEvents);
-}
-
-async function isSessionActive(page: any): Promise<boolean> {
-  return page.evaluate(() =>
-    (window as any).__e2eTestAPI.isTranscriberSessionActive(),
-  );
-}
-
-async function getSessionType(
-  page: any,
-): Promise<'meeting' | 'dictation' | null> {
-  return page.evaluate(() =>
-    (window as any).__e2eTestAPI.getTranscriberSessionType(),
-  );
 }
 
 // A recording session left active by an earlier spec (electronApp is
@@ -112,27 +103,24 @@ test.describe('Settings — model switch toast lifecycle', () => {
     await navigateToSettings(page, 'Transcription');
     await ensureNoActiveRecordingSession(page, electronApp);
 
-    // Wait out the app-launch eager model preload (main.ts's
-    // preloadCurrentModel) before triggering our own failing update. Both
-    // features share one WhisperTranscriber job queue with no coordination
-    // between them, so if the preload's own transcriber:ready broadcast is
-    // still in flight when our update call is enqueued behind it, that
-    // unrelated ready event lands during this test and gets miscounted as
-    // belonging to our (failed) update.
-    const loadingToast = page.getByText(/Loading model/).first();
-    if (await loadingToast.isVisible().catch(() => false)) {
-      await expect(loadingToast).toBeHidden({ timeout: 20_000 });
-    }
-
     await installTranscriberEventCapture(page);
 
-    // Fails fast inside whisper-process.ts's pipeline() call with a normal
-    // thrown error rather than triggering the flaky BFCArena native crash
-    // (docs/whisper-onnxruntime-crash.md) — deterministic failure path.
+    // Mocked failure instead of a real model load: previously used a
+    // deliberately-invalid model name to trigger a real (but deterministic)
+    // failure inside whisper-process.ts's pipeline() call — that meant a
+    // real network round trip to huggingface.co to observe the 401. This
+    // test only asserts on the UI's reaction to a failed swap (error toast,
+    // no ready broadcast), which setE2eMockSwapResult exercises without any
+    // real model/network involvement — see its own comment in transcriber.ts.
+    await mockSwapResult(page, {
+      success: false,
+      message: 'mocked model load failure',
+    });
     const result = await updateModelPrefs(page, {
       selectedModel: 'Xenova/this-model-does-not-exist-e2e-test',
       quantized: false,
     });
+    await mockSwapResult(page, null);
 
     expect(result.success).toBe(false);
 
@@ -168,8 +156,16 @@ test.describe('Settings — model switch toast lifecycle', () => {
 
     await installTranscriberEventCapture(page);
 
+    // Mocked success instead of a real model load: this test only asserts
+    // on the UI's reaction to a successful swap (transcriber:ready
+    // broadcast, persisted preference) — settings.ts's handler persists the
+    // preference itself and sends transcriber:ready regardless of whether
+    // the underlying load was real, so neither assertion below depends on a
+    // real onnxruntime load happening. See setE2eMockSwapResult's comment.
+    await mockSwapResult(page, { success: true });
+
     // Toggles the .en suffix on the same (reliable) tiny model rather than
-    // switching model size, so this exercises a real swap deterministically.
+    // switching model size, so this exercises the swap deterministically.
     const result = await updateModelPrefs(page, {
       selectedModel: 'Xenova/whisper-tiny',
       quantized: false,
@@ -191,6 +187,8 @@ test.describe('Settings — model switch toast lifecycle', () => {
       quantized: before.quantized,
       multilingual: before.multilingual,
     });
+
+    await mockSwapResult(page, null);
   });
 });
 

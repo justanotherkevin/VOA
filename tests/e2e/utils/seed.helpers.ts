@@ -37,6 +37,33 @@ export async function mockEnrichMeeting(page: Page): Promise<void> {
   );
 }
 
+// Substitutes a canned transcript for the real Whisper output on the next
+// transcription — pass null to restore real transcription. Lets specs that
+// only assert on transcript plumbing (renderer → IPC → store → UI) skip
+// needing the model loaded. See transcriberService.setE2eMockTranscript.
+export async function mockTranscript(
+  page: Page,
+  text: string | null,
+): Promise<void> {
+  await page.evaluate(
+    async (t) => (window as any).__e2eTestAPI.mockTranscript(t),
+    text,
+  );
+}
+
+// Dictates the outcome (success/failure) of the next model swap without a
+// real onnxruntime load or network call — pass null to restore a real swap.
+// See transcriberService.setE2eMockSwapResult.
+export async function mockSwapResult(
+  page: Page,
+  result: { success: boolean; message?: string } | null,
+): Promise<void> {
+  await page.evaluate(
+    async (r) => (window as any).__e2eTestAPI.mockSwapResult(r),
+    result,
+  );
+}
+
 /**
  * Clear all meetings from the store via IPC.
  * The main process broadcasts a `meetings:cleared` event so `useMeetings` updates
