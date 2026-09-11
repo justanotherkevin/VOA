@@ -3,14 +3,12 @@ import path from 'path';
 import log from 'electron-log';
 import { preloadPath, resolveHtmlPath } from '@/main/util';
 import type { ActiveWindow } from '@/main/active-window';
+import {
+  NOTIFICATION_WIDTH,
+  NOTIFICATION_HEIGHT,
+} from '@/lib/notification-dimensions';
 
-// Constants for notification window
-// Wide enough for the dual system-audio + mic waveform in RecordingRow
-// (two 80px waveform columns + divider + title) alongside the plain-text
-// rows the other notification states use.
-const NOTIFICATION_WIDTH = 620;
-const NOTIFICATION_HEIGHT = 80;
-const NOTIFICATION_MARGIN = 60;
+const NOTIFICATION_MARGIN = 0;
 const FADE_DURATION_MS = 300;
 const FADE_BUFFER_MS = 50; // Buffer after fade animation to ensure UI is ready
 
@@ -74,9 +72,10 @@ export function createNotificationWindow(): BrowserWindow {
     y: NOTIFICATION_MARGIN,
     frame: false,
     transparent: true,
+    roundedCorners: false,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: true,
+    resizable: false,
     movable: false,
     minimizable: false,
     maximizable: false,
