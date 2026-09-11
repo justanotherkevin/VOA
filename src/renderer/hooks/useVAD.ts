@@ -13,14 +13,18 @@ import {
   isOverconstrainedError,
 } from '@/renderer/utils/MicConstraints';
 
-// Matches @ricky0123/vad-web's own default getUserMedia constraints —
-// duplicated here (rather than imported) since the library doesn't export
-// them, only its internal default getStream/resumeStream closures.
+// vad-web's own default getStream/resumeStream request echoCancellation, so
+// we override them (getVadMicStream below) to pass these instead. On macOS
+// echoCancellation: true moves the mic into the voice-processing audio unit,
+// which puts Core Audio into communication mode and ducks every other app's
+// audio (a playing YouTube video, music, etc.). useAudioRecorder disables the
+// same three flags for that reason; the VAD stream must match or the ducking
+// comes back the moment recording starts.
 const VAD_BASE_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   channelCount: 1,
-  echoCancellation: true,
-  autoGainControl: true,
-  noiseSuppression: true,
+  echoCancellation: false,
+  autoGainControl: false,
+  noiseSuppression: false,
 };
 
 async function getVadMicStream(): Promise<MediaStream> {

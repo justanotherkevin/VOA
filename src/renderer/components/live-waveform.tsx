@@ -260,19 +260,19 @@ export const LiveWaveform = ({
 
     const setupMicrophone = async () => {
       try {
+        // echoCancellation: true moves the mic into macOS's voice-processing
+        // audio unit, which puts Core Audio into communication mode and ducks
+        // every other app's audio. useAudioRecorder / useVAD disable these
+        // three flags for that reason; this meter stream must match.
+        const processingFlags = {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        };
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: deviceId
-            ? {
-                deviceId: { exact: deviceId },
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-              }
-            : {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-              },
+            ? { deviceId: { exact: deviceId }, ...processingFlags }
+            : { ...processingFlags },
         });
         streamRef.current = stream;
         onStreamReady?.(stream);
