@@ -10,8 +10,9 @@ const RESOURCES_PATH = app.isPackaged
 
 export function resolveHtmlPath(htmlFileName: string) {
   if (process.env.NODE_ENV === 'development') {
-    const port = process.env.VITE_DEV_SERVER_PORT || 5173;
-    const url = new URL(`http://localhost:${port}`);
+    // electron-vite sets this to the renderer dev server's actual root URL
+    // (port can shift off 5173 if something else already holds it).
+    const url = new URL(process.env.ELECTRON_RENDERER_URL || 'http://localhost:5173');
     url.pathname = htmlFileName;
     return url.href;
   }
