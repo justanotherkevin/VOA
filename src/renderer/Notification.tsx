@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/renderer/components/select';
+import { NOTIFICATION_HEIGHT } from '@/lib/notification-dimensions';
 
 const CALENDAR_MATCH_TIMEOUT_MS = 10_000;
 // Must match the .notification-flip-out / .notification-flip-in keyframe
@@ -42,31 +43,31 @@ function StateIcon({ state }: { state: NotificationData['state'] }) {
   switch (state) {
     case 'recording':
       return (
-        <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0 bg-red-400/20 text-red-400">
+        <div className="flex items-center justify-center w-icon-sm h-icon-sm rounded-full shrink-0 bg-red-400/20 text-red-400">
           <Mic className="w-3.5 h-3.5" />
         </div>
       );
     case 'loading':
       return (
-        <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0 bg-yellow-400/20 text-yellow-400">
+        <div className="flex items-center justify-center w-icon-sm h-icon-sm rounded-full shrink-0 bg-yellow-400/20 text-yellow-400">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         </div>
       );
     case 'recording-stopped':
       return (
-        <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0 bg-amber-400/20 text-amber-400">
+        <div className="flex items-center justify-center w-icon-sm h-icon-sm rounded-full shrink-0 bg-amber-400/20 text-amber-400">
           <Pause className="w-3 h-3" />
         </div>
       );
     case 'processing':
       return (
-        <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0 bg-indigo-400/20 text-indigo-400">
+        <div className="flex items-center justify-center w-icon-sm h-icon-sm rounded-full shrink-0 bg-indigo-400/20 text-indigo-400">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         </div>
       );
     case 'done':
       return (
-        <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0 bg-green-400/20 text-green-400">
+        <div className="flex items-center justify-center w-icon-sm h-icon-sm rounded-full shrink-0 bg-green-400/20 text-green-400">
           <Check className="w-3.5 h-3.5" />
         </div>
       );
@@ -74,7 +75,7 @@ function StateIcon({ state }: { state: NotificationData['state'] }) {
     case 'calendar-match':
     default:
       return (
-        <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full shrink-0 bg-indigo-400/20 text-indigo-400">
+        <div className="flex items-center justify-center w-icon-sm h-icon-sm rounded-full shrink-0 bg-indigo-400/20 text-indigo-400">
           <CalendarIcon className="w-3.5 h-3.5" />
         </div>
       );
@@ -100,22 +101,22 @@ function InMeetingRow({ notification }: { notification: NotificationData }) {
     >
       <StateIcon state="in-meeting" />
       <div className="flex flex-col min-w-0 flex-1 gap-px">
-        <span className="text-[12.5px] font-semibold truncate">
+        <span className="text-compact font-semibold truncate">
           {notification.title || 'Meeting'}
         </span>
-        <span className="text-[11px] text-white/55 truncate">
+        <span className="text-detail text-white/55 truncate">
           Meeting detected
         </span>
       </div>
       <button
         onClick={() => window.electronAPI.recordings.toggle()}
-        className="shrink-0 rounded-full bg-indigo-400 text-black text-[11.5px] font-medium px-3 py-1 cursor-pointer hover:bg-indigo-300 transition-colors"
+        className="shrink-0 rounded-full bg-indigo-400 text-black text-detail font-medium px-3 py-1 cursor-pointer hover:bg-indigo-300 transition-colors"
       >
         Start
       </button>
       <button
         onClick={handleDismiss}
-        className="shrink-0 rounded-full bg-white/10 text-white/70 text-[11.5px] px-2 py-1 cursor-pointer hover:bg-white/20 hover:text-white transition-colors"
+        className="shrink-0 rounded-full bg-white/10 text-white/70 text-detail px-2 py-1 cursor-pointer hover:bg-white/20 hover:text-white transition-colors"
       >
         Dismiss
       </button>
@@ -169,7 +170,7 @@ function CalendarMatchRow({
       data-testid="notification-calendar-match"
     >
       <StateIcon state="calendar-match" />
-      <span className="text-[12.5px] font-semibold shrink-0 whitespace-nowrap">
+      <span className="text-compact font-semibold shrink-0 whitespace-nowrap">
         Which meeting?
       </span>
       <Select
@@ -194,8 +195,6 @@ function CalendarMatchRow({
     </div>
   );
 }
-
-const WAVEFORM_COLUMN_WIDTH = 80;
 
 // Displays the "System" waveform by listening for levels the main window's
 // real system-audio capture forwards over IPC (see audioCapture.ts /
@@ -236,17 +235,14 @@ function RecordingRow({ notification }: { notification: NotificationData }) {
       data-testid={`notification-${notification.state}`}
     >
       <StateIcon state="recording" />
-      <span className="text-[12.5px] font-semibold truncate shrink-0 max-w-[160px]">
+      <span className="text-compact font-semibold truncate shrink-0 max-w-[160px]">
         {notification.title || 'Recording'}
       </span>
       <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
         {dual && (
           <>
-            <div
-              className="flex flex-col items-center gap-1 shrink-0"
-              style={{ width: WAVEFORM_COLUMN_WIDTH }}
-            >
-              <span className="text-[9px] font-medium uppercase tracking-wide text-white/40">
+            <div className="flex flex-col items-center gap-1 shrink-0 w-notif-waveform">
+              <span className="text-caption font-medium uppercase tracking-wide text-white/40">
                 System
               </span>
               <LiveWaveform
@@ -265,12 +261,9 @@ function RecordingRow({ notification }: { notification: NotificationData }) {
             <div className="w-px self-stretch bg-white/12" />
           </>
         )}
-        <div
-          className="flex flex-col items-center gap-1 shrink-0"
-          style={{ width: WAVEFORM_COLUMN_WIDTH }}
-        >
+        <div className="flex flex-col items-center gap-1 shrink-0 w-notif-waveform">
           {dual && (
-            <span className="text-[9px] font-medium uppercase tracking-wide text-white/40">
+            <span className="text-caption font-medium uppercase tracking-wide text-white/40">
               Mic
             </span>
           )}
@@ -299,15 +292,15 @@ function DefaultRow({ notification }: { notification: NotificationData }) {
     >
       <StateIcon state={notification.state} />
       <div className="flex flex-col min-w-0 flex-1 gap-px">
-        <span className="text-[12.5px] font-semibold truncate">
+        <span className="text-compact font-semibold truncate">
           {notification.title || notification.state}
         </span>
-        <span className="text-[11px] text-white/55 truncate">
+        <span className="text-detail text-white/55 truncate">
           {notification.message}
         </span>
       </div>
       {notification.activeWindow && (
-        <div className="shrink-0 flex items-center rounded-full bg-white/10 px-2 py-1 text-[10.5px] text-white/75">
+        <div className="shrink-0 flex items-center rounded-full bg-white/10 px-2 py-1 text-detail text-white/75">
           {notification.activeWindow.owner.name}
         </div>
       )}
@@ -397,7 +390,10 @@ function NotificationOverlay() {
       className={`relative ${isVisible ? 'block' : 'hidden'}`}
       data-testid="notification-window"
     >
-      <div className="notification-pill">
+      <div
+        className="notification-pill"
+        style={{ minHeight: NOTIFICATION_HEIGHT }}
+      >
         <div className={`notification-flip-wrap ${flipClass}`}>
           {renderRow(displayed)}
         </div>

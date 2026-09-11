@@ -199,6 +199,26 @@
   --shadow-blur: var(--shadow-blur);
   --shadow-opacity: var(--shadow-opacity);
   --color-shadow-color: var(--shadow-color);
+
+  /* Micro type scale — for compact chrome (pills, badges, captions) below
+     Tailwind's default text-xs (12px). Three sizes, one per semantic role —
+     see docs/design-guide.md. Do not add a fourth without a role it alone
+     serves; collapse into the nearest existing size otherwise. */
+  --text-compact: 0.8125rem; /* 13px — primary text in compact UI */
+  --text-detail: 0.6875rem; /* 11px — secondary text: subtitle/button/badge */
+  --text-caption: 0.625rem; /* 10px — tracked, uppercase micro-labels only */
+
+  /* Small circular status/icon badge, reused anywhere a compact icon
+     appears (not notification-specific). */
+  --spacing-icon-sm: 1.875rem; /* 30px */
+
+  /* Notification pill (Notification.tsx) — kept prefixed because these are
+     sized to this specific component, not general-purpose. See
+     src/lib/notification-dimensions.ts for the window-level width/height
+     these are nested inside. */
+  --radius-notif-pill: 1.25rem; /* 20px */
+  --spacing-notif-waveform: 5rem; /* 80px */
+  --spacing-notif-pill-min-width: 27.5rem; /* 440px */
 }
 
 @layer base {
@@ -253,10 +273,10 @@
      shell itself is created once and never remounts — only the row inside
      .notification-flip-wrap swaps between states. */
   .notification-pill {
-    @apply flex items-center rounded-[20px] border border-white/10 bg-neutral-800/55 px-4 py-2.5 text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)];
+    @apply flex items-center rounded-notif-pill border border-white/10 bg-neutral-800/55 px-4 py-2.5 text-white;
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    min-width: 440px;
+    min-width: var(--spacing-notif-pill-min-width);
     /* Lives on the shell, not the flip-wrap, so the wrap's own rotateX
        transform (below) gets real perspective foreshortening. */
     perspective: 900px;

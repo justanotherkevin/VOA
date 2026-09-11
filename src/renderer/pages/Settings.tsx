@@ -6,6 +6,7 @@ import { usePermissions } from '@/renderer/hooks/usePermissions';
 import { useAudioDevices } from '@/renderer/hooks/useAudioDevices';
 import { useSettingsNavContext } from '@/renderer/hooks/useSettingsNavContext';
 import { useUIPreferencesContext } from '@/renderer/hooks/useUIPreferencesContext';
+import { applyOptimisticPrefUpdate } from '@/renderer/hooks/useOptimisticPref';
 import { RecordingPane } from './settings/RecordingPane';
 import { AudioPane } from './settings/AudioPane';
 import { GeneralPane } from './settings/GeneralPane';
@@ -189,30 +190,61 @@ export default function Settings() {
   }, []);
 
   async function updateRecordingPref(key: string, value: unknown) {
-    const update = { [key]: value };
-    if (key === 'autoRecordMode') setAutoRecordMode(value as any);
-    await window.electronAPI.settings.recording.update(update);
+    // autoRecordMode is the only recording pref mirrored in local state
+    // (watchedApps/whileRecording above aren't wired to the backend yet), so
+    // it's the only one that can be optimistically reverted on failure.
+    if (key === 'autoRecordMode') {
+      await applyOptimisticPrefUpdate(
+        autoRecordMode,
+        setAutoRecordMode as (value: unknown) => void,
+        value,
+        () => window.electronAPI.settings.recording.update({ [key]: value }),
+        'Failed to update recording preference',
+      );
+      return;
+    }
+    const result = await window.electronAPI.settings.recording.update({
+      [key]: value,
+    });
+    if (result && (result as { success?: boolean }).success === false) {
+      toast.error(
+        (result as { message?: string }).message ||
+          'Failed to update recording preference',
+      );
+    }
   }
 
   async function updateAppPref(key: string, value: unknown) {
-    const newPrefs = { ...appPrefs, [key]: value };
-    setAppPrefs(newPrefs);
-    await window.electronAPI.settings.app.update({ [key]: value });
+    await applyOptimisticPrefUpdate(
+      appPrefs,
+      setAppPrefs,
+      { ...appPrefs, [key]: value },
+      () => window.electronAPI.settings.app.update({ [key]: value }),
+      'Failed to update preference',
+    );
   }
 
   async function updateAudioPref(key: string, value: unknown) {
-    const newPrefs = { ...audioPrefs, [key]: value };
-    setAudioPrefs(newPrefs);
-    await window.electronAPI.settings.audio.update({ [key]: value });
+    await applyOptimisticPrefUpdate(
+      audioPrefs,
+      setAudioPrefs,
+      { ...audioPrefs, [key]: value },
+      () => window.electronAPI.settings.audio.update({ [key]: value }),
+      'Failed to update audio preference',
+    );
   }
 
   async function updatePastePref(
     key: 'enabled' | 'allowedApps',
     value: unknown,
   ) {
-    const newPrefs = { ...pastePrefs, [key]: value };
-    setPastePrefs(newPrefs);
-    await window.electronAPI.settings.paste.update({ [key]: value });
+    await applyOptimisticPrefUpdate(
+      pastePrefs,
+      setPastePrefs,
+      { ...pastePrefs, [key]: value },
+      () => window.electronAPI.settings.paste.update({ [key]: value }),
+      'Failed to update paste preference',
+    );
   }
 
   async function refreshRunningApps() {
@@ -220,23 +252,17 @@ export default function Settings() {
     if (apps) setRunningApps(apps);
   }
 
+  // The "model-load" toast (fed by transcriber:progress broadcasts) is
+  // resolved separately via the transcriber:error broadcast a failed swap
+  // also triggers — see ipc/settings.ts.
   async function updateModelPref(key: string, value: unknown) {
-    const previousPrefs = modelPrefs;
-    const newPrefs = { ...modelPrefs, [key]: value };
-    setModelPrefs(newPrefs as any);
-
-    const result = await window.electronAPI.settings.model.update({
-      [key]: value,
-    });
-    if (!result?.success) {
-      // Revert the optimistic update — the backend rejected the change
-      // (e.g. a model swap while recording, or a failed model load). The
-      // "model-load" toast (fed by transcriber:progress broadcasts) is
-      // resolved separately via the transcriber:error broadcast this same
-      // failure triggers — see ipc/settings.ts.
-      setModelPrefs(previousPrefs);
-      toast.error(result?.message || 'Failed to update model preference');
-    }
+    await applyOptimisticPrefUpdate(
+      modelPrefs,
+      setModelPrefs as (value: unknown) => void,
+      { ...modelPrefs, [key]: value },
+      () => window.electronAPI.settings.model.update({ [key]: value }),
+      'Failed to update model preference',
+    );
   }
 
   function isModelDownloaded(modelPath: string) {
@@ -305,13 +331,13 @@ export default function Settings() {
   async function handleSelectProvider(
     provider: 'lmstudio' | 'ollama' | 'builtin',
   ) {
-    const previous = summarizerProvider;
-    setSummarizerProvider(provider);
-    const result = await window.electronAPI.summarizerProvider.set(provider);
-    if (!result?.success) {
-      setSummarizerProvider(previous);
-      toast.error(result?.message || 'Failed to update AI provider');
-    }
+    await applyOptimisticPrefUpdate(
+      summarizerProvider,
+      setSummarizerProvider,
+      provider,
+      () => window.electronAPI.summarizerProvider.set(provider),
+      'Failed to update AI provider',
+    );
   }
 
   async function handleDownloadBuiltin() {
