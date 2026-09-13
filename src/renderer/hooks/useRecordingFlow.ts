@@ -94,56 +94,66 @@ export function useRecordingFlow({
     showMeetingEnded,
   } = useNotificationFlow();
 
-  const handleToggleCapture = useCallback(
+  // Only the shortcut that matches the active session's type may stop it —
+  // otherwise the other shortcut mid-session would stop the wrong capture
+  // (e.g. dictation shortcut cutting off an in-progress meeting recording).
+  const stopCaptureSession = useCallback(
+    (sessionOptions?: { forceType?: 'dictation' }) => {
+      const incomingIsDictation = sessionOptions?.forceType === 'dictation';
+      if (incomingIsDictation !== isDictationSessionRef.current) {
+        const activeLabel = isDictationSessionRef.current
+          ? 'dictation'
+          : 'meeting';
+        toast.info(
+          `Use the ${activeLabel} shortcut to stop the active ${activeLabel} session.`,
+        );
+        return;
+      }
+      const label = isDictationSessionRef.current ? 'Dictation' : 'Recording';
+      setIsRecordingActive(false);
+      stopRecording();
+      // Dictation sessions never start system audio (see below), so never
+      // stop it either. Meeting sessions always start it when supported.
+      if (!isDictationSessionRef.current) {
+        stopSystemRecording();
+      }
+      window.electronAPI.recordingDebugLog.recordEvent({
+        type: 'session_stop',
+        timestamp: Date.now(),
+        sessionType: isDictationSessionRef.current ? 'dictation' : 'meeting',
+      });
+      showRecordingStopped(label);
+      showProcessing();
+      setIsFinalizing(true);
+    },
+    [stopRecording, stopSystemRecording, showRecordingStopped, showProcessing],
+  );
+
+  const startCaptureSession = useCallback(
     async (sessionOptions?: { forceType?: 'dictation' }) => {
-      if (isRecording) {
-        // Only the shortcut that matches the active session's type may stop it —
-        // otherwise the other shortcut mid-session would stop the wrong capture
-        // (e.g. dictation shortcut cutting off an in-progress meeting recording).
-        const incomingIsDictation = sessionOptions?.forceType === 'dictation';
-        if (incomingIsDictation !== isDictationSessionRef.current) {
-          const activeLabel = isDictationSessionRef.current
-            ? 'dictation'
-            : 'meeting';
-          toast.info(
-            `Use the ${activeLabel} shortcut to stop the active ${activeLabel} session.`,
-          );
-          return;
-        }
-        const label = isDictationSessionRef.current ? 'Dictation' : 'Recording';
-        setIsRecordingActive(false);
-        stopRecording();
-        // Dictation sessions never start system audio (see below), so never
-        // stop it either. Meeting sessions always start it when supported.
-        if (!isDictationSessionRef.current) {
-          stopSystemRecording();
-        }
-        showRecordingStopped(label);
-        showProcessing();
-        setIsFinalizing(true);
-      } else {
-        const isDictation = sessionOptions?.forceType === 'dictation';
-        // Meeting recordings require system audio (per product decision —
-        // mic-only meeting capture isn't useful) so unsupported machines
-        // block the whole session rather than silently degrading.
-        if (!isDictation && !systemAudioSupportedRef.current) {
-          toast.info(
-            "This machine isn't supported for meeting recording (requires macOS 14 Sonoma or later). Dictation still works.",
-          );
-          return;
-        }
-        isDictationSessionRef.current = isDictation;
-        const sessionStartedAt = Date.now();
-        hasActiveSessionRef.current = true;
-        setIsRecordingActive(true);
-        const label = isDictation ? 'Dictation' : 'Recording';
-        // Model may already be warm (no visible loading flash) — only
-        // show the loading notification if it isn't. Audio capture below
-        // starts immediately either way and is never gated on this.
-        const modelAlreadyReady = modelStatus.status === 'ready';
-        if (!modelAlreadyReady) {
-          showLoading(label);
-        }
+      const isDictation = sessionOptions?.forceType === 'dictation';
+      // Meeting recordings require system audio (per product decision —
+      // mic-only meeting capture isn't useful) so unsupported machines
+      // block the whole session rather than silently degrading.
+      if (!isDictation && !systemAudioSupportedRef.current) {
+        toast.info(
+          "This machine isn't supported for meeting recording (requires macOS 14 Sonoma or later). Dictation still works.",
+        );
+        return;
+      }
+      isDictationSessionRef.current = isDictation;
+      const sessionStartedAt = Date.now();
+      hasActiveSessionRef.current = true;
+      setIsRecordingActive(true);
+      const label = isDictation ? 'Dictation' : 'Recording';
+      // Model may already be warm (no visible loading flash) — only
+      // show the loading notification if it isn't. Audio capture below
+      // starts immediately either way and is never gated on this.
+      const modelAlreadyReady = modelStatus.status === 'ready';
+      if (!modelAlreadyReady) {
+        showLoading(label);
+      }
+      try {
         await startRecording();
         // Dictation is mic-only by design — never pull in system audio.
         // Capturing (near-)silent system audio here is what produced
@@ -158,25 +168,54 @@ export function useRecordingFlow({
         if (!modelAlreadyReady) {
           await modelStatus.ensureReady();
         }
-        showRecordingStart(label, {
+        const uiState = {
           isMeeting: !isDictation,
           systemAudioEnabled: !isDictation && systemAudioSupportedRef.current,
+        };
+        showRecordingStart(label, uiState);
+        window.electronAPI.recordingDebugLog.recordEvent({
+          type: 'session_start',
+          timestamp: sessionStartedAt,
+          sessionType: isDictation ? 'dictation' : 'meeting',
+          initialState: {
+            systemAudioSupported: systemAudioSupportedRef.current,
+            modelStatus: modelStatus.status,
+          },
+          uiState,
         });
+      } catch (error) {
+        window.electronAPI.recordingDebugLog.recordEvent({
+          type: 'session_error',
+          timestamp: Date.now(),
+          stage: 'session_start',
+          message: error instanceof Error ? error.message : String(error),
+        });
+        toast.error(`Failed to start ${label.toLowerCase()}`);
+        hasActiveSessionRef.current = false;
+        setIsRecordingActive(false);
+        showIdle();
       }
     },
     [
-      isRecording,
       startRecording,
-      stopRecording,
       startSystemRecording,
-      stopSystemRecording,
       showRecordingStart,
       showLoading,
-      showRecordingStopped,
-      showProcessing,
+      showIdle,
       modelStatus.status,
       modelStatus.ensureReady,
     ],
+  );
+
+  const handleToggleCapture = useCallback(
+    async (sessionOptions?: { forceType?: 'dictation' }) => {
+      if (isRecording) {
+        stopCaptureSession(sessionOptions);
+      } else {
+        await startCaptureSession(sessionOptions);
+      }
+    },
+    [isRecording, stopCaptureSession, startCaptureSession],
   );
 
   const handleToggleRecording = useCallback(
@@ -265,6 +304,12 @@ export function useRecordingFlow({
         });
       } catch (error) {
         showError('Failed to process audio');
+        window.electronAPI.recordingDebugLog.recordEvent({
+          type: 'session_error',
+          timestamp: Date.now(),
+          stage: 'recording_complete',
+          message: error instanceof Error ? error.message : String(error),
+        });
       }
     },
     [showError],
@@ -311,7 +356,26 @@ export function useRecordingFlow({
       // the new session.
       let cancelled = false;
       (async () => {
-        await window.electronAPI.transcriber.endSession(Date.now());
+        try {
+          await window.electronAPI.transcriber.endSession(Date.now());
+        } catch (error) {
+          if (cancelled) return;
+          window.electronAPI.recordingDebugLog.recordEvent({
+            type: 'session_error',
+            timestamp: Date.now(),
+            stage: 'end_session',
+            message: error instanceof Error ? error.message : String(error),
+          });
+          toast.error('Failed to save recording session');
+          // Still recover the UI rather than leaving the pill stuck in
+          // "processing" forever — see the endSession-error flag raised
+          // during the recording-debug-log feature review.
+          cleanup();
+          showIdle();
+          setIsRecordingActive(false);
+          setIsFinalizing(false);
+          return;
+        }
         if (cancelled) return;
         showDone();
 

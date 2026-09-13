@@ -99,6 +99,9 @@ export const CHANNELS = {
   SYSTEM: {
     LIST_RUNNING_APPS: 'system:list-running-apps',
   },
+  RECORDING_DEBUG_LOG: {
+    RECORD_EVENT: 'recording-debug-log:record-event',
+  },
   LM_STUDIO: {
     GET: 'lmStudio:get',
     SET: 'lmStudio:set',

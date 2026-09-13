@@ -260,6 +260,12 @@ const electronAPI = {
       ipcRenderer.invoke(CHANNELS.SYSTEM_AUDIO.CAPABILITY),
   },
 
+  // ── Recording debug log (dev-only local troubleshooting trail) ───────────
+  recordingDebugLog: {
+    recordEvent: (payload: unknown) =>
+      ipcRenderer.invoke(CHANNELS.RECORDING_DEBUG_LOG.RECORD_EVENT, payload),
+  },
+
   // ── Transcript History (legacy compat) ────────────────────────────────────
   transcriptHistory: {
     get: () => ipcRenderer.invoke(CHANNELS.TRANSCRIPT_HISTORY.GET),
