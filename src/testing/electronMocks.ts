@@ -289,6 +289,11 @@ export function attachGlobalElectronMock() {
       getCapability: vi.fn(async () => true),
     },
 
+    // ── Recording debug log ────────────────────────────────────────────────────
+    recordingDebugLog: {
+      recordEvent: vi.fn(async () => {}),
+    },
+
     // ── Transcript History ────────────────────────────────────────────────────
     transcriptHistory: {
       get: vi.fn(async () => []),

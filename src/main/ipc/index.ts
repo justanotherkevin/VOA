@@ -8,6 +8,7 @@ import { registerShortcutHandlers } from './shortcuts';
 import { registerPermissionsHandlers } from './permissions';
 import { registerMeetingDetectorHandlers } from './meeting-detector';
 import { registerCalendarHandlers } from './calendar';
+import { registerRecordingDebugLogHandlers } from './recording-debug-log';
 
 export function registerIpcHandlers(deps: {
   permissionsService: PermissionsService;
@@ -23,4 +24,5 @@ export function registerIpcHandlers(deps: {
   registerPermissionsHandlers(deps.permissionsService);
   registerMeetingDetectorHandlers();
   registerCalendarHandlers();
+  registerRecordingDebugLogHandlers();
 }
