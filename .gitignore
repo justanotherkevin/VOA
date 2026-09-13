@@ -65,8 +65,8 @@ npm-debug.log.*
 
 # Subagent-driven-development scratch workspace (ledgers, briefs, review packages)
 /.superpowers/
-# Local-only recording-flow debug trail (see src/main/utils/recording-debug-log.ts)
-/.recording-logs/
+# Local-only debug logs (see src/main/utils/recording-debug-log.ts for the recording-flow trail under here)
+/.logs/
 # Added by code-review-graph
 .code-review-graph/
 

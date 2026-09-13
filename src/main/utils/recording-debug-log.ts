@@ -9,7 +9,7 @@ import { log } from 'electron-log';
 // chasing a bug in useRecordingFlow.ts (e.g. "why did the notification show
 // mic-only for a meeting session?"). Never runs in a packaged build — there
 // is no repo root to write into, and this is a local dev aid only.
-const LOG_DIR = path.join(app.getAppPath(), '.recording-logs');
+const LOG_DIR = path.join(app.getAppPath(), '.logs', '.recording-logs');
 const LOG_FILE = path.join(LOG_DIR, 'sessions.jsonl');
 
 export type RecordingDebugEvent =
