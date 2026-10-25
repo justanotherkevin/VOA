@@ -8,6 +8,13 @@ All notable changes to VOA are documented here.
 
 ### Added
 
+- **The notification window now shows each transcribed segment live while a dictation is recording, so the user can see that speech is being converted.** `TranscriberService` sends each segment over a new `notification:dictation-chunk` IPC channel and clears the list at the start of every session over `notification:dictation-reset`, and `Notification.tsx` renders the list above the pill.
+  - The notification window grows to `NOTIFICATION_DICTATION_WINDOW_HEIGHT` only while a dictation records, and shrinks back to `NOTIFICATION_HEIGHT` for every other state, so the transparent extra space never blocks clicks on apps underneath, e.g. during the clickable meeting detected prompt.
+  - Tests: `notification.test.tsx`, `transcriber-integration.test.ts`, and a new E2E spec, `notification-window-height.spec.ts`, which checks the real window height for a dictation and a meeting.
+
+- **A new "Copy dictated text to clipboard" setting in Settings, Transcription copies the full transcript when a dictation ends, and it is on by default.** Unlike paste, it is not gated by the allowed app list. It is stored as `copyToClipboard` on `PastePreferences` and validated on write.
+  - `getPastePreferences()` now spreads the stored object over `DEFAULT_PASTE_PREFERENCES`, because electron-store only fills in missing top level keys. Without that, users who saved paste settings before this field existed would read it as undefined and never get the copy. Covered by a new `src/main/store/__tests__/preferences.test.ts`.
+
 - **A local, dev-only debug log now tracks each recording session's start/stop and any errors, to help diagnose notification/waveform bugs without touching the transcript store.** `src/main/utils/recording-debug-log.ts`'s `recordDebugEvent()` appends JSON Lines to a gitignored `.recording-logs/sessions.jsonl` at the repo root (no-ops in a packaged build), reached from the renderer via a new `recording-debug-log:record-event` IPC channel and `window.electronAPI.recordingDebugLog.recordEvent()`.
   - `useRecordingFlow.ts`'s `handleToggleCapture` was split into `startCaptureSession`/`stopCaptureSession` helpers, each logging a `session_start`/`session_stop` event (including the notification's `isMeeting`/`systemAudioEnabled` flags) and a `session_error` event on failure.
   - Fixed two previously-silent failure paths as part of this: a thrown error during session start (e.g. `startRecording`/`startSession`/`ensureReady`) now shows a toast and resets recording state instead of an unhandled rejection with the pill stuck on "loading"; a failed `transcriber.endSession()` now shows a toast and recovers the UI instead of leaving the pill stuck on "processing" forever.
