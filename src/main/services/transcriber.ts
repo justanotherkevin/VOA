@@ -12,7 +12,11 @@ import {
 } from '@/main/store';
 import { getActiveWindow } from '@/main/active-window';
 import { stripNonSpeechTags } from '@/main/pipeline/text-cleaner';
-import { pasteTextToActiveWindow, shouldPasteText } from '@/main/util';
+import {
+  pasteTextToActiveWindow,
+  copyTextToClipboard,
+  shouldPasteText,
+} from '@/main/util';
 import { getMainWindow } from '@/main/state/volatile';
 import { CHANNELS } from '@/lib/ipc-channels';
 import { log } from 'electron-log';
@@ -24,7 +28,11 @@ import {
   type AsrType,
 } from '@/main/pipeline/asr-factory';
 import type { Recording } from '@/main/store';
-import { updateNotificationState } from '@/main/notification-window';
+import {
+  updateNotificationState,
+  sendDictationChunk,
+  resetDictationChunks,
+} from '@/main/notification-window';
 
 export type ModelLoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -125,6 +133,7 @@ class TranscriberService {
     this.sessionSegments = [];
     this.sessionChunks = [];
     this.sessionSources = new Set();
+    resetDictationChunks();
 
     this.calendarMatches = [];
     this.calendarMatchDecision = 'pending';
@@ -258,6 +267,16 @@ class TranscriberService {
     return prefs.allowedApps.includes(activeWindow.owner.name);
   }
 
+  // Unlike shouldPasteForSession, clipboard copy isn't gated by the
+  // allow-list/active-window check — it's a plain "always copy dictated text"
+  // preference, defaulting on.
+  private shouldCopyToClipboardForSession(
+    type: 'meeting' | 'dictation',
+  ): boolean {
+    if (type !== 'dictation') return false;
+    return getPastePreferences().copyToClipboard;
+  }
+
   async endSession(
     endedAt: number,
     callbacks: TranscriberCallbacks,
@@ -313,6 +332,12 @@ class TranscriberService {
     else if (sources.has('system')) audioSource = 'system';
 
     if (fullText) {
+      if (this.shouldCopyToClipboardForSession(type)) {
+        log(
+          `[TranscriberService] Copying combined dictation transcript (${fullText.length} chars) to clipboard on session end`,
+        );
+        copyTextToClipboard(fullText);
+      }
       if (await this.shouldPasteForSession(type)) {
         log(
           `[TranscriberService] Pasting combined dictation transcript (${fullText.length} chars) on session end`,
@@ -722,6 +747,12 @@ class TranscriberService {
     // transcribing when the shortcut's stop press ended the session), so honor
     // paste eligibility here too — otherwise dictated text silently never
     // reaches the clipboard/active window at all.
+    if (this.shouldCopyToClipboardForSession(meta.type)) {
+      log(
+        `[TranscriberService] Copying late-recovered dictation transcript (${outputText.length} chars) to clipboard`,
+      );
+      copyTextToClipboard(outputText);
+    }
     if (await this.shouldPasteForSession(meta.type)) {
       log(
         `[TranscriberService] Pasting late-recovered dictation transcript (${outputText.length} chars)`,
@@ -845,6 +876,12 @@ class TranscriberService {
         log(
           `[TranscriberService] Segment appended to session buffer (${this.sessionSegments.length} segments so far, source: ${source})`,
         );
+        // Live visual confirmation that speech is actually being converted —
+        // dictation only, since the notification pill's transcript list is
+        // gated the same way on the renderer side (Notification.tsx).
+        if (this.sessionType === 'dictation') {
+          sendDictationChunk(outputText);
+        }
       } else {
         log(
           `[TranscriberService] Segment discarded — no speech after cleaning (source: ${source})`,

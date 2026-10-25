@@ -82,7 +82,8 @@ export default function Settings() {
   const [pastePrefs, setPastePrefs] = useState<{
     enabled: boolean;
     allowedApps: string[];
-  }>({ enabled: false, allowedApps: [] });
+    copyToClipboard: boolean;
+  }>({ enabled: false, allowedApps: [], copyToClipboard: true });
   const [runningApps, setRunningApps] = useState<string[]>([]);
 
   const [summarizerProvider, setSummarizerProvider] = useState<
@@ -235,7 +236,7 @@ export default function Settings() {
   }
 
   async function updatePastePref(
-    key: 'enabled' | 'allowedApps',
+    key: 'enabled' | 'allowedApps' | 'copyToClipboard',
     value: unknown,
   ) {
     await applyOptimisticPrefUpdate(

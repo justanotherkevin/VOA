@@ -14,6 +14,8 @@ import {
   triggerNotificationShow,
   triggerNotificationHide,
   triggerCalendarMatch,
+  triggerDictationChunk,
+  triggerDictationReset,
 } from '@/testing/electronMocks';
 import Notification from '@/renderer/Notification';
 
@@ -295,6 +297,99 @@ describe('Notification Component', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+  });
+
+  describe('dictation live transcript list', () => {
+    it('appends chunks in order and shows nothing before the first chunk arrives', async () => {
+      render(<Notification />);
+
+      act(() => {
+        triggerNotificationShow({
+          title: 'Dictation Started',
+          message: 'Speak now...',
+          isMeeting: false,
+        });
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId('notification-recording'),
+        ).toBeInTheDocument();
+      });
+      expect(
+        screen.queryByTestId('notification-dictation-transcript'),
+      ).not.toBeInTheDocument();
+
+      act(() => {
+        triggerDictationChunk('first chunk');
+      });
+      act(() => {
+        triggerDictationChunk('second chunk');
+      });
+
+      await waitFor(() => {
+        const list = screen.getByTestId('notification-dictation-transcript');
+        expect(within(list).getByText('first chunk')).toBeInTheDocument();
+        expect(within(list).getByText('second chunk')).toBeInTheDocument();
+      });
+    });
+
+    it('does not show the transcript list for a meeting recording', async () => {
+      render(<Notification />);
+
+      act(() => {
+        triggerNotificationShow({
+          title: 'Recording Started',
+          message: 'Speak now...',
+          isMeeting: true,
+        });
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId('notification-recording'),
+        ).toBeInTheDocument();
+      });
+
+      act(() => {
+        triggerDictationChunk('should not render for meetings');
+      });
+
+      expect(
+        screen.queryByTestId('notification-dictation-transcript'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('clears accumulated chunks on a dictation-reset event', async () => {
+      render(<Notification />);
+
+      act(() => {
+        triggerNotificationShow({
+          title: 'Dictation Started',
+          message: 'Speak now...',
+          isMeeting: false,
+        });
+      });
+      act(() => {
+        triggerDictationChunk('stale chunk from previous session');
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId('notification-dictation-transcript'),
+        ).toBeInTheDocument();
+      });
+
+      act(() => {
+        triggerDictationReset();
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId('notification-dictation-transcript'),
+        ).not.toBeInTheDocument();
+      });
     });
   });
 });

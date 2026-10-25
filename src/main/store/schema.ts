@@ -7,6 +7,12 @@ export interface MeetingActionItem {
   done: boolean;
 }
 
+// Kind specific data (Meeting or Dictation) stays on the Recording itself,
+// not in separate per kind records that point back to it by ID. Recordings
+// live in one electron-store JSON file with no joins or transactions, so
+// separate records would need hand written code to keep them in step.
+// Revisit if storage moves to a real database or one Recording needs more
+// than one kind.
 export interface Recording {
   id: string;
   title: string;
@@ -103,6 +109,7 @@ export interface StoredCalendarPreferences {
 export interface PastePreferences {
   enabled: boolean;
   allowedApps: string[];
+  copyToClipboard: boolean;
 }
 
 export interface StoreSchema {
@@ -179,4 +186,5 @@ export const DEFAULT_STORED_CALENDAR_PREFERENCES: StoredCalendarPreferences = {
 export const DEFAULT_PASTE_PREFERENCES: PastePreferences = {
   enabled: false,
   allowedApps: [],
+  copyToClipboard: true,
 };

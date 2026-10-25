@@ -287,6 +287,24 @@
     backface-visibility: hidden;
   }
 
+  /* Dictation-only live transcript list (Notification.tsx), floated above
+     the pill within the notification window's extra vertical space (see
+     NOTIFICATION_DICTATION_WINDOW_HEIGHT). column-reverse + append-in-chronological-
+     order is a pure-CSS "always scrolled to newest" trick: the container's
+     default scroll position (0) lands on the last DOM child once the axis
+     is reversed, so no manual scrollIntoView/scrollTop bookkeeping is
+     needed as chunks arrive. */
+  .notification-dictation-list {
+    @apply absolute left-0 bottom-1/2 flex w-full flex-col-reverse gap-1.5 overflow-y-auto rounded-notif-pill border border-white/10 bg-neutral-900/70 px-3 py-2 text-white;
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    max-height: 132px;
+  }
+
+  .notification-dictation-chunk {
+    @apply text-detail leading-snug text-white/80;
+  }
+
   .notification-flip-out {
     animation: notification-flip-out 200ms cubic-bezier(0.55, 0, 1, 0.45)
       forwards;

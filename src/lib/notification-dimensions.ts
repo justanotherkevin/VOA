@@ -13,3 +13,10 @@ export const NOTIFICATION_WIDTH = 620;
 // window's native bounds and the DOM content height match instead of the
 // pill shrink-wrapping to a smaller, independently-drifting value.
 export const NOTIFICATION_HEIGHT = 80;
+
+// BrowserWindow height used only while a Dictation is recording, so the live
+// transcript list has room next to the pill. Electron clips content to the
+// window bounds regardless of CSS overflow. Every other state uses
+// NOTIFICATION_HEIGHT, so the transparent extra space never blocks clicks on
+// the apps underneath, e.g. in the clickable meeting-detected prompt.
+export const NOTIFICATION_DICTATION_WINDOW_HEIGHT = 220;

@@ -12,7 +12,9 @@ export function resolveHtmlPath(htmlFileName: string) {
   if (process.env.NODE_ENV === 'development') {
     // electron-vite sets this to the renderer dev server's actual root URL
     // (port can shift off 5173 if something else already holds it).
-    const url = new URL(process.env.ELECTRON_RENDERER_URL || 'http://localhost:5173');
+    const url = new URL(
+      process.env.ELECTRON_RENDERER_URL || 'http://localhost:5173',
+    );
     url.pathname = htmlFileName;
     return url.href;
   }
@@ -34,6 +36,18 @@ export function shouldPasteText(): boolean {
   // TranscriberService.shouldPasteForSession(). Kept disabled and unused by
   // that flow; only the legacy per-segment call site in transcribe() remains.
   return false;
+}
+
+// Writes text to the system clipboard without simulating a paste keystroke.
+// Used for dictation's "copy to clipboard" preference, independent of the
+// auto-paste feature (which already writes the clipboard as a side effect of
+// pasteTextToActiveWindow below).
+export function copyTextToClipboard(text: string) {
+  try {
+    clipboard.writeText(text);
+  } catch (copyError) {
+    console.error('Failed to copy text to clipboard:', copyError);
+  }
 }
 
 // copy and paste text

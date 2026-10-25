@@ -225,14 +225,18 @@ export function saveUIPreferences(prefs: Partial<UIPreferences>): void {
 
 const MAX_ALLOWED_APPS = 50;
 
+// Spread over the defaults because electron-store only fills in missing
+// top-level keys, so an object saved before a field existed would lack it.
 export function getPastePreferences(): PastePreferences {
-  return getStore()?.get('pastePreferences') ?? DEFAULT_PASTE_PREFERENCES;
+  return {
+    ...DEFAULT_PASTE_PREFERENCES,
+    ...getStore()?.get('pastePreferences'),
+  };
 }
 
 export function savePastePreferences(prefs: Partial<PastePreferences>): void {
   const store = getStore();
-  const current = store?.get('pastePreferences') ?? DEFAULT_PASTE_PREFERENCES;
-  const merged = { ...current, ...prefs };
+  const merged = { ...getPastePreferences(), ...prefs };
 
   // Validate the merged result rather than trusting the renderer's payload —
   // a buggy or compromised renderer could otherwise persist `enabled: 1` or
@@ -243,6 +247,7 @@ export function savePastePreferences(prefs: Partial<PastePreferences>): void {
   const sanitized: PastePreferences = {
     enabled: merged.enabled,
     allowedApps: [],
+    copyToClipboard: merged.copyToClipboard,
   };
 
   if (typeof merged.enabled !== 'boolean') {
@@ -250,6 +255,13 @@ export function savePastePreferences(prefs: Partial<PastePreferences>): void {
       `[Store] savePastePreferences: coerced non-boolean enabled=${JSON.stringify(merged.enabled)} to false`,
     );
     sanitized.enabled = false;
+  }
+
+  if (typeof merged.copyToClipboard !== 'boolean') {
+    log.info(
+      `[Store] savePastePreferences: coerced non-boolean copyToClipboard=${JSON.stringify(merged.copyToClipboard)} to true`,
+    );
+    sanitized.copyToClipboard = true;
   }
 
   if (!Array.isArray(merged.allowedApps)) {
