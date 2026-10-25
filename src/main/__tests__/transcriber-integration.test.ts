@@ -46,12 +46,22 @@ vi.mock('@/main/store', () => ({
     language: 'auto',
   })),
   generateTitle: vi.fn((text: string) => text.slice(0, 20)),
-  getPastePreferences: vi.fn(() => ({ enabled: false, allowedApps: [] })),
+  getPastePreferences: vi.fn(() => ({
+    enabled: false,
+    allowedApps: [],
+    copyToClipboard: true,
+  })),
   getCalendarPreferences: vi.fn(() => ({ feedUrl: '' })),
 }));
 
 vi.mock('@/main/active-window', () => ({
   getActiveWindow: vi.fn(async () => undefined),
+}));
+
+vi.mock('@/main/notification-window', () => ({
+  updateNotificationState: vi.fn(),
+  sendDictationChunk: vi.fn(),
+  resetDictationChunks: vi.fn(),
 }));
 
 vi.mock('@/main/state/volatile', () => ({
@@ -90,6 +100,7 @@ vi.mock('@/main/pipeline/text-cleaner', () => ({
 
 vi.mock('@/main/util', () => ({
   pasteTextToActiveWindow: vi.fn(),
+  copyTextToClipboard: vi.fn(),
   shouldPasteText: vi.fn(() => false),
 }));
 
@@ -510,6 +521,137 @@ describe('TranscriberService — dictation paste allow-list', () => {
     await transcriberService.endSession(2000, callbacks);
 
     expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+  });
+});
+
+describe('TranscriberService — dictation clipboard copy', () => {
+  const callbacks = createTranscriberCallbacks();
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    resetTranscriberSessionState();
+
+    const { getPastePreferences } = await import('@/main/store');
+    const { getActiveWindow } = await import('@/main/active-window');
+    (getPastePreferences as any).mockReturnValue({
+      enabled: false,
+      allowedApps: [],
+      copyToClipboard: true,
+    });
+    (getActiveWindow as any).mockResolvedValue(undefined);
+  });
+
+  it('copies the combined transcript to the clipboard at endSession, independent of the paste allow-list', async () => {
+    const { copyTextToClipboard, pasteTextToActiveWindow } =
+      await import('@/main/util');
+
+    transcriberService.beginSession(1000, 'dictation');
+    const svc = transcriberService as any;
+    svc.sessionSegments.push(
+      { text: 'first segment', startedAt: 1000, source: 'mic' },
+      { text: 'second segment', startedAt: 2000, source: 'mic' },
+    );
+    svc.sessionSources.add('mic');
+    await transcriberService.endSession(3000, callbacks);
+
+    expect(copyTextToClipboard).toHaveBeenCalledTimes(1);
+    expect(copyTextToClipboard).toHaveBeenCalledWith(
+      'first segment second segment',
+    );
+    // Paste stays gated by its own allow-list, unaffected by clipboard copy.
+    expect(pasteTextToActiveWindow).not.toHaveBeenCalled();
+  });
+
+  it('does not copy to the clipboard when the preference is disabled', async () => {
+    const { getPastePreferences } = await import('@/main/store');
+    (getPastePreferences as any).mockReturnValue({
+      enabled: false,
+      allowedApps: [],
+      copyToClipboard: false,
+    });
+    const { copyTextToClipboard } = await import('@/main/util');
+
+    transcriberService.beginSession(1000, 'dictation');
+    const svc = transcriberService as any;
+    svc.sessionSegments.push({
+      text: 'dictated text',
+      startedAt: 1000,
+      source: 'mic',
+    });
+    svc.sessionSources.add('mic');
+    await transcriberService.endSession(2000, callbacks);
+
+    expect(copyTextToClipboard).not.toHaveBeenCalled();
+  });
+
+  it('does not copy for a regular recording-shortcut (meeting) session', async () => {
+    const { copyTextToClipboard } = await import('@/main/util');
+
+    await seedAndEndSession(
+      [{ text: 'some transcript', startedAt: 1000, source: 'mic' }],
+      callbacks,
+      { endedAt: 2000, type: 'meeting' },
+    );
+
+    expect(copyTextToClipboard).not.toHaveBeenCalled();
+  });
+
+  it('still copies to the clipboard when the trailing segment arrives late', async () => {
+    const { copyTextToClipboard } = await import('@/main/util');
+
+    transcriberService.beginSession(1000, 'dictation');
+    await transcriberService.endSession(2000, callbacks);
+    expect(copyTextToClipboard).not.toHaveBeenCalled();
+
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
+
+    expect(copyTextToClipboard).toHaveBeenCalledTimes(1);
+    expect(copyTextToClipboard).toHaveBeenCalledWith('transcribed text');
+  });
+});
+
+describe('TranscriberService — dictation notification chunk broadcasts', () => {
+  const callbacks = createTranscriberCallbacks();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetTranscriberSessionState();
+  });
+
+  it('resets the notification window transcript list at the start of every session', async () => {
+    const { resetDictationChunks } = await import('@/main/notification-window');
+
+    transcriberService.beginSession(1000, 'dictation');
+
+    expect(resetDictationChunks).toHaveBeenCalledTimes(1);
+  });
+
+  it('broadcasts each dictation segment to the notification window as it completes', async () => {
+    const { sendDictationChunk } = await import('@/main/notification-window');
+
+    transcriberService.beginSession(1000, 'dictation');
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
+
+    expect(sendDictationChunk).toHaveBeenCalledTimes(1);
+    expect(sendDictationChunk).toHaveBeenCalledWith('transcribed text');
+  });
+
+  it('does not broadcast segments for a regular recording-shortcut (meeting) session', async () => {
+    const { sendDictationChunk } = await import('@/main/notification-window');
+
+    transcriberService.beginSession(1000, 'meeting');
+    await transcriberService.transcribe(
+      { audio: SILENT_AUDIO, source: 'mic' },
+      callbacks,
+    );
+
+    expect(sendDictationChunk).not.toHaveBeenCalled();
   });
 });
 

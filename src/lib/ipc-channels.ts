@@ -70,6 +70,8 @@ export const CHANNELS = {
     HIDE: 'notification:hide',
     UPDATE_STATE: 'notification:update-state',
     GET_ACTIVE_WINDOW: 'notification:get-active-window',
+    DICTATION_CHUNK: 'notification:dictation-chunk',
+    DICTATION_RESET: 'notification:dictation-reset',
   },
   TRANSCRIPT_HISTORY: {
     GET: 'transcriptHistory:get',

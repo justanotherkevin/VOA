@@ -19,6 +19,8 @@ let completeCallback: ((msg: any) => void) | null = null;
 let recordingToggleCallback: (() => void) | null = null;
 let dictationToggleCallback: (() => void) | null = null;
 let notificationStateUpdateCallback: ((data: any) => void) | null = null;
+let dictationChunkCallback: ((data: any) => void) | null = null;
+let dictationResetCallback: (() => void) | null = null;
 let meetingSavedCallback: ((meeting: any) => void) | null = null;
 let meetingClearedCallback: (() => void) | null = null;
 let meetingDetectedCallback: ((event: any) => void) | null = null;
@@ -279,6 +281,18 @@ export function attachGlobalElectronMock() {
             notificationStateUpdateCallback = null;
           };
         }),
+        dictationChunk: vi.fn((cb: (data: any) => void) => {
+          dictationChunkCallback = cb;
+          return () => {
+            dictationChunkCallback = null;
+          };
+        }),
+        dictationReset: vi.fn((cb: () => void) => {
+          dictationResetCallback = cb;
+          return () => {
+            dictationResetCallback = null;
+          };
+        }),
       },
     },
 
@@ -316,6 +330,8 @@ export function detachGlobalElectronMock() {
     recordingToggleCallback = null;
     dictationToggleCallback = null;
     notificationStateUpdateCallback = null;
+    dictationChunkCallback = null;
+    dictationResetCallback = null;
     meetingSavedCallback = null;
     meetingClearedCallback = null;
     meetingDetectedCallback = null;
@@ -342,6 +358,8 @@ export function resetElectronMockCallbacks() {
   recordingToggleCallback = null;
   dictationToggleCallback = null;
   notificationStateUpdateCallback = null;
+  dictationChunkCallback = null;
+  dictationResetCallback = null;
   meetingSavedCallback = null;
   meetingClearedCallback = null;
   meetingDetectedCallback = null;
@@ -376,6 +394,7 @@ export function triggerNotificationShow(data: {
   message: string;
   state?: NotificationData['state'];
   activeWindow?: any;
+  isMeeting?: boolean;
 }) {
   notificationStateUpdateCallback?.({
     state: data.state ?? 'recording',
@@ -385,7 +404,16 @@ export function triggerNotificationShow(data: {
       title: data.title,
       owner: { name: 'Test App' },
     },
+    isMeeting: data.isMeeting,
   });
+}
+
+export function triggerDictationChunk(text: string) {
+  dictationChunkCallback?.({ text });
+}
+
+export function triggerDictationReset() {
+  dictationResetCallback?.();
 }
 
 export function triggerNotificationHide() {

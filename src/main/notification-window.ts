@@ -6,7 +6,9 @@ import type { ActiveWindow } from '@/main/active-window';
 import {
   NOTIFICATION_WIDTH,
   NOTIFICATION_HEIGHT,
+  NOTIFICATION_DICTATION_WINDOW_HEIGHT,
 } from '@/lib/notification-dimensions';
+import { CHANNELS } from '@/lib/ipc-channels';
 
 const NOTIFICATION_MARGIN = 0;
 const FADE_DURATION_MS = 300;
@@ -144,6 +146,15 @@ export function updateNotificationState(
       );
     }
 
+    const isDictationRecording =
+      payload.state === 'recording' && payload.isMeeting === false;
+    notificationWindow?.setSize(
+      NOTIFICATION_WIDTH,
+      isDictationRecording
+        ? NOTIFICATION_DICTATION_WINDOW_HEIGHT
+        : NOTIFICATION_HEIGHT,
+    );
+
     // Show the window for non-idle states
     if (payload.state !== 'idle') {
       notificationWindow?.showInactive();
@@ -243,6 +254,26 @@ export function isNotificationWindowOpen(): boolean {
  */
 export function getCurrentNotificationState(): NotificationState {
   return currentState;
+}
+
+/**
+ * Appends one completed speech-to-text chunk to the notification window's
+ * live dictation transcript list (see Notification.tsx). Called by
+ * TranscriberService for each VAD segment transcribed during an active
+ * dictation session, so the user has visible confirmation that speech is
+ * actually being converted rather than silently doing nothing.
+ */
+export function sendDictationChunk(text: string): void {
+  sendToNotificationWindow(CHANNELS.NOTIFICATIONS.DICTATION_CHUNK, { text });
+}
+
+/**
+ * Clears the notification window's live dictation transcript list. Called at
+ * the start of every session so a new dictation doesn't start out showing
+ * the previous session's leftover chunks.
+ */
+export function resetDictationChunks(): void {
+  sendToNotificationWindow(CHANNELS.NOTIFICATIONS.DICTATION_RESET);
 }
 
 /**

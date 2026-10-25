@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   ArrowUpRight,
   ChevronDown,
+  Clipboard,
   Cpu,
   Download,
   Folder,
@@ -107,9 +108,13 @@ export function TranscriptionPane({
   handleDownloadBuiltin: () => Promise<void>;
   handleCancelDownload: () => Promise<void>;
   handleDeleteBuiltin: () => Promise<void>;
-  pastePrefs: { enabled: boolean; allowedApps: string[] };
+  pastePrefs: {
+    enabled: boolean;
+    allowedApps: string[];
+    copyToClipboard: boolean;
+  };
   updatePastePref: (
-    key: 'enabled' | 'allowedApps',
+    key: 'enabled' | 'allowedApps' | 'copyToClipboard',
     value: unknown,
   ) => Promise<void>;
   runningApps: string[];
@@ -529,6 +534,23 @@ export function TranscriptionPane({
             />
           </div>
         </ComingSoon>
+      </div>
+
+      <div style={{ marginBottom: 22 }}>
+        <SectionLabel>Clipboard</SectionLabel>
+        <div className="s-card-rows">
+          <SettingRow
+            icon={Clipboard}
+            title="Copy dictated text to clipboard"
+            description="Copies the transcript when dictation completes, so you can paste it manually."
+            actions={
+              <SettingSwitch
+                checked={pastePrefs.copyToClipboard}
+                onChange={(v) => updatePastePref('copyToClipboard', v)}
+              />
+            }
+          />
+        </div>
       </div>
 
       {platform === 'darwin' && (

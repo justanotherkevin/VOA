@@ -33,7 +33,12 @@ vi.mock('@/main/store', () => ({
   getCalendarPreferences: vi.fn(() => ({ feedUrl: '' })),
   // Consumed by shouldPasteForSession() on dictation session end — defaults
   // to paste disabled so endSession tests never hit getActiveWindow().
-  getPastePreferences: vi.fn(() => ({ enabled: false, allowedApps: [] })),
+  // copyToClipboard defaults true to match the real store default.
+  getPastePreferences: vi.fn(() => ({
+    enabled: false,
+    allowedApps: [],
+    copyToClipboard: true,
+  })),
 }));
 
 vi.mock('@/main/active-window', () => ({
@@ -43,6 +48,8 @@ vi.mock('@/main/active-window', () => ({
 const mockCreateCalendarProvider = vi.fn();
 vi.mock('@/main/notification-window', () => ({
   updateNotificationState: vi.fn(),
+  sendDictationChunk: vi.fn(),
+  resetDictationChunks: vi.fn(),
 }));
 
 vi.mock('@/main/pipeline/structured-summarizer', () => ({
@@ -64,6 +71,7 @@ vi.mock('@/main/pipeline/text-cleaner', () => ({
 
 vi.mock('@/main/util', () => ({
   pasteTextToActiveWindow: vi.fn(),
+  copyTextToClipboard: vi.fn(),
 }));
 
 vi.mock('electron-log', () => ({

@@ -370,8 +370,34 @@ function useFlippedContent(notification: NotificationData | null) {
   return { displayed, phase };
 }
 
+// The live speech-to-text list, dictation-only: visible proof that speech is
+// actually converting to text while dictation is in progress. Chunks arrive
+// in chronological order (oldest first) — see .notification-dictation-list
+// in App.css for how column-reverse turns that into an always-newest-visible
+// scroll without any manual scroll management here.
+function DictationTranscriptList({ chunks }: { chunks: string[] }) {
+  if (chunks.length === 0) return null;
+
+  return (
+    <div
+      className="notification-dictation-list"
+      data-testid="notification-dictation-transcript"
+    >
+      {chunks.map((text, i) => (
+        // Index-keyed: chunks are append-only and never reordered/removed
+        // individually within a session (the whole list is cleared as a
+        // unit on the next session's reset).
+        // eslint-disable-next-line react/no-array-index-key
+        <div key={i} className="notification-dictation-chunk">
+          {text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function NotificationOverlay() {
-  const { notification, isVisible } = useNotifications();
+  const { notification, isVisible, dictationChunks } = useNotifications();
   const { displayed, phase } = useFlippedContent(notification);
 
   if (!displayed) {
@@ -385,9 +411,13 @@ function NotificationOverlay() {
         ? 'notification-flip-in'
         : '';
 
+  const showDictationTranscript =
+    displayed.state === 'recording' && displayed.isMeeting === false;
+
   return (
     <div
       className={`relative ${isVisible ? 'block' : 'hidden'}`}
+      style={{ height: '100vh' }}
       data-testid="notification-window"
     >
       <div
@@ -398,6 +428,9 @@ function NotificationOverlay() {
           {renderRow(displayed)}
         </div>
       </div>
+      {showDictationTranscript && (
+        <DictationTranscriptList chunks={dictationChunks} />
+      )}
     </div>
   );
 }

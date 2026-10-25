@@ -55,6 +55,7 @@ export function useNotifications() {
     DEV_MODE ? DEV_NOTIFICATION : null,
   );
   const [isVisible, setIsVisible] = useState(DEV_MODE);
+  const [dictationChunks, setDictationChunks] = useState<string[]>([]);
   const clearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export function useNotifications() {
         if (notificationData.state === 'idle') {
           setIsVisible(false);
           setNotification(null);
+          setDictationChunks([]);
           return;
         }
 
@@ -93,16 +95,36 @@ export function useNotifications() {
         setIsVisible(true);
       });
 
+    // Pushed by TranscriberService (main process) for each speech-to-text
+    // segment during an active dictation session — visible proof the app is
+    // actually converting speech, not silently doing nothing. Reset on
+    // 'notification:dictation-reset' at the start of every session (sent
+    // from beginSession regardless of type) so a new session never opens on
+    // the previous one's leftover chunks.
+    const unsubscribeDictationChunk =
+      window.electronAPI.notifications.on.dictationChunk((data: unknown) => {
+        const { text } = data as { text: string };
+        setDictationChunks((prev) => [...prev, text]);
+      });
+
+    const unsubscribeDictationReset =
+      window.electronAPI.notifications.on.dictationReset(() => {
+        setDictationChunks([]);
+      });
+
     return () => {
       if (clearTimeoutRef.current) {
         clearTimeout(clearTimeoutRef.current);
       }
       unsubscribeStateUpdate();
+      unsubscribeDictationChunk();
+      unsubscribeDictationReset();
     };
   }, []);
 
   return {
     notification,
     isVisible,
+    dictationChunks,
   };
 }

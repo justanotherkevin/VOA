@@ -248,6 +248,10 @@ const electronAPI = {
     on: {
       updateState: (cb: (...args: unknown[]) => void) =>
         subscribe(CHANNELS.NOTIFICATIONS.UPDATE_STATE, cb),
+      dictationChunk: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.NOTIFICATIONS.DICTATION_CHUNK, cb),
+      dictationReset: (cb: (...args: unknown[]) => void) =>
+        subscribe(CHANNELS.NOTIFICATIONS.DICTATION_RESET, cb),
     },
   },
 
