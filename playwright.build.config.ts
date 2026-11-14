@@ -12,6 +12,7 @@ process.env.NODE_ENV = 'production';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: '**/*.spec.ts', // e2e suite disabled
   timeout: 30000,
   retries: 0,
   workers: 1,

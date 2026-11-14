@@ -77,11 +77,23 @@ export function mixStereoToMono(buffer: AudioBuffer): Float32Array {
 }
 export async function acquireSystemAudioStream(): Promise<MediaStream | null> {
   if (process.platform === 'darwin') {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const loopback = require('electron-audio-loopback');
-    const { getLoopbackAudioMediaStream } = loopback;
-    if (typeof getLoopbackAudioMediaStream !== 'function') return null;
-    return withTimeout(5000, getLoopbackAudioMediaStream());
+    // Inlined from electron-audio-loopback/dist/renderer.js: a sandboxed preload can't require() the package.
+    return withTimeout(
+      5000,
+      (async () => {
+        await ipcRenderer.invoke('enable-loopback-audio');
+        try {
+          const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          stream.getVideoTracks().forEach((t) => {
+            t.stop();
+            stream.removeTrack(t);
+          });
+          return stream;
+        } finally {
+          await ipcRenderer.invoke('disable-loopback-audio');
+        }
+      })(),
+    );
   }
   if (process.platform === 'win32') {
     const source = await ipcRenderer.invoke('system-audio:get-desktop-source');

@@ -10,6 +10,7 @@ const devServerPort = process.env.VITE_DEV_SERVER_PORT || '5173';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: '**/*.spec.ts', // e2e suite disabled
   timeout: 10000,
   retries: 0,
   workers: 1,

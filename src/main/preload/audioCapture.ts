@@ -17,12 +17,14 @@ import { CHANNELS } from '@/lib/ipc-channels';
 
   Why it can't move to the renderer either:
 
-  On macOS, electron-audio-loopback is a native Node.js module — it needs require(). The renderer runs in a sandboxed browser context with no access to require. The MediaStream
-   it returns also can't cross contextBridge (non-serializable).
+  On macOS, system audio comes from getDisplayMedia plus IPC calls to the main process (the electron-audio-loopback handlers). The MediaStream it returns can't cross
+  contextBridge (non-serializable), so it has to be consumed where it is created.
 
   So preload is the only execution context that has both:
-  - require() / Node.js access → for electron-audio-loopback
-  - Browser APIs → for MediaRecorder and AudioContext
+  - ipcRenderer → to enable and disable loopback audio in the main process
+  - Browser APIs → for getDisplayMedia, MediaRecorder and AudioContext
+
+  Windows are sandboxed, so preload can't require() the electron-audio-loopback package. Its small renderer logic is inlined in utils/audioHelper.ts instead.
 */
 
 let systemAudioStopHandle: (() => void) | null = null;
