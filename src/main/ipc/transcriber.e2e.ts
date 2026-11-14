@@ -5,7 +5,29 @@ import { getMeetings, updateMeeting } from '../store';
 import { getMainWindow } from '../state/volatile';
 import { makeCallbacks, setE2eForceMeeting } from './transcriber';
 
+type SourceStats = { chunks: number; samples: number; peak: number };
+const audioStats: Record<'mic' | 'system', SourceStats> = {
+  mic: { chunks: 0, samples: 0, peak: 0 },
+  system: { chunks: 0, samples: 0, peak: 0 },
+};
+
 export function registerTranscriberE2eHandlers() {
+  // Observation point for meeting-system-audio.spec.ts: counts what actually
+  // reaches transcribe() per source and how loud it was, before Whisper runs.
+  const originalTranscribe = transcriberService.transcribe.bind(transcriberService);
+  transcriberService.transcribe = (args, callbacks) => {
+    const stats = audioStats[args?.source ?? 'mic'];
+    const audio = (args?.audio ?? []) as ArrayLike<number>;
+    let peak = 0;
+    for (let i = 0; i < audio.length; i++) peak = Math.max(peak, Math.abs(audio[i]));
+    stats.chunks++;
+    stats.samples += audio.length;
+    stats.peak = Math.max(stats.peak, peak);
+    return originalTranscribe(args, callbacks);
+  };
+
+  ipcMain.handle('transcriber:e2e-audio-stats', () => audioStats);
+
   ipcMain.handle('transcriber:e2e-force-meeting', () => {
     setE2eForceMeeting(true);
   });

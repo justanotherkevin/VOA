@@ -300,6 +300,7 @@ if (process.env.E2E_TEST === 'true') {
       ipcRenderer.invoke('transcriber:e2e-session-active'),
     getTranscriberSessionType: () =>
       ipcRenderer.invoke('transcriber:e2e-session-type'),
+    getAudioStats: () => ipcRenderer.invoke('transcriber:e2e-audio-stats'),
   });
 }
 
