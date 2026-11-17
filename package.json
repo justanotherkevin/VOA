@@ -55,7 +55,6 @@
     "@xenova/transformers": "^2.17.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "electron-audio-loopback": "^1.0.6",
     "electron-debug": "^4.1.0",
     "electron-log": "^5.3.2",
     "electron-store": "^11.0.2",
@@ -89,8 +88,8 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/ui": "^4.0.9",
     "autoprefixer": "^10.4.21",
-    "electron": "^35.0.2",
-    "electron-builder": "^25.1.8",
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^5.0.0",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
@@ -142,6 +141,7 @@
       "entitlementsInherit": "assets/entitlements.mac.plist",
       "gatekeeperAssess": false,
       "extendInfo": {
+        "NSAudioCaptureUsageDescription": "VOA records meeting audio from other apps to transcribe it.",
         "NSMicrophoneUsageDescription": "We need access to your microphone to transcribe audio.",
         "NSAppleEventsUsageDescription": "We need to control other applications to paste the transcribed text.",
         "NSAccessibilityUsageDescription": "We need accessibility permissions to paste text into other applications."

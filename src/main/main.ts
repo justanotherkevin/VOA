@@ -7,18 +7,16 @@
  */
 
 import path from 'path';
-import { app, BrowserWindow, shell, systemPreferences } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  session,
+  shell,
+  systemPreferences,
+} from 'electron';
 import MenuBuilder from '@/main/menu';
 
-if (process.platform === 'darwin') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { initMain } = require('electron-audio-loopback');
-    initMain(app);
-  } catch {
-    // electron-audio-loopback unavailable in this environment
-  }
-}
 import {
   getAssetPath,
   isDebug,
@@ -133,7 +131,13 @@ app
     await initializeStore();
     // On macOS, the icon property in BrowserWindow is ignored for the dock — it only affects Windows (taskbar) and Linux. The dock icon on macOS must be set explicitly via app.dock.setIcon().
     if (process.platform === 'darwin') {
-      app.dock.setIcon(getAssetPath('icon.png'));
+      app.dock?.setIcon(getAssetPath('icon.png'));
+      session.defaultSession.setDisplayMediaRequestHandler((_req, callback) => {
+        desktopCapturer
+          .getSources({ types: ['screen'] })
+          .then((sources) => callback({ video: sources[0], audio: 'loopback' }))
+          .catch(() => callback({}));
+      });
     }
 
     const electronProbe: OsPermissionProbe = {
