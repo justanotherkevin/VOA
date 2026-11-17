@@ -125,6 +125,8 @@ All notable changes to VOA are documented here.
   - Filter the run with `ASR_BENCH_ENGINES` and `ASR_BENCH_FIXTURES`. Results go to `.logs/asr-benchmark.json`.
   - A partial run on 7 short fixtures showed whisper.cpp Base at 141 ms to first text against 985 ms for onnxruntime Base in segmented mode, and 24.2% WER against 29.5%.
 
+- **Whisper Base is now the default speech model instead of Tiny.** `DEFAULT_MODEL` and the default `selectedModel` in `src/lib/Constants.ts`, `src/main/store/schema.ts` and the initial state in `src/renderer/pages/Settings.tsx` now use `Xenova/whisper-base`, which maps to `ggml-base.en.bin`. In the benchmark, Tiny on onnxruntime averaged over 100% WER because of repetition loops. Users who already saved a model in Settings keep their choice.
+
 - **Recolored the landing page (`docs/index.html`) from the Material blue/indigo palette to a warm parchment/ink scheme**, and switched the heading font from Inter to Figtree, both inspired by meetily.ai's design tokens (extracted from their live CSS, not guessed).
 - **Expanded `README.md`** with a repo layout table, a testing command reference, a "Before you open a PR" checklist, and a "Known limitations" section, aimed at getting new contributors from clone to open PR without extra back-and-forth.
 - **Re-enabled Base as a selectable Whisper model** — repeated manual switching between Tiny/Base in the real app didn't reproduce the native crash Small/Medium hit reliably. A version-bump experiment (`onnxruntime-node` 1.14.0 → 1.24.1) to fix the crash outright made things worse and was reverted; see `docs/whisper-onnxruntime-crash.md`.
