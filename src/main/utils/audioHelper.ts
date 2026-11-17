@@ -18,7 +18,9 @@ function startAudioChunk(
   if (!state.active || !state.stream) return;
   state.chunks = [];
   state.chunkStart = Date.now();
-  state.recorder = new MediaRecorder(state.stream, { mimeType } as MediaRecorderOptions);
+  state.recorder = new MediaRecorder(state.stream, {
+    mimeType,
+  } as MediaRecorderOptions);
   state.recorder.addEventListener('dataavailable', (e: BlobEvent) => {
     if (e.data && e.data.size > 0) state.chunks.push(e.data);
   });
@@ -77,21 +79,27 @@ export function mixStereoToMono(buffer: AudioBuffer): Float32Array {
 }
 export async function acquireSystemAudioStream(): Promise<MediaStream | null> {
   if (process.platform === 'darwin') {
-    // Inlined from electron-audio-loopback/dist/renderer.js: a sandboxed preload can't require() the package.
     return withTimeout(
       5000,
       (async () => {
-        await ipcRenderer.invoke('enable-loopback-audio');
-        try {
-          const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-          stream.getVideoTracks().forEach((t) => {
-            t.stop();
-            stream.removeTrack(t);
-          });
-          return stream;
-        } finally {
-          await ipcRenderer.invoke('disable-loopback-audio');
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true,
+        });
+        stream.getVideoTracks().forEach((t) => {
+          t.stop();
+          stream.removeTrack(t);
+        });
+        // Without the System Audio Recording permission macOS gives an ended track and no error.
+        const audio = stream.getAudioTracks()[0];
+        if (!audio || audio.readyState === 'ended') {
+          console.error(
+            'System audio capture failed: grant System Audio Recording permission in System Settings > Privacy & Security.',
+          );
+          stream.getTracks().forEach((t) => t.stop());
+          return null;
         }
+        return stream;
       })(),
     );
   }

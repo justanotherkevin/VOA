@@ -7,7 +7,7 @@ export {
   CalendarParticipant,
   CalendarEventMatch,
 } from './types';
-export { default as whisperTranscriber } from './whisper-transcriber';
+export { default as whisperTranscriber } from './whisper-cpp-transcriber';
 export {
   default as llamaSummarizer,
   BUILTIN_MODEL_PATH,

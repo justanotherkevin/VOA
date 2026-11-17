@@ -138,7 +138,7 @@ export const DEFAULT_SHORTCUTS: ShortcutPreferences = {
 };
 
 export const DEFAULT_MODEL_PREFERENCES: ModelPreferences = {
-  selectedModel: 'Xenova/whisper-tiny',
+  selectedModel: 'Xenova/whisper-base',
   multilingual: false,
   quantized: false,
   language: 'english',

@@ -62,7 +62,7 @@ export default function Settings() {
   const { microphones, defaultOutputLabel, labelsAvailable } =
     useAudioDevices();
   const [modelPrefs, setModelPrefs] = useState({
-    selectedModel: 'Xenova/whisper-tiny',
+    selectedModel: 'Xenova/whisper-base',
     asrType: 'whisper' as const,
   });
   const [cachedModels, setCachedModels] = useState<

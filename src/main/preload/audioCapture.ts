@@ -17,14 +17,14 @@ import { CHANNELS } from '@/lib/ipc-channels';
 
   Why it can't move to the renderer either:
 
-  On macOS, system audio comes from getDisplayMedia plus IPC calls to the main process (the electron-audio-loopback handlers). The MediaStream it returns can't cross
+  On macOS, system audio comes from getDisplayMedia, answered by the display media handler (loopback audio) registered in the main process. The MediaStream it returns can't cross
   contextBridge (non-serializable), so it has to be consumed where it is created.
 
   So preload is the only execution context that has both:
-  - ipcRenderer → to enable and disable loopback audio in the main process
+  - ipcRenderer → to talk to the main process
   - Browser APIs → for getDisplayMedia, MediaRecorder and AudioContext
 
-  Windows are sandboxed, so preload can't require() the electron-audio-loopback package. Its small renderer logic is inlined in utils/audioHelper.ts instead.
+  The capture logic lives in utils/audioHelper.ts.
 */
 
 let systemAudioStopHandle: (() => void) | null = null;
@@ -33,7 +33,7 @@ let systemAudioStopHandle: (() => void) | null = null;
 // this same stream/AnalyserNode (not a second acquireSystemAudioStream()
 // call) and forwarded over IPC — see ipc/notifications.ts's relay. A second
 // concurrent loopback capture used to be tried here, but on macOS
-// electron-audio-loopback taps a single OS-level audio source, so a second
+// the loopback tap is a single OS-level audio source, so a second
 // tap starved this real capture of audio (meetings transcribing to a bare
 // "[ Pause ]" token instead of real speech).
 let meterContext: AudioContext | null = null;
