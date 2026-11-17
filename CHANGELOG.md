@@ -110,6 +110,21 @@ All notable changes to VOA are documented here.
 
 ### Changed
 
+- **Live transcription now runs on whisper.cpp instead of onnxruntime.** The new `src/main/pipeline/whisper-server.ts` starts `whisper-server` (Homebrew whisper.cpp) on a free local port with `-l en --max-context 0`.
+  - It downloads the ggml model to `userData/models` on first use, queues requests one at a time, and restarts the server once if it dies. It stops the server on quit and on SIGINT/SIGTERM.
+  - The new `whisper-cpp-transcriber.ts` implements `AsrTranscriber`, and the app model ids map to `ggml-*.en.bin` files. `whisperTranscriber` in `pipeline/index.ts` now points to it.
+  - The old onnxruntime engine files remain but are unused. The Homebrew binary path is a shortcut for development only.
+
+- **System audio is now captured with Electron's built in loopback, which fixes a silent stream on macOS 26.**
+  - Electron is upgraded from 35 to 45.3.3 and electron-builder from 25 to 26.18.0, which is needed for the Electron 45 ABI. `electron-audio-loopback` is removed.
+  - `main.ts` registers `setDisplayMediaRequestHandler` with `audio: 'loopback'`, which uses a CoreAudio Tap on macOS 14.2 and later.
+  - `audioHelper.ts` logs an error and returns null when the audio track is missing or ended. A missing System Audio Recording permission produces this case.
+  - `NSAudioCaptureUsageDescription` is added to the mac Info.plist.
+
+- **The ASR benchmark (`npm run test:asr`) now compares onnxruntime and whisper.cpp on the same audio.** It reports audio duration, cold load, time to first text, time to complete, real time factor, WER and hallucination flags.
+  - Filter the run with `ASR_BENCH_ENGINES` and `ASR_BENCH_FIXTURES`. Results go to `.logs/asr-benchmark.json`.
+  - A partial run on 7 short fixtures showed whisper.cpp Base at 141 ms to first text against 985 ms for onnxruntime Base in segmented mode, and 24.2% WER against 29.5%.
+
 - **Recolored the landing page (`docs/index.html`) from the Material blue/indigo palette to a warm parchment/ink scheme**, and switched the heading font from Inter to Figtree, both inspired by meetily.ai's design tokens (extracted from their live CSS, not guessed).
 - **Expanded `README.md`** with a repo layout table, a testing command reference, a "Before you open a PR" checklist, and a "Known limitations" section, aimed at getting new contributors from clone to open PR without extra back-and-forth.
 - **Re-enabled Base as a selectable Whisper model** — repeated manual switching between Tiny/Base in the real app didn't reproduce the native crash Small/Medium hit reliably. A version-bump experiment (`onnxruntime-node` 1.14.0 → 1.24.1) to fix the crash outright made things worse and was reverted; see `docs/whisper-onnxruntime-crash.md`.
