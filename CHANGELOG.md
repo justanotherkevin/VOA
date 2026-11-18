@@ -110,6 +110,10 @@ All notable changes to VOA are documented here.
 
 ### Changed
 
+- **All Vitest settings now live in one `vitest.config.ts` file.** It defines five projects: `frontend`, `backend`, `asr`, `qwen` and `lmstudio`.
+  - The npm test scripts and `scripts/test-ui.sh` now pick a project with `--project` instead of a config file with `--config`.
+  - The five per suite config files were deleted. The old root `vitest.config.ts` was not used by any script and relied on `environmentMatchGlobs`, which Vitest no longer supports.
+
 - **Live transcription now runs on whisper.cpp instead of onnxruntime.** The new `src/main/pipeline/whisper-server.ts` starts `whisper-server` (Homebrew whisper.cpp) on a free local port with `-l en --max-context 0`.
   - It downloads the ggml model to `userData/models` on first use, queues requests one at a time, and restarts the server once if it dies. It stops the server on quit and on SIGINT/SIGTERM.
   - The new `whisper-cpp-transcriber.ts` implements `AsrTranscriber`, and the app model ids map to `ggml-*.en.bin` files. `whisperTranscriber` in `pipeline/index.ts` now points to it.
