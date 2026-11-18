@@ -191,7 +191,7 @@ audio-transformer/
 │
 ├── electron.vite.config.ts              ← Build config (main + preload + renderer)
 ├── vite.renderer.config.ts              ← Renderer-only Vite overrides
-├── vitest.config.ts                     ← Unit test runner config
+├── vitest.config.ts                     ← Unit test runner config (Vitest projects: frontend, backend, asr, qwen, lmstudio)
 ├── playwright.config.ts                 ← E2E dev mode config
 ├── playwright.build.config.ts           ← E2E production build config
 ├── tailwind.config.cjs                  ← Tailwind CSS config
